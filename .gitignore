@@ -1,0 +1,19 @@
+.anchor
+.DS_Store
+target
+**/*.rs.bk
+node_modules
+test-ledger
+.yarn
+
+# Wallet keypairs (private keys - DO NOT COMMIT)
+user*.json
+*.keypair
+
+# Logs and temporary files
+logs/
+nohup.out
+
+# Local data files
+fees.json
+bal.sh
