@@ -1,20 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  turbopack: {
-    resolveAlias: {
-      // Polyfills for Node.js modules not available in browser
-      fs: false,
-      net: false,
-      tls: false,
-    },
-  },
+  turbopack: {},
   webpack: (config) => {
     config.resolve.fallback = {
       fs: false,
       net: false,
       tls: false,
     };
+    config.externals.push('pino-pretty', 'lokijs', 'encoding');
     return config;
   },
 };

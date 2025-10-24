@@ -48,17 +48,22 @@ NEXT_PUBLIC_LAMPORTS_PER_E6=100
 ### Development
 
 ```bash
-# Start development server (runs on port 3434)
+# Start development server (runs on port 3434, binds to all interfaces)
 npm run dev
 
 # Build for production
 npm run build
 
-# Start production server (runs on port 3434)
+# Start production server (runs on port 3434, binds to all interfaces)
 npm start
 ```
 
-Open [http://localhost:3434](http://localhost:3434) in your browser.
+Open the app in your browser:
+- **Local**: [http://localhost:3434](http://localhost:3434)
+- **Network (Ethernet)**: http://64.20.42.194:3434
+- **Network (Tailscale)**: http://100.64.91.224:3434
+
+The server binds to `0.0.0.0:3434`, making it accessible from other devices on your network.
 
 ## Usage Flow
 
