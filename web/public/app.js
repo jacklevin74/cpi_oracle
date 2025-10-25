@@ -738,9 +738,9 @@ async function fetchMarketData() {
         currentYesPrice = yesProb;
         currentNoPrice = noProb;
 
-        // Calculate total shares (simplified: use vault as proxy for liquidity)
-        const yesShares = Math.max(0, -qY / 1_000_000);
-        const noShares = Math.max(0, -qN / 1_000_000);
+        // Calculate total shares (q values are in LAMPORTS scale)
+        const yesShares = Math.max(0, -qY / 10_000_000);
+        const noShares = Math.max(0, -qN / 10_000_000);
 
         // Update YES/NO prices (in XNT instead of percentages)
         if (document.getElementById('yesPercentage')) {
@@ -801,8 +801,8 @@ async function fetchMarketData() {
                 currentWinningSide = yesProb > 0.5 ? 'yes' : 'no';
             }
             // Store actual payout per share (convert from e6 to XNT)
-            // pps_e6 uses LAMPORTS scale: 1 XNT = 10_000_000 e6
-            currentPayoutPerShare = pps / 10_000_000;
+            // pps_e6 max is 1_000_000, so pps_e6 / 1_000_000 = XNT per share (max 1.0)
+            currentPayoutPerShare = pps / 1_000_000;
         } else {
             currentWinningSide = null;
             currentPayoutPerShare = 0;
@@ -864,8 +864,9 @@ async function fetchPositionData() {
             const sharesY = readI64LE(d, o); o += 8;
             const sharesN = readI64LE(d, o); o += 8;
 
-            const sharesYesFloat = sharesY / 1_000_000;
-            const sharesNoFloat = sharesN / 1_000_000;
+            // Shares are stored in LAMPORTS scale: 10_000_000 e6 = 1 share
+            const sharesYesFloat = sharesY / 10_000_000;
+            const sharesNoFloat = sharesN / 10_000_000;
 
             updatePositionDisplay(sharesYesFloat, sharesNoFloat);
         }

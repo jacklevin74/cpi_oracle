@@ -50,6 +50,15 @@
                         <span class="market-status" id="marketStatusBadge">OPEN</span>
                         <span class="market-volume">Vol: <span id="vaultDisplay">0</span> XNT</span>
                     </div>
+
+                    <!-- Winner Banner (shown when market settled) -->
+                    <div class="winner-banner" id="winnerBanner" style="display: none;">
+                        <div class="winner-content">
+                            <div class="winner-outcome" id="winnerOutcome">YES WON</div>
+                            <div class="winner-reason" id="winnerReason">$95,000 ↑ $96,500</div>
+                        </div>
+                    </div>
+
                     <!-- Market Cycle Timer -->
                     <div class="market-cycle-timer" id="cycleTimer">
                         <div class="cycle-status" id="cycleStatus">
@@ -58,14 +67,6 @@
                         <div class="cycle-clock-display">
                             <div class="current-time" id="currentTime">--:--:--</div>
                             <div class="next-market-time" id="nextMarketTime">Next: --:--</div>
-                        </div>
-                    </div>
-
-                    <!-- Winner Banner (shown when market settled) -->
-                    <div class="winner-banner" id="winnerBanner" style="display: none;">
-                        <div class="winner-content">
-                            <div class="winner-outcome" id="winnerOutcome">YES WON</div>
-                            <div class="winner-reason" id="winnerReason">$95,000 ↑ $96,500</div>
                         </div>
                     </div>
                 </div>
