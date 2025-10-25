@@ -788,6 +788,9 @@ async function fetchMarketData() {
             else document.getElementById('marketStatusBadge').style.background = '#ff4757';
         }
 
+        // Update button states based on market status
+        updateButtonStates();
+
         // Determine winning side if market is settled
         if (status === 2) {
             // Use the actual winner field from the contract
@@ -1132,6 +1135,13 @@ async function createDiscriminator(name) {
 }
 
 async function executeTrade() {
+    // Check if market is open
+    if (currentMarketStatus !== 0) {
+        addLog('ERROR: Market is not open for trading', 'error');
+        showError('Market closed');
+        return;
+    }
+
     if (!wallet) {
         addLog('ERROR: No wallet connected', 'error');
         showError('No wallet');
@@ -1357,6 +1367,13 @@ async function stopMarket() {
 }
 
 async function redeemWinnings() {
+    // Check if market is settled
+    if (currentMarketStatus !== 2) {
+        addLog('ERROR: Market is not settled yet', 'error');
+        showError('Market not settled');
+        return;
+    }
+
     if (!wallet) {
         addLog('ERROR: No wallet connected', 'error');
         showError('No wallet');
@@ -2219,3 +2236,61 @@ window.addEventListener('DOMContentLoaded', () => {
         tradeAmountInput.addEventListener('input', updateTradeButton);
     }
 });
+
+// Update button states based on market status
+function updateButtonStates() {
+    const tradeBtn = document.getElementById('tradeBtn');
+    const yesBtn = document.getElementById('yesBtn');
+    const noBtn = document.getElementById('noBtn');
+    
+    // Trade buttons - enable only when market is OPEN (status = 0)
+    const canTrade = currentMarketStatus === 0;
+    
+    if (tradeBtn) {
+        tradeBtn.disabled = !canTrade;
+        if (!canTrade) {
+            tradeBtn.style.opacity = '0.5';
+            tradeBtn.style.cursor = 'not-allowed';
+        } else {
+            tradeBtn.style.opacity = '1';
+            tradeBtn.style.cursor = 'pointer';
+        }
+    }
+    
+    if (yesBtn) {
+        yesBtn.disabled = !canTrade;
+        if (!canTrade) {
+            yesBtn.style.opacity = '0.5';
+            yesBtn.style.cursor = 'not-allowed';
+        } else {
+            yesBtn.style.opacity = '1';
+            yesBtn.style.cursor = 'pointer';
+        }
+    }
+    
+    if (noBtn) {
+        noBtn.disabled = !canTrade;
+        if (!canTrade) {
+            noBtn.style.opacity = '0.5';
+            noBtn.style.cursor = 'not-allowed';
+        } else {
+            noBtn.style.opacity = '1';
+            noBtn.style.cursor = 'pointer';
+        }
+    }
+    
+    // Redeem button - enable only when market is SETTLED (status = 2)
+    const redeemBtns = document.querySelectorAll('[onclick*="redeemWinnings"]');
+    const canRedeem = currentMarketStatus === 2;
+    
+    redeemBtns.forEach(btn => {
+        btn.disabled = !canRedeem;
+        if (!canRedeem) {
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        } else {
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        }
+    });
+}
