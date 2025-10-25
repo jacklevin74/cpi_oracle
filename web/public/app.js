@@ -662,6 +662,9 @@ async function fetchOracleData() {
         // Update BTC chart with numeric price
         updateBTCChart(btcPrice);
 
+        // Update winning indicator
+        updateWinningIndicator(btcPrice);
+
         // Display age
         const ageText = age < 60 ? `${age}s ago` : `${Math.floor(age / 60)}m ago`;
         if (document.getElementById('oracleAge')) {
@@ -764,7 +767,7 @@ async function fetchMarketData() {
         }
 
         // Update vault display (in header)
-        // Convert e6 to XNT: vault_e6 / 10_000_000 = XNT (LAMPORTS_PER_E6 = 100)
+        // vault_e6 uses LAMPORTS scale: 1 XNT = 10_000_000 e6
         if (document.getElementById('vaultDisplay')) {
             document.getElementById('vaultDisplay').textContent = (vault / 10_000_000).toFixed(0);
         }
@@ -798,7 +801,7 @@ async function fetchMarketData() {
                 currentWinningSide = yesProb > 0.5 ? 'yes' : 'no';
             }
             // Store actual payout per share (convert from e6 to XNT)
-            // pps_e6 / 10_000_000 = XNT per share (LAMPORTS_PER_E6 = 100)
+            // pps_e6 uses LAMPORTS scale: 1 XNT = 10_000_000 e6
             currentPayoutPerShare = pps / 10_000_000;
         } else {
             currentWinningSide = null;
@@ -1154,7 +1157,7 @@ async function executeTrade() {
     if (action === 'buy') {
         // Calculate how much XNT to spend
         estimatedCost = numShares * sharePrice;
-        // Convert XNT to e6 units: 1 XNT = 10_000_000 e6 units (LAMPORTS_PER_E6 = 100)
+        // Convert to e6 units: 1 XNT = 10_000_000 e6 (due to LAMPORTS_PER_E6 = 100)
         amount_e6 = Math.floor(estimatedCost * 10_000_000);
     } else {
         // For selling, pass number of shares
