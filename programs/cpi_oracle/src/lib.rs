@@ -93,7 +93,7 @@ pub struct Position {
 }
 impl Position {
     pub const SEED: &'static [u8] = b"pos";
-    pub const SIZE: usize = 32 + 8 + 8;
+    pub const SPACE: usize = 32 + 8 + 8;
 }
 
 // ---- Limits (all scaled 1e6) ----
@@ -170,7 +170,7 @@ pub struct InitPosition<'info> {
     #[account(
         init,
         payer = user,
-        space = 8 + Position::SIZE,
+        space = 8 + Position::SPACE,
         seeds = [Position::SEED, amm.key().as_ref(), user.key().as_ref()],
         bump
     )]
