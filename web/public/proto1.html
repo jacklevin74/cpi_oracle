@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X1 Markets - Proto</title>
+    <link rel="stylesheet" href="proto1.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="trading-platform">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <div class="nav-brand">
+                <span class="brand-icon">⬡</span>
+                <span class="brand-name">X1 Proto</span>
+            </div>
+            <div class="nav-center">
+                <div class="oracle-ticker">
+                    <span class="ticker-label">BTC</span>
+                    <span class="ticker-price" id="tickerPrice">$--</span>
+                    <div class="market-status-badge" id="marketStatusBadge">OPEN</div>
+                </div>
+            </div>
+            <div class="nav-right">
+                <div id="walletNavDisconnected">
+                    <button class="btn-connect" onclick="connectBackpack()">Connect Wallet</button>
+                </div>
+                <div id="walletNavConnected" class="hidden">
+                    <div class="wallet-dropdown">
+                        <div class="wallet-balance">
+                            <span class="balance-amount" id="navWalletBal">0.00</span>
+                            <span class="balance-unit">XNT</span>
+                        </div>
+                        <div class="wallet-address-short" id="navWalletAddr">--</div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Grid Layout -->
+        <div class="main-grid">
+            <!-- Left: Chart + Market Info -->
+            <div class="grid-left">
+                <!-- Market Question -->
+                <div class="market-card">
+                    <div class="market-question">Will BTC go UP or DOWN?</div>
+                    <div class="market-cycle-info">
+                        <div class="cycle-status" id="cycleState">LOADING...</div>
+                        <div class="cycle-times">
+                            <span id="currentTime">--:--:--</span>
+                            <span class="next-label">Next: <span id="nextMarketTime">--:--</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Winner Banner -->
+                <div class="winner-banner" id="winnerBanner" style="display: none;">
+                    <span class="winner-outcome" id="winnerOutcome">UP WON</span>
+                    <span class="winner-reason" id="winnerReason">$95,000 → $96,500</span>
+                </div>
+
+                <!-- Price Header with Indicator -->
+                <div class="price-header">
+                    <div class="price-item">
+                        <div class="price-label">Price to Beat</div>
+                        <div id="chartBeatPrice" class="price-value price-beat">--</div>
+                    </div>
+                    <div class="price-item price-center">
+                        <div class="price-indicator" id="priceArrowIndicator">
+                            <div class="arrow-icon" id="arrowIcon">↑</div>
+                            <div class="arrow-content">
+                                <div class="arrow-change" id="arrowLabelChange">+$0</div>
+                                <div class="arrow-percent" id="arrowLabelPercent">+0.00%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="price-item price-right">
+                        <div class="price-label">Current Price</div>
+                        <div id="chartCurrentPrice" class="price-value price-current">$0.00</div>
+                    </div>
+                </div>
+
+                <!-- BTC Chart -->
+                <div class="chart-section">
+                    <canvas id="btcChart"></canvas>
+                </div>
+
+                <!-- Market Overview Stats -->
+                <div class="market-stats">
+                    <div class="stat-card">
+                        <div class="stat-label">UP PRICE</div>
+                        <div class="stat-value stat-up"><span id="yesPercentage">0.50</span> XNT</div>
+                        <div class="stat-sub" id="yesShares">0 shares</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">DOWN PRICE</div>
+                        <div class="stat-value stat-down"><span id="noPercentage">0.50</span> XNT</div>
+                        <div class="stat-sub" id="noShares">0 shares</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">LIQUIDITY</div>
+                        <div class="stat-value"><span id="vaultTotalDisplay">0</span> XNT</div>
+                        <div class="stat-sub">Total Vault</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">START PRICE</div>
+                        <div class="stat-value" id="oracleSnapshotPrice">--</div>
+                        <div class="stat-sub">BTC Snapshot</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Trading + Position -->
+            <div class="grid-right">
+                <!-- Trade Panel -->
+                <div class="panel trade-panel">
+                    <div class="panel-header">TRADE</div>
+
+                    <div class="trade-tabs">
+                        <button class="tab-btn active" id="buyTab" onclick="switchTab('buy')">Buy</button>
+                        <button class="tab-btn" id="sellTab" onclick="switchTab('sell')">Sell</button>
+                    </div>
+
+                    <div class="outcome-selector">
+                        <button class="outcome-btn outcome-yes active" id="yesBtn" onclick="selectOutcome('yes')">
+                            <span class="outcome-label">UP</span>
+                            <span class="outcome-price"><span id="yesBtnPrice">0.50</span> XNT</span>
+                        </button>
+                        <button class="outcome-btn outcome-no" id="noBtn" onclick="selectOutcome('no')">
+                            <span class="outcome-label">DOWN</span>
+                            <span class="outcome-price"><span id="noBtnPrice">0.50</span> XNT</span>
+                        </button>
+                    </div>
+
+                    <div class="trade-amount">
+                        <label class="input-label">Number of Shares</label>
+                        <input type="number" id="tradeAmountShares" class="amount-input" placeholder="10" step="1" value="10">
+                        <div class="quick-amounts">
+                            <button class="quick-btn" onclick="setShares(1)">1</button>
+                            <button class="quick-btn" onclick="setShares(10)">10</button>
+                            <button class="quick-btn" onclick="setShares(50)">50</button>
+                            <button class="quick-btn" onclick="setShares(100)">100</button>
+                        </div>
+                    </div>
+
+                    <div class="trade-cost">
+                        <span>Est. Cost</span>
+                        <span id="tradeCost">~5.00 XNT</span>
+                    </div>
+
+                    <button class="btn-trade" id="tradeBtn" onclick="executeTrade()">
+                        <span id="tradeBtnText">Buy 10 UP shares (~5.00 XNT)</span>
+                    </button>
+                </div>
+
+                <!-- Position Panel -->
+                <div class="panel position-panel" id="positionStatusConnected">
+                    <div class="panel-header">HOLDINGS</div>
+                    <div class="position-grid">
+                        <div class="position-card position-up">
+                            <div class="position-label">UP</div>
+                            <div class="position-amount" id="posYesDisplay">0.00</div>
+                            <div class="position-value" id="posYesValue">$0.00</div>
+                        </div>
+                        <div class="position-card position-down">
+                            <div class="position-label">DOWN</div>
+                            <div class="position-amount" id="posNoDisplay">0.00</div>
+                            <div class="position-value" id="posNoValue">$0.00</div>
+                        </div>
+                    </div>
+                    <div class="position-summary">
+                        <div class="summary-row">
+                            <span>Total Value</span>
+                            <span id="totalPosValue">$0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Net Exposure</span>
+                            <span id="netExposure">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Redeem Panel -->
+                <div class="panel redeem-panel" id="redeemableSection">
+                    <div class="panel-header">REDEEM</div>
+                    <div class="redeem-amount" id="redeemableAmount">0.00 XNT</div>
+                    <div class="redeem-breakdown" id="redeemableBreakdown">
+                        UP: 0 × 0.00 = 0.00<br>
+                        DOWN: 0 × 0.00 = 0.00
+                    </div>
+                    <button class="btn-redeem" id="btnRedeem" onclick="redeemWinnings()" disabled>REDEEM</button>
+                </div>
+
+                <!-- Wallet Panel -->
+                <div class="panel wallet-panel">
+                    <div class="panel-header">WALLET</div>
+                    <div id="sidebarWalletDisconnected">
+                        <p class="empty-text">Connect wallet to start trading</p>
+                    </div>
+                    <div id="sidebarWalletConnected" class="hidden">
+                        <div class="wallet-info">
+                            <div class="wallet-label">Trading Wallet</div>
+                            <div class="wallet-address" id="sessionAddr">--</div>
+                            <div class="wallet-balance-large">
+                                <span id="walletBal">0.0000</span> XNT
+                            </div>
+                        </div>
+                        <div class="wallet-actions">
+                            <input type="number" id="withdrawAmount" class="input-compact" placeholder="Amount to withdraw" step="0.01">
+                            <button class="btn-compact" onclick="withdrawToBackpack()">Withdraw</button>
+                            <button class="btn-compact btn-ghost" onclick="disconnectWallet()">Disconnect</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Log -->
+                <div class="panel activity-panel">
+                    <div class="panel-header">
+                        Activity
+                        <button class="btn-clear" onclick="clearLog()">Clear</button>
+                    </div>
+                    <div class="activity-log" id="logContent">
+                        <div class="log-entry log-info">
+                            <span class="log-time">--:--:--</span>
+                            <span class="log-message">Initializing...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden compatibility elements -->
+        <div id="positionStatusDisconnected" style="display: none;"></div>
+        <div id="vaultDisplay" style="display: none;"></div>
+        <div id="buyTab" style="display: none;"></div>
+        <div id="sellTab" style="display: none;"></div>
+        <div id="redeemableSectionSidebar" style="display: none;"></div>
+        <div id="redeemableAmountSidebar" style="display: none;"></div>
+        <div id="redeemableBreakdownSidebar" style="display: none;"></div>
+        <div id="btnRedeemSidebar" style="display: none;"></div>
+        <div id="lastTradeAction" style="display: none;"></div>
+        <div id="lastTradeSize" style="display: none;"></div>
+        <div id="snapshotBtn" style="display: none;"></div>
+        <div id="snapshotLabel" style="display: none;"></div>
+        <div id="oracleAge" style="display: none;"></div>
+        <div id="oracleCurrentPrice" style="display: none;"></div>
+        <div id="winningIndicator" style="display: none;"></div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

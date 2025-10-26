@@ -42,6 +42,8 @@ const server = http.createServer((req, res) => {
         filePath = '/index.html';
     } else if (req.url === '/hl' || req.url === '/hyperliquid') {
         filePath = '/hyperliquid.html';
+    } else if (req.url === '/proto1') {
+        filePath = '/proto1.html';
     } else {
         filePath = req.url;
     }
