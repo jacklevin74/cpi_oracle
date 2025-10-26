@@ -147,6 +147,9 @@ window.addEventListener('load', async () => {
     // Start polling
     startPolling();
     addLog('System ready. Auto-refresh every 1s', 'success');
+
+    // Set up Backpack account change listener
+    setupBackpackAccountListener();
 });
 
 // ============= SESSION MANAGEMENT =============
@@ -155,6 +158,67 @@ async function restoreSession() {
     // REMOVED: No auto-connect on page load
     // User must explicitly click "Connect" button
     showNoWallet();
+}
+
+// ============= BACKPACK ACCOUNT SWITCHING =============
+
+function setupBackpackAccountListener() {
+    if (!window.backpack) {
+        console.log('Backpack not detected, account listener not set up');
+        return;
+    }
+
+    // Listen for account changes in Backpack
+    window.backpack.on('accountChanged', async (publicKey) => {
+        console.log('[Account Switch] Backpack account changed to:', publicKey?.toString());
+
+        if (!publicKey) {
+            // User disconnected
+            addLog('Backpack disconnected', 'warning');
+            disconnectWallet();
+            return;
+        }
+
+        // Check if we're already connected
+        if (!backpackWallet) {
+            console.log('[Account Switch] Not connected yet, ignoring account change');
+            return;
+        }
+
+        const newBackpackAddress = publicKey.toString();
+        addLog('Backpack wallet switched to: ' + newBackpackAddress.substring(0, 12) + '...', 'info');
+
+        try {
+            // Update backpack wallet reference
+            backpackWallet = window.backpack;
+
+            // Re-derive session wallet for the new Backpack wallet
+            addLog('Re-deriving session wallet for new Backpack account...', 'info');
+            console.log('[Account Switch] Deriving new session wallet...');
+
+            wallet = await deriveSessionWalletFromBackpack(backpackWallet);
+
+            const sessionAddr = wallet.publicKey.toString();
+            console.log('[Account Switch] New session wallet:', sessionAddr);
+
+            addLog('Switched to session wallet: ' + sessionAddr.substring(0, 12) + '...', 'success');
+            addLog('This is the deterministic session wallet for your new Backpack account', 'info');
+
+            // Update UI
+            showHasWallet(newBackpackAddress);
+            updateWalletBalance();
+            fetchPositionData();
+            showStatus('Switched! Session wallet: ' + sessionAddr);
+
+        } catch (err) {
+            console.error('[Account Switch] Failed to switch session wallet:', err);
+            addLog('Failed to switch session wallet: ' + err.message, 'error');
+            showError('Failed to derive session wallet for new account');
+            disconnectWallet();
+        }
+    });
+
+    console.log('Backpack account change listener installed');
 }
 
 async function connectBackpack() {
