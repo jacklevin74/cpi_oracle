@@ -179,14 +179,23 @@ async function connectBackpack() {
         // Derive deterministic session wallet from Backpack signature
         // Same Backpack = Same signature = Same session wallet, ALWAYS!
         // No localStorage needed - completely reproducible from signature alone
+        console.log('[DEBUG] About to derive session wallet...');
         wallet = await deriveSessionWalletFromBackpack(backpackWallet);
+        console.log('[DEBUG] Wallet object:', wallet);
+        console.log('[DEBUG] Wallet is null?', wallet === null);
+        console.log('[DEBUG] Wallet publicKey:', wallet ? wallet.publicKey : 'NULL WALLET');
 
         const sessionAddr = wallet.publicKey.toString();
+        console.log('[DEBUG] Session address:', sessionAddr);
+
         addLog('Session wallet: ' + sessionAddr.substring(0, 12) + '...', 'success');
         addLog('This wallet is deterministically derived from your Backpack signature', 'info');
         addLog('Same Backpack = Same session wallet, on any device!', 'info');
 
+        console.log('[DEBUG] About to call showHasWallet...');
         showHasWallet(backpackAddress);
+        console.log('[DEBUG] showHasWallet completed');
+
         updateWalletBalance();
         fetchPositionData();
         showStatus('Connected! Session wallet: ' + sessionAddr);
@@ -256,21 +265,33 @@ async function deriveSessionWalletFromBackpack(backpackWallet) {
     try {
         // Request signature from Backpack - this is DETERMINISTIC and SECRET
         addLog('Requesting signature to derive session wallet...', 'info');
+        console.log('[DEBUG derive] Requesting signature from Backpack...');
+
         const signature = await backpackWallet.signMessage(message);
+        console.log('[DEBUG derive] Got signature, length:', signature.length);
+        console.log('[DEBUG derive] Signature type:', typeof signature);
+        console.log('[DEBUG derive] First 8 bytes:', Array.from(signature.slice(0, 8)));
 
         // Use first 32 bytes of signature as Ed25519 seed
         // Ed25519 seeds are exactly 32 bytes (256 bits)
         const seed = signature.slice(0, 32);
+        console.log('[DEBUG derive] Seed created, length:', seed.length);
 
         // Create keypair from deterministic seed
         const keypair = solanaWeb3.Keypair.fromSeed(seed);
+        console.log('[DEBUG derive] Keypair created');
+        console.log('[DEBUG derive] Keypair publicKey:', keypair.publicKey.toString());
+        console.log('[DEBUG derive] Keypair type:', typeof keypair);
+        console.log('[DEBUG derive] Keypair is null?', keypair === null);
 
         addLog('Session wallet derived from signature (deterministic)', 'success');
         addLog('Same Backpack = Same session wallet, always!', 'info');
 
+        console.log('[DEBUG derive] Returning keypair...');
         return keypair;
     } catch (err) {
         console.error('Failed to derive session wallet:', err);
+        console.error('[DEBUG derive] Error stack:', err.stack);
         throw new Error('User denied signature request or Backpack error');
     }
 }
@@ -502,6 +523,9 @@ function showNoWallet() {
 }
 
 function showHasWallet(backpackAddr) {
+    console.log('[DEBUG showHasWallet] Called with backpackAddr:', backpackAddr);
+    console.log('[DEBUG showHasWallet] wallet object:', wallet);
+
     if (!wallet) {
         console.error('showHasWallet called but wallet is null');
         return;
@@ -510,25 +534,37 @@ function showHasWallet(backpackAddr) {
     const sessionAddr = wallet.publicKey.toString();
     const shortAddr = sessionAddr.substring(0, 8) + '...' + sessionAddr.substring(sessionAddr.length - 4);
 
+    console.log('[DEBUG showHasWallet] sessionAddr:', sessionAddr);
+    console.log('[DEBUG showHasWallet] shortAddr:', shortAddr);
+
     // Nav bar
-    if (document.getElementById('navWalletAddr')) {
-        document.getElementById('navWalletAddr').textContent = shortAddr;
+    const navWalletAddr = document.getElementById('navWalletAddr');
+    console.log('[DEBUG showHasWallet] navWalletAddr element:', navWalletAddr);
+    if (navWalletAddr) {
+        navWalletAddr.textContent = shortAddr;
         document.getElementById('walletNavDisconnected').classList.add('hidden');
         document.getElementById('walletNavConnected').classList.remove('hidden');
+        console.log('[DEBUG showHasWallet] Nav bar updated');
     }
 
     // Sidebar
-    if (document.getElementById('sessionAddr')) {
-        document.getElementById('sessionAddr').textContent = sessionAddr;
+    const sessionAddrElement = document.getElementById('sessionAddr');
+    console.log('[DEBUG showHasWallet] sessionAddr element:', sessionAddrElement);
+    if (sessionAddrElement) {
+        sessionAddrElement.textContent = sessionAddr;
         document.getElementById('sidebarWalletDisconnected').classList.add('hidden');
         document.getElementById('sidebarWalletConnected').classList.remove('hidden');
+        console.log('[DEBUG showHasWallet] Sidebar updated, text content:', sessionAddrElement.textContent);
     }
 
     // Position & Status
     if (document.getElementById('positionStatusDisconnected')) {
         document.getElementById('positionStatusDisconnected').classList.add('hidden');
         document.getElementById('positionStatusConnected').classList.remove('hidden');
+        console.log('[DEBUG showHasWallet] Position status updated');
     }
+
+    console.log('[DEBUG showHasWallet] Function completed');
 }
 
 async function updateWalletBalance() {

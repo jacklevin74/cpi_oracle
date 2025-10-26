@@ -1,0 +1,197 @@
+
+╔═══════════════════════════════════════════════╗
+║     AUTOMATED SETTLEMENT BOT - 10 MIN CYCLES  ║
+╚═══════════════════════════════════════════════╝
+
+[2025-10-26T21:09:43.064Z] Operator: jqj117nAKqLepiFkxjAQob4p2ibfBnvJ943J3cryX55
+[2025-10-26T21:09:43.065Z] RPC: http://127.0.0.1:8899
+[2025-10-26T21:09:43.065Z] Oracle: 4KYeNyv1B9YjjQkfJk2C6Uqo71vKzFZriRe5NXg6GyCq
+[2025-10-26T21:09:43.066Z] AMM PDA: D9QLyPx7uBXr9BARa5r8w1offurA6cTfysc7LiAUtPRo
+[2025-10-26T21:09:43.066Z] Vault PDA: 6stF65Zgi2rXCKNSBDvxtg4MrsvaRByi2chAoetG7yFT
+[2025-10-26T21:09:43.066Z] 
+🚀 Initializing market for immediate pre-market trading...
+
+[2025-10-26T21:09:43.091Z] Initializing new market...
+[SUCCESS] Market initialized: 2W2upTiWkwJTHK6nVMnDwdL8y4FWAFDf93tSqn5MDNyiEbv8WoMNvdUfgFEVykvVx752xmVQAcK8RnKJFwY7SCBG
+[SUCCESS] ✓ PRE-MARKET BETTING NOW OPEN!
+[2025-10-26T21:09:44.907Z] 
+⏰ Current cycle snapshot at: 21:10:00
+[2025-10-26T21:09:44.907Z] Pre-market phase: 0m 15s until snapshot
+
+[2025-10-26T21:10:00.011Z] 
+📸 TAKING ORACLE SNAPSHOT
+
+[2025-10-26T21:10:00.012Z] Taking oracle snapshot...
+[SUCCESS] Snapshot taken: 3W4CvQEEqnMxpHbUV5Mfr9qVe9c5nmZ7oUZsbRADqMwbpzVhtZBBfYJVrPzJcpZBz8czUdUaQudcgGUisRWytvm5
+[SUCCESS] ✓ ACTIVE MARKET NOW OPEN (snapshot taken)
+[2025-10-26T21:10:00.262Z] Active trading: 5m 0s until market closes
+
+[2025-10-26T21:15:00.359Z] 
+🛑 STOPPING MARKET
+
+[2025-10-26T21:15:00.360Z] Stopping market...
+[SUCCESS] Market stopped: 5EqDStWLJoSwbdhSyduZTGPdwz7UgnYwuaoxu8qgtCwSyjL5v513bqAn7jLMpcdWiHGLND81vmBXipyuPiQpekCd
+[2025-10-26T21:15:02.077Z] 
+⚖️  SETTLING MARKET
+
+[2025-10-26T21:15:02.078Z] Settling market by oracle...
+[SUCCESS] Market settled: 5oPJaxvwLWgG4qK3nPmiKYMZ26Ee4ktSgkoKdzcgKaMq1ZPA8F9Xu68AeHjNmcUNT7RJQhhMyE7ZPS5Uz33VnRRn
+[2025-10-26T21:15:02.402Z] Resolution: YES won (Start: $113408.99, Settle: $113409.08)
+[2025-10-26T21:15:02.402Z] 
+=== AUTO-REDEEMING ALL POSITIONS ===
+[2025-10-26T21:15:02.402Z] Scanning for active positions...
+[INFO] Found 3 positions with shares
+[2025-10-26T21:15:02.415Z] Redeeming for 6TR36fyP... (UP: 410.00, DOWN: 0.00)
+[SUCCESS]   ✓ Redeemed: 3oSuNHkDuwr4fcmD...
+[2025-10-26T21:15:03.251Z] Redeeming for FAbxCF2x... (UP: 200.00, DOWN: 0.00)
+[SUCCESS]   ✓ Redeemed: 5jVw3oFmQmKyRaCH...
+[2025-10-26T21:15:04.035Z] Redeeming for 3TG2xMmY... (UP: 100.00, DOWN: 0.00)
+[SUCCESS]   ✓ Redeemed: KUDhoqqZecVGydTM...
+[2025-10-26T21:15:04.736Z] 
+=== AUTO-REDEEM COMPLETE ===
+[SUCCESS] 3 positions redeemed
+[SUCCESS] ✓ First cycle complete! Starting continuous cycles...
+
+[2025-10-26T21:15:05.737Z] 
+=== STARTING NEW MARKET CYCLE ===
+[2025-10-26T21:15:05.737Z] Cycle start: 21:15:05
+[2025-10-26T21:15:05.737Z] Pre-market ends (snapshot): 21:20:05
+[2025-10-26T21:15:05.737Z] Market will close at: 21:25:05
+[2025-10-26T21:15:05.737Z] Next cycle starts at: 21:25:05
+[2025-10-26T21:15:05.738Z] Closing existing market...
+[SUCCESS] Market closed: N5jtvxn522nmb3B4kHnrnmdDTRSset4x2TxLgtqJBgnhhejnHJDdGbdPJ3VQMK3x9tmECo1a6ZwvBjZSqUznrYd
+[2025-10-26T21:15:08.079Z] Initializing new market...
+[SUCCESS] Market initialized: RJkk1akvVKpSsyzyYcmcmZkN3VEtTg8mndipWGSxemUqQ51oyD1i7r8QkgEdu82aWtnJfnU88BwLJCyJDjbCECQ
+[SUCCESS] ✓ PRE-MARKET BETTING NOW OPEN!
+[INFO] Pre-market phase: 5m 0s until snapshot
+[INFO] Pre-market open - 4m 55s until snapshot
+[INFO] Pre-market open - 4m 45s until snapshot
+[INFO] Pre-market open - 4m 35s until snapshot
+[INFO] Pre-market open - 4m 25s until snapshot
+[INFO] Pre-market open - 4m 15s until snapshot
+[INFO] Pre-market open - 4m 5s until snapshot
+[INFO] Pre-market open - 3m 55s until snapshot
+[INFO] Pre-market open - 3m 45s until snapshot
+[INFO] Pre-market open - 3m 35s until snapshot
+[INFO] Pre-market open - 3m 25s until snapshot
+[INFO] Pre-market open - 3m 15s until snapshot
+[INFO] Pre-market open - 3m 5s until snapshot
+[INFO] Pre-market open - 2m 55s until snapshot
+[INFO] Pre-market open - 2m 45s until snapshot
+[INFO] Pre-market open - 2m 35s until snapshot
+[INFO] Pre-market open - 2m 25s until snapshot
+[INFO] Pre-market open - 2m 15s until snapshot
+[INFO] Pre-market open - 2m 5s until snapshot
+[INFO] Pre-market open - 1m 55s until snapshot
+[INFO] Pre-market open - 1m 45s until snapshot
+[INFO] Pre-market open - 1m 35s until snapshot
+[INFO] Pre-market open - 1m 25s until snapshot
+[INFO] Pre-market open - 1m 15s until snapshot
+[INFO] Pre-market open - 1m 5s until snapshot
+[INFO] Pre-market open - 0m 55s until snapshot
+[INFO] Pre-market open - 0m 45s until snapshot
+[INFO] Pre-market open - 0m 35s until snapshot
+[INFO] Pre-market open - 0m 25s until snapshot
+[INFO] Pre-market open - 0m 15s until snapshot
+[INFO] Pre-market open - 0m 5s until snapshot
+[2025-10-26T21:20:05.742Z] 
+=== TAKING SNAPSHOT ===
+[2025-10-26T21:20:05.743Z] Taking oracle snapshot...
+[SUCCESS] Snapshot taken: 4NoGrdeYEEYaFbEWK9yaqYRnXKVCZ4deWFH9QfBXxmdWvQ9vtH1Yh6W1kTgsr6jscrsedSrH3JyTQXNvgpRn4wu
+[SUCCESS] ✓ Snapshot taken! Market continues ACTIVE for trading!
+[INFO] Market active (post-snapshot) - 4m 59s remaining
+[INFO] Market active (post-snapshot) - 4m 49s remaining
+[INFO] Market active (post-snapshot) - 4m 39s remaining
+[INFO] Market active (post-snapshot) - 4m 29s remaining
+[INFO] Market active (post-snapshot) - 4m 19s remaining
+[INFO] Market active (post-snapshot) - 4m 9s remaining
+[INFO] Market active (post-snapshot) - 3m 59s remaining
+[INFO] Market active (post-snapshot) - 3m 49s remaining
+[INFO] Market active (post-snapshot) - 3m 39s remaining
+[INFO] Market active (post-snapshot) - 3m 29s remaining
+[INFO] Market active (post-snapshot) - 3m 19s remaining
+[INFO] Market active (post-snapshot) - 3m 9s remaining
+[INFO] Market active (post-snapshot) - 2m 59s remaining
+[INFO] Market active (post-snapshot) - 2m 49s remaining
+[INFO] Market active (post-snapshot) - 2m 39s remaining
+[INFO] Market active (post-snapshot) - 2m 29s remaining
+[INFO] Market active (post-snapshot) - 2m 19s remaining
+[INFO] Market active (post-snapshot) - 2m 9s remaining
+[INFO] Market active (post-snapshot) - 1m 59s remaining
+[INFO] Market active (post-snapshot) - 1m 49s remaining
+[INFO] Market active (post-snapshot) - 1m 39s remaining
+[INFO] Market active (post-snapshot) - 1m 29s remaining
+[INFO] Market active (post-snapshot) - 1m 19s remaining
+[INFO] Market active (post-snapshot) - 1m 9s remaining
+[INFO] Market active (post-snapshot) - 0m 59s remaining
+[INFO] Market active (post-snapshot) - 0m 49s remaining
+[INFO] Market active (post-snapshot) - 0m 39s remaining
+[INFO] Market active (post-snapshot) - 0m 29s remaining
+[INFO] Market active (post-snapshot) - 0m 19s remaining
+[INFO] Market active (post-snapshot) - 0m 9s remaining
+[2025-10-26T21:25:05.746Z] 
+=== CLOSING MARKET ===
+[2025-10-26T21:25:05.747Z] Stopping market...
+[SUCCESS] Market stopped: 4h7RL8rc4zR7EjMRNATBfc4M5QfhQKnia2jVJsaYsmHTM9i5zeAPv1X7BnEniEsipDZ1n5fX37BvVWjoWjsj5g5g
+[2025-10-26T21:25:07.610Z] Settling market by oracle...
+[SUCCESS] Market settled: 4Enr7MifX7n7SRBB5NvW1vCRbGseAzACsHwyuBa1x1LmkzWbMve8tmoq6jsp74M3hKK4BG7LSxQhLvEBJ7gu5nic
+[SUCCESS] ✓ Market settled! Entering waiting period...
+[2025-10-26T21:25:08.863Z] Resolution: YES won (Start: $113372.08, Settle: $113330.36)
+[2025-10-26T21:25:08.863Z] 
+=== AUTO-REDEEMING ALL POSITIONS ===
+[2025-10-26T21:25:08.863Z] Scanning for active positions...
+[INFO] Found 1 positions with shares
+[2025-10-26T21:25:08.874Z] Redeeming for 3TG2xMmY... (UP: 100.00, DOWN: 0.00)
+[SUCCESS]   ✓ Redeemed: 3RAcaG7NjCNN64gq...
+[2025-10-26T21:25:09.764Z] 
+=== AUTO-REDEEM COMPLETE ===
+[SUCCESS] 1 positions redeemed
+[SUCCESS] ✓ Cycle complete! Next cycle will start immediately with new pre-market.
+[2025-10-26T21:25:10.765Z] 
+=== STARTING NEW MARKET CYCLE ===
+[2025-10-26T21:25:10.766Z] Cycle start: 21:25:10
+[2025-10-26T21:25:10.766Z] Pre-market ends (snapshot): 21:30:10
+[2025-10-26T21:25:10.766Z] Market will close at: 21:35:10
+[2025-10-26T21:25:10.766Z] Next cycle starts at: 21:35:10
+[2025-10-26T21:25:10.767Z] Closing existing market...
+[SUCCESS] Market closed: 5foVfwAi8o83ygzWk2MoHbbY9hE7wZGwr3C8Yvw3qzRZfsx9KRgfavah7Y1kF2PzaxxJnKKWvJgnUNjphB6NN8pn
+[2025-10-26T21:25:13.104Z] Initializing new market...
+[SUCCESS] Market initialized: 2U8H46QknTRso4Q5CakQr1efBZvpaDoDHGRypfRu1RuP6u8hXs9a46qHhMLc6ipfpKovs699oVtWy8pF5ubntczq
+[SUCCESS] ✓ PRE-MARKET BETTING NOW OPEN!
+[INFO] Pre-market phase: 5m 0s until snapshot
+[INFO] Pre-market open - 4m 55s until snapshot
+[INFO] Pre-market open - 4m 45s until snapshot
+[INFO] Pre-market open - 4m 35s until snapshot
+[INFO] Pre-market open - 4m 25s until snapshot
+[INFO] Pre-market open - 4m 15s until snapshot
+[INFO] Pre-market open - 4m 5s until snapshot
+[INFO] Pre-market open - 3m 55s until snapshot
+[INFO] Pre-market open - 3m 45s until snapshot
+[INFO] Pre-market open - 3m 35s until snapshot
+[INFO] Pre-market open - 3m 25s until snapshot
+[INFO] Pre-market open - 3m 15s until snapshot
+[INFO] Pre-market open - 3m 5s until snapshot
+[INFO] Pre-market open - 2m 55s until snapshot
+[INFO] Pre-market open - 2m 45s until snapshot
+[INFO] Pre-market open - 2m 35s until snapshot
+[INFO] Pre-market open - 2m 25s until snapshot
+[INFO] Pre-market open - 2m 15s until snapshot
+[INFO] Pre-market open - 2m 5s until snapshot
+[INFO] Pre-market open - 1m 55s until snapshot
+[INFO] Pre-market open - 1m 45s until snapshot
+[INFO] Pre-market open - 1m 35s until snapshot
+[INFO] Pre-market open - 1m 25s until snapshot
+[INFO] Pre-market open - 1m 15s until snapshot
+[INFO] Pre-market open - 1m 5s until snapshot
+[INFO] Pre-market open - 0m 55s until snapshot
+[INFO] Pre-market open - 0m 45s until snapshot
+[INFO] Pre-market open - 0m 35s until snapshot
+[INFO] Pre-market open - 0m 25s until snapshot
+[INFO] Pre-market open - 0m 15s until snapshot
+[INFO] Pre-market open - 0m 5s until snapshot
+[2025-10-26T21:30:10.771Z] 
+=== TAKING SNAPSHOT ===
+[2025-10-26T21:30:10.771Z] Taking oracle snapshot...
+[SUCCESS] Snapshot taken: 4vPXrmPnYKvQUPB8qfKLGYAeQ9683UDZU38u8GmoQw8k3KKT97Ru4iPeYNT7ZTtDXMKQruuTxXLnbuo7ANfxZL2v
+[SUCCESS] ✓ Snapshot taken! Market continues ACTIVE for trading!
+[INFO] Market active (post-snapshot) - 4m 59s remaining

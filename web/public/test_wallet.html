@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wallet Test</title>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        #output {
+            white-space: pre-wrap;
+            background: #111;
+            padding: 10px;
+            margin-top: 20px;
+            border: 1px solid #0f0;
+        }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .info { color: #ff0; }
+    </style>
+</head>
+<body>
+    <h1>Wallet Connection Test</h1>
+    <button onclick="testConnect()">Connect Backpack</button>
+    <div id="output"></div>
+
+    <script>
+        let wallet = null;
+        let backpackWallet = null;
+
+        function log(msg, type = 'info') {
+            const output = document.getElementById('output');
+            const line = document.createElement('div');
+            line.className = type;
+            line.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+            output.appendChild(line);
+            console.log(msg);
+        }
+
+        async function deriveSessionWalletFromBackpack(backpackWallet) {
+            const message = new TextEncoder().encode('x1-markets-deterministic-session-wallet-v1');
+
+            try {
+                log('Requesting signature to derive session wallet...', 'info');
+                const signature = await backpackWallet.signMessage(message);
+                log('Got signature: ' + signature.length + ' bytes', 'success');
+                log('Signature (hex): ' + Array.from(signature.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(''), 'info');
+
+                const seed = signature.slice(0, 32);
+                log('Using first 32 bytes as seed', 'info');
+
+                const keypair = solanaWeb3.Keypair.fromSeed(seed);
+                log('Keypair created!', 'success');
+                log('Session wallet pubkey: ' + keypair.publicKey.toString(), 'success');
+
+                return keypair;
+            } catch (err) {
+                log('Error: ' + err.message, 'error');
+                console.error('Failed to derive session wallet:', err);
+                throw err;
+            }
+        }
+
+        async function testConnect() {
+            try {
+                log('=== Starting connection test ===', 'info');
+
+                if (!window.backpack) {
+                    log('ERROR: Backpack wallet not found!', 'error');
+                    return;
+                }
+
+                log('Connecting to Backpack...', 'info');
+                await window.backpack.connect();
+                backpackWallet = window.backpack;
+
+                const backpackAddress = backpackWallet.publicKey.toString();
+                log('Backpack connected: ' + backpackAddress, 'success');
+
+                log('Deriving session wallet...', 'info');
+                wallet = await deriveSessionWalletFromBackpack(backpackWallet);
+
+                if (wallet) {
+                    const sessionAddr = wallet.publicKey.toString();
+                    log('SUCCESS! Session wallet: ' + sessionAddr, 'success');
+                    log('Short form: ' + sessionAddr.substring(0, 12) + '...', 'info');
+                } else {
+                    log('ERROR: wallet is null after derivation!', 'error');
+                }
+
+            } catch (err) {
+                log('Connection failed: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>
