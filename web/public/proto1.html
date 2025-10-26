@@ -109,6 +109,20 @@
                         <div class="stat-sub">BTC Snapshot</div>
                     </div>
                 </div>
+
+                <!-- Global Trade History -->
+                <div class="trade-history-section">
+                    <div class="history-header">
+                        <span class="history-title">Live Trades</span>
+                        <span class="history-count" id="tradeCount">0 trades</span>
+                    </div>
+                    <div class="trade-feed" id="tradeFeed">
+                        <div class="trade-feed-empty">
+                            <span class="empty-icon">📊</span>
+                            <span class="empty-text">Waiting for trades...</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Right: Trading + Position -->
@@ -350,6 +364,117 @@
             document.getElementById('sharesSlider').value = shares;
             updateFromInput();
         };
+
+        // Trade History Management
+        const MAX_TRADES = 20;
+        let tradeHistory = [];
+
+        function addTradeToHistory(trade) {
+            // Remove empty state if present
+            const tradeFeed = document.getElementById('tradeFeed');
+            const emptyState = tradeFeed.querySelector('.trade-feed-empty');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            // Add to history array
+            tradeHistory.unshift(trade);
+            if (tradeHistory.length > MAX_TRADES) {
+                tradeHistory.pop();
+            }
+
+            // Create trade item
+            const tradeItem = document.createElement('div');
+            tradeItem.className = 'trade-item';
+
+            // Determine trade class
+            const action = trade.action.toLowerCase(); // 'buy' or 'sell'
+            const side = trade.side.toLowerCase(); // 'yes' or 'no'
+            const sideDisplay = side === 'yes' ? 'UP' : 'DOWN';
+            const tradeClass = `${action}-${side === 'yes' ? 'up' : 'down'}`;
+
+            // Format user address (first 4 + last 4)
+            const userAddr = trade.user || 'Unknown';
+            const shortAddr = userAddr.length > 8 ?
+                userAddr.slice(0, 4) + '...' + userAddr.slice(-4) : userAddr;
+
+            // Format time
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            tradeItem.innerHTML = `
+                <div class="trade-side ${tradeClass}">
+                    ${action.toUpperCase()}<br>${sideDisplay}
+                </div>
+                <div class="trade-info">
+                    <div class="trade-action">${trade.shares} shares @ ${trade.price} XNT</div>
+                    <div class="trade-user">${shortAddr}</div>
+                </div>
+                <div class="trade-meta">
+                    <div class="trade-amount">${trade.cost} XNT</div>
+                    <div class="trade-time">${timeStr}</div>
+                </div>
+            `;
+
+            // Add to feed (prepend for newest first)
+            tradeFeed.insertBefore(tradeItem, tradeFeed.firstChild);
+
+            // Remove oldest if too many
+            const items = tradeFeed.querySelectorAll('.trade-item');
+            if (items.length > MAX_TRADES) {
+                items[items.length - 1].remove();
+            }
+
+            // Update count
+            document.getElementById('tradeCount').textContent = `${tradeHistory.length} trade${tradeHistory.length !== 1 ? 's' : ''}`;
+        }
+
+        // Hook into trade execution
+        // Wait for app.js to load, then wrap executeTrade
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const originalExecuteTrade = window.executeTrade;
+                window.executeTrade = async function() {
+                    // Call original function
+                    if (originalExecuteTrade) {
+                        const result = await originalExecuteTrade();
+
+                        // Extract trade info from UI state
+                        try {
+                            const action = document.getElementById('buyTab').classList.contains('active') ? 'BUY' : 'SELL';
+                            const side = document.getElementById('yesBtn').classList.contains('active') ? 'YES' : 'NO';
+                            const shares = parseFloat(document.getElementById('tradeAmountShares').value || 0).toFixed(2);
+                            const costText = document.getElementById('tradeCost').textContent;
+                            const cost = costText.replace(/[^0-9.]/g, '');
+                            const price = (parseFloat(cost) / parseFloat(shares)).toFixed(2);
+
+                            // Get user address if available
+                            let userAddr = 'You';
+                            if (window.wallet && window.wallet.publicKey) {
+                                userAddr = window.wallet.publicKey.toString();
+                            }
+
+                            addTradeToHistory({
+                                action: action,
+                                side: side,
+                                shares: shares,
+                                price: price,
+                                cost: parseFloat(cost).toFixed(2),
+                                user: userAddr
+                            });
+                        } catch (e) {
+                            console.log('Could not add trade to history:', e);
+                        }
+
+                        return result;
+                    }
+                };
+            }, 1000); // Wait for app.js to fully load
+        });
     </script>
 </body>
 </html>
