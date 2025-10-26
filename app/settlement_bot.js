@@ -198,6 +198,8 @@ async function settleMarket(conn, kp, ammPda) {
 async function findAllPositions(conn, ammPda) {
   log("Scanning for active positions...");
 
+  const POS_SEED = Buffer.from("pos");
+
   // Get all program accounts for our program that match Position size
   const accounts = await conn.getProgramAccounts(PID, {
     filters: [
@@ -225,8 +227,16 @@ async function findAllPositions(conn, ammPda) {
       const yesShares = Number(data.readBigInt64LE(offset)); offset += 8;
       const noShares = Number(data.readBigInt64LE(offset));
 
-      // Only include positions with actual shares
-      if (yesShares > 0 || noShares > 0) {
+      // Verify this position belongs to the current AMM by checking PDA derivation
+      const [expectedPda] = PublicKey.findProgramAddressSync(
+        [POS_SEED, ammPda.toBuffer(), owner.toBuffer()],
+        PID
+      );
+
+      // Only include if:
+      // 1. Has shares
+      // 2. PDA matches current AMM (not from old markets)
+      if ((yesShares > 0 || noShares > 0) && expectedPda.equals(pubkey)) {
         positions.push({
           pubkey,
           owner,
