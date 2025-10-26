@@ -264,14 +264,20 @@ function setupBackpackAccountListener() {
 }
 
 async function connectBackpack() {
+    console.log('[connectBackpack] Button clicked!');
     try {
+        console.log('[connectBackpack] Checking for window.backpack...');
+        console.log('[connectBackpack] window.backpack exists?', !!window.backpack);
+
         if (!window.backpack) {
+            console.error('[connectBackpack] Backpack wallet not found in window object');
             addLog('ERROR: Backpack wallet not found!', 'error');
-            showError('Backpack wallet not found! Install from backpack.app');
-            window.open('https://backpack.app/', '_blank');
+            addLog('Please open this page in the Backpack mobile browser', 'info');
+            showError('Backpack wallet not found! Please open in Backpack browser');
             return;
         }
 
+        console.log('[connectBackpack] Backpack detected, attempting to connect...');
         addLog('Connecting to Backpack wallet...', 'info');
         showStatus('Connecting to Backpack...');
 
