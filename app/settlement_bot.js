@@ -22,9 +22,10 @@ const AMM_SEED = Buffer.from("amm_btc_v3");
 const VAULT_SOL_SEED = Buffer.from("vault_sol");
 
 // === TIMING CONSTANTS ===
-const CYCLE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
-const ACTIVE_DURATION_MS = 5 * 60 * 1000; // 5 minutes active trading
-const WAIT_DURATION_MS = 5 * 60 * 1000;   // 5 minutes waiting
+const CYCLE_DURATION_MS = 10 * 60 * 1000;  // 10 minutes total
+const PREMARKET_DURATION_MS = 2 * 60 * 1000; // 2 minutes pre-market betting
+const ACTIVE_DURATION_MS = 3 * 60 * 1000;  // 3 minutes active (after snapshot)
+const WAIT_DURATION_MS = 5 * 60 * 1000;    // 5 minutes waiting
 
 // === STATUS FILE ===
 const STATUS_FILE = "./market_status.json";
@@ -429,11 +430,13 @@ function formatCountdown(ms) {
 /* ---------------- Main Cycle Loop ---------------- */
 async function runCycle(conn, kp, ammPda, vaultPda) {
   const cycleStartTime = Date.now();
-  const marketEndTime = cycleStartTime + ACTIVE_DURATION_MS;
+  const snapshotTime = cycleStartTime + PREMARKET_DURATION_MS;
+  const marketEndTime = snapshotTime + ACTIVE_DURATION_MS;
   const nextCycleStartTime = cycleStartTime + CYCLE_DURATION_MS;
 
   log(C.bold("\n=== STARTING NEW MARKET CYCLE ==="));
   log(`Cycle start: ${formatTime(new Date(cycleStartTime))}`);
+  log(`Pre-market ends (snapshot): ${formatTime(new Date(snapshotTime))}`);
   log(`Market will close at: ${formatTime(new Date(marketEndTime))}`);
   log(`Next cycle starts at: ${formatTime(new Date(nextCycleStartTime))}`);
 
@@ -449,33 +452,67 @@ async function runCycle(conn, kp, ammPda, vaultPda) {
     await initMarket(conn, kp, ammPda, vaultPda);
     await new Promise(r => setTimeout(r, 1500));
 
-    // Step 3: Take snapshot
+    logSuccess(C.bold("✓ PRE-MARKET BETTING NOW OPEN!"));
+    logInfo(`Users can trade before snapshot for ${formatCountdown(PREMARKET_DURATION_MS)}`);
+
+    // Step 3: Pre-market phase - trading allowed WITHOUT snapshot
+    writeStatus({
+      state: "PREMARKET",
+      cycleStartTime,
+      snapshotTime,
+      marketEndTime,
+      nextCycleStartTime,
+      lastUpdate: Date.now()
+    });
+
+    const premarketWaitStart = Date.now();
+    while (Date.now() < snapshotTime) {
+      const remaining = snapshotTime - Date.now();
+      if (remaining > 0) {
+        logInfo(`Pre-market open - ${formatCountdown(remaining)} until snapshot`);
+        writeStatus({
+          state: "PREMARKET",
+          cycleStartTime,
+          snapshotTime,
+          marketEndTime,
+          nextCycleStartTime,
+          timeRemaining: remaining,
+          lastUpdate: Date.now()
+        });
+        await new Promise(r => setTimeout(r, Math.min(10000, remaining)));
+      }
+    }
+
+    // Step 4: Take snapshot (market stays open)
+    log(C.bold("\n=== TAKING SNAPSHOT ==="));
     const snapshotSuccess = await snapshotStart(conn, kp, ammPda);
     if (!snapshotSuccess) {
       logError("Failed to take snapshot - aborting cycle");
       return;
     }
 
-    logSuccess(C.bold("✓ Market is now ACTIVE for trading!"));
+    logSuccess(C.bold("✓ Snapshot taken! Market continues ACTIVE for trading!"));
 
-    // Update status: ACTIVE
+    // Update status: ACTIVE (post-snapshot)
     writeStatus({
       state: "ACTIVE",
       cycleStartTime,
+      snapshotTime,
       marketEndTime,
       nextCycleStartTime,
       lastUpdate: Date.now()
     });
 
-    // Step 4: Wait for active period, updating status regularly
+    // Step 5: Continue active trading period, updating status regularly
     const activeWaitStart = Date.now();
     while (Date.now() < marketEndTime) {
       const remaining = marketEndTime - Date.now();
       if (remaining > 0) {
-        logInfo(`Market active - ${formatCountdown(remaining)} remaining`);
+        logInfo(`Market active (post-snapshot) - ${formatCountdown(remaining)} remaining`);
         writeStatus({
           state: "ACTIVE",
           cycleStartTime,
+          snapshotTime,
           marketEndTime,
           nextCycleStartTime,
           timeRemaining: remaining,
@@ -485,7 +522,7 @@ async function runCycle(conn, kp, ammPda, vaultPda) {
       }
     }
 
-    // Step 5: Stop and settle market
+    // Step 6: Stop and settle market
     log(C.bold("\n=== CLOSING MARKET ==="));
     await stopMarket(conn, kp, ammPda);
     await new Promise(r => setTimeout(r, 1500));

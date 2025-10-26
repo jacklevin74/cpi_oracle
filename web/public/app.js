@@ -2347,12 +2347,37 @@ function updateCycleDisplay(status) {
     currentTimeEl.textContent = currentTimeStr;
 
     // Remove all state classes
-    stateEl.classList.remove('active', 'waiting', 'error');
+    stateEl.classList.remove('active', 'waiting', 'error', 'premarket');
 
     // Update winner banner
     updateWinnerBanner(status);
 
-    if (status.state === 'ACTIVE') {
+    if (status.state === 'PREMARKET') {
+        stateEl.textContent = 'PRE-MARKET';
+        stateEl.classList.add('premarket');
+
+        // Show that snapshot hasn't been taken yet
+        if (document.getElementById('snapshotLabel')) {
+            document.getElementById('snapshotLabel').textContent = 'SNAPSHOT PENDING';
+        }
+        if (document.getElementById('oracleSnapshotPrice')) {
+            document.getElementById('oracleSnapshotPrice').textContent = 'Not yet taken';
+            document.getElementById('oracleSnapshotPrice').style.color = '#ff8c00'; // Orange
+        }
+
+        // Show when snapshot will be taken
+        if (status.snapshotTime) {
+            const snapshotTime = new Date(status.snapshotTime);
+            const snapshotTimeStr = snapshotTime.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            nextMarketTimeEl.textContent = `Snapshot: ${snapshotTimeStr}`;
+        } else {
+            nextMarketTimeEl.textContent = 'Pre-market betting';
+        }
+    } else if (status.state === 'ACTIVE') {
         stateEl.textContent = 'MARKET ACTIVE';
         stateEl.classList.add('active');
 

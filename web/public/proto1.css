@@ -247,6 +247,18 @@ body {
     letter-spacing: 0.5px;
 }
 
+.cycle-status.premarket {
+    color: var(--orange);
+}
+
+.cycle-status.waiting {
+    color: var(--text-secondary);
+}
+
+.cycle-status.error {
+    color: var(--red);
+}
+
 .cycle-times {
     display: flex;
     align-items: center;
