@@ -8,6 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer"></div>
+
     <div class="trading-platform">
         <!-- Top Navigation -->
         <nav class="top-nav">
@@ -20,6 +23,10 @@
                     <span class="ticker-label">BTC</span>
                     <span class="ticker-price" id="tickerPrice">$--</span>
                     <div class="market-status-badge" id="marketStatusBadge">OPEN</div>
+                    <div class="ws-status" id="wsStatus" title="Live Trade Feed">
+                        <span class="ws-dot"></span>
+                        <span class="ws-label">Feed</span>
+                    </div>
                 </div>
             </div>
             <div class="nav-right">
@@ -367,9 +374,36 @@
 
         // Trade History Management
         const MAX_TRADES = 20;
+        const TRADE_HISTORY_KEY = 'proto1_trade_history';
         let tradeHistory = [];
 
-        function addTradeToHistory(trade) {
+        // Load trade history from localStorage
+        function loadTradeHistory() {
+            try {
+                const saved = localStorage.getItem(TRADE_HISTORY_KEY);
+                if (saved) {
+                    const loaded = JSON.parse(saved);
+                    console.log(`💾 Restored ${loaded.length} trades from localStorage`);
+                    // Render each trade (in reverse to maintain order)
+                    loaded.reverse().forEach(trade => {
+                        addTradeToHistory(trade, false); // Don't save back to localStorage
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load trade history:', err);
+            }
+        }
+
+        // Save trade history to localStorage
+        function saveTradeHistory() {
+            try {
+                localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(tradeHistory));
+            } catch (err) {
+                console.error('Failed to save trade history:', err);
+            }
+        }
+
+        function addTradeToHistory(trade, shouldSave = true) {
             // Remove empty state if present
             const tradeFeed = document.getElementById('tradeFeed');
             const emptyState = tradeFeed.querySelector('.trade-feed-empty');
@@ -381,6 +415,11 @@
             tradeHistory.unshift(trade);
             if (tradeHistory.length > MAX_TRADES) {
                 tradeHistory.pop();
+            }
+
+            // Save to localStorage
+            if (shouldSave) {
+                saveTradeHistory();
             }
 
             // Create trade item
@@ -479,14 +518,23 @@
         // ============= WEBSOCKET TRADE MONITOR =============
         let tradeSocket = null;
 
+        function updateWsStatus(status) {
+            const wsStatus = document.getElementById('wsStatus');
+            if (wsStatus) {
+                wsStatus.className = `ws-status ${status}`;
+            }
+        }
+
         function connectTradeMonitor() {
             const wsUrl = `ws://${window.location.hostname}:3435`;
             console.log('Connecting to trade monitor:', wsUrl);
+            updateWsStatus('connecting');
 
             tradeSocket = new WebSocket(wsUrl);
 
             tradeSocket.onopen = () => {
                 console.log('✅ Connected to live trade feed');
+                updateWsStatus('connected');
             };
 
             tradeSocket.onmessage = (event) => {
@@ -494,23 +542,27 @@
                     const data = JSON.parse(event.data);
 
                     if (data.type === 'history') {
-                        // Load historical trades
-                        console.log(`Loaded ${data.trades.length} historical trades`);
-                        data.trades.forEach(trade => {
-                            addTradeToHistory({
-                                action: trade.action,
-                                side: trade.side,
-                                shares: trade.shares,
-                                price: trade.avgPrice,
-                                cost: trade.amount,
-                                user: 'Global', // Mark as global trade
-                                timestamp: trade.timestamp
+                        // Load historical trades from server (only if we don't have localStorage data)
+                        if (tradeHistory.length === 0) {
+                            console.log(`📜 Loaded ${data.trades.length} historical trades from server`);
+                            data.trades.forEach(trade => {
+                                addTradeToHistory({
+                                    action: trade.action,
+                                    side: trade.side,
+                                    shares: trade.shares,
+                                    price: trade.avgPrice,
+                                    cost: trade.amount,
+                                    user: 'Global', // Mark as global trade
+                                    timestamp: trade.timestamp
+                                }, true); // Save to localStorage
                             });
-                        });
+                        } else {
+                            console.log(`📜 Skipping server history (already have ${tradeHistory.length} trades from cache)`);
+                        }
                     } else if (data.type === 'trade') {
                         // New trade from ANY user
                         const trade = data.trade;
-                        console.log(`📊 New trade: ${trade.action} ${trade.side} - ${trade.shares} shares`);
+                        console.log(`📊 NEW TRADE: ${trade.action} ${trade.side} - ${trade.shares} shares @ ${trade.avgPrice}`);
 
                         addTradeToHistory({
                             action: trade.action,
@@ -520,7 +572,7 @@
                             cost: trade.amount,
                             user: 'User', // Could enhance to show actual user address
                             timestamp: trade.timestamp
-                        });
+                        }, true); // Save to localStorage
                     }
                 } catch (err) {
                     console.error('Failed to parse trade message:', err);
@@ -529,16 +581,22 @@
 
             tradeSocket.onerror = (error) => {
                 console.error('❌ Trade feed error:', error);
+                updateWsStatus('disconnected');
             };
 
             tradeSocket.onclose = () => {
                 console.log('Trade feed disconnected. Reconnecting in 5s...');
+                updateWsStatus('disconnected');
                 setTimeout(connectTradeMonitor, 5000);
             };
         }
 
         // Start trade monitor on page load
         window.addEventListener('load', () => {
+            // Load cached trades immediately (instant restore)
+            loadTradeHistory();
+
+            // Then connect to WebSocket for live updates
             setTimeout(connectTradeMonitor, 2000); // Wait for page to settle
         });
     </script>

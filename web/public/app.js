@@ -1356,6 +1356,36 @@ async function createDiscriminator(name) {
     return hashArray.slice(0, 8);
 }
 
+// ============= TOAST NOTIFICATIONS =============
+function showToast(type, title, message) {
+    const container = document.getElementById('toastContainer');
+    if (!container) {
+        console.error('Toast container not found');
+        return;
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    toast.innerHTML = `
+        <div class="toast-header">
+            <span class="toast-icon">${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ⓘ'}</span>
+            <span class="toast-title">${title}</span>
+        </div>
+        <div class="toast-message">${message}</div>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => {
+            container.removeChild(toast);
+        }, 300);
+    }, 4000);
+}
+
 async function executeTrade() {
     // Check if market is open
     if (currentMarketStatus !== 0) {
@@ -1506,6 +1536,13 @@ async function executeTrade() {
         addLog(`Trade SUCCESS: ${tradeDesc}`, 'success');
         showStatus('Trade success: ' + signature.substring(0, 16) + '...');
 
+        // Show toast notification
+        const actionText = action.toUpperCase();
+        const sideText = side === 'yes' ? 'UP' : 'DOWN';
+        const toastTitle = `${actionText} ${sideText} Success`;
+        const toastMessage = `${numShares.toFixed(2)} shares @ $${sharePrice.toFixed(4)}`;
+        showToast('success', toastTitle, toastMessage);
+
         // Update last trade info
         updateLastTradeInfo(action, side, numShares, estimatedCost);
 
@@ -1537,6 +1574,12 @@ async function executeTrade() {
     } catch (err) {
         addLog('Trade FAILED: ' + err.message, 'error');
         showError('Trade failed: ' + err.message);
+
+        // Show error toast
+        const actionText = currentAction ? currentAction.toUpperCase() : 'TRADE';
+        const sideText = currentSide === 'yes' ? 'UP' : 'DOWN';
+        showToast('error', `${actionText} ${sideText} Failed`, err.message.substring(0, 60));
+
         console.error(err);
     }
 }

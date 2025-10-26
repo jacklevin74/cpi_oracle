@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            font-family: monospace;
+            padding: 20px;
+        }
+        #log {
+            background: #1a1a1a;
+            padding: 15px;
+            border: 1px solid #333;
+            height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: #3fb68b; }
+        .error { color: #ff5353; }
+        .info { color: #888; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <p>Testing connection to trade monitor on port 3435</p>
+    <div id="log"></div>
+
+    <script>
+        const log = document.getElementById('log');
+
+        function addLog(msg, type = 'info') {
+            const line = document.createElement('div');
+            line.className = type;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        const wsUrl = `ws://${window.location.hostname}:3435`;
+        addLog(`Attempting connection to: ${wsUrl}`);
+        addLog(`window.location.hostname = ${window.location.hostname}`);
+
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            addLog('✅ WebSocket CONNECTED!', 'success');
+        };
+
+        ws.onmessage = (event) => {
+            addLog(`📨 Received: ${event.data.substring(0, 100)}...`, 'info');
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'history') {
+                    addLog(`📜 History: ${data.trades.length} trades`, 'success');
+                } else if (data.type === 'trade') {
+                    addLog(`📊 Trade: ${data.trade.action} ${data.trade.side} - ${data.trade.shares} shares`, 'success');
+                }
+            } catch (e) {
+                addLog(`Parse error: ${e.message}`, 'error');
+            }
+        };
+
+        ws.onerror = (error) => {
+            addLog(`❌ WebSocket ERROR: ${error}`, 'error');
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = () => {
+            addLog('WebSocket connection closed', 'error');
+        };
+    </script>
+</body>
+</html>
