@@ -1,69 +1,36 @@
 Loaded 100 historical trades
-Loaded 25 chat messages
+Loaded 30 chat messages
 Monitoring trades on program: EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF
 WebSocket server running on port 3435
 Subscription ID: 0
-Client connected to trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client connected to trade feed
-[CHAT] Anon: boo
-Client connected to trade feed
-[CHAT] Anon: Yow
-[CHAT] Anon: Hello world
-[CHAT] Anon: Up or down ?
-6TR36 BUY YES: 10.00 shares @ 0.7149 XNT
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3435
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.liClient connected to trade feed
 Client disconnected from trade feed
 Client connected to trade feed
 Client disconnected from trade feed
 Client connected to trade feed
 Client disconnected from trade feed
 Client connected to trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-3TG2x BUY YES: 10.00 shares @ 0.5250 XNT
-[CHAT] Anon: wen xen?
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client disconnected from trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
-Client disconnected from trade feed
-Client connected to trade feed
+pile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:508:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '::',
+  port: 3435
+}
+
+Node.js v24.9.0
