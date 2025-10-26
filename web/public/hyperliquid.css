@@ -268,7 +268,7 @@ body {
     transform: translate(-50%, -50%);
     z-index: 10;
     pointer-events: none;
-    display: flex;
+    display: none;
     align-items: center;
     gap: 12px;
     padding: 16px 24px;
@@ -277,6 +277,10 @@ body {
     backdrop-filter: blur(10px);
     border: 1px solid var(--border-color);
     transition: all 0.3s ease;
+}
+
+.price-arrow-indicator.visible {
+    display: flex !important;
 }
 
 .price-arrow-indicator.up {
