@@ -191,6 +191,27 @@
                     <button class="btn-redeem" id="btnRedeem" onclick="redeemWinnings()" disabled>REDEEM</button>
                 </div>
 
+                <!-- Wallet Info -->
+                <div class="wallet-panel" id="walletPanel">
+                    <div class="panel-header">WALLET</div>
+                    <div class="wallet-address-section">
+                        <div class="wallet-label">DEPOSIT ADDRESS</div>
+                        <div class="wallet-address-display" id="walletAddressDisplay">
+                            <span id="walletAddressFull">Connect wallet to view address</span>
+                            <button class="btn-copy" id="btnCopyAddress" onclick="copyWalletAddress()" style="display: none;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="wallet-balance-info">
+                            <span class="wallet-balance-label">Balance:</span>
+                            <span class="wallet-balance-amount" id="walletBalanceDisplay">0.00 XNT</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Activity Log (Hidden for minimal UI) -->
                 <div id="logContent" style="display: none;"></div>
 
@@ -223,5 +244,39 @@
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script src="app.js"></script>
+    <script>
+        // Copy wallet address function
+        function copyWalletAddress() {
+            const addressElement = document.getElementById('walletAddressFull');
+            const address = addressElement.textContent;
+
+            if (address && address !== 'Connect wallet to view address') {
+                navigator.clipboard.writeText(address).then(() => {
+                    const btn = document.getElementById('btnCopyAddress');
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                    }, 1500);
+                    addLog('Address copied to clipboard', 'success');
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    addLog('Failed to copy address', 'error');
+                });
+            }
+        }
+
+        // Update wallet address display when wallet connects
+        const originalUpdateUI = window.updateUI || (() => {});
+        window.updateUI = function() {
+            originalUpdateUI();
+            if (wallet && wallet.publicKey) {
+                const address = wallet.publicKey.toString();
+                document.getElementById('walletAddressFull').textContent = address;
+                document.getElementById('btnCopyAddress').style.display = 'flex';
+                document.getElementById('walletBalanceDisplay').textContent = document.getElementById('walletBal').textContent || '0.00 XNT';
+            }
+        };
+    </script>
 </body>
 </html>
