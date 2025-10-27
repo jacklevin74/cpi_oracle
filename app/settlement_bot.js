@@ -460,7 +460,18 @@ function formatCountdown(ms) {
 
 /* ---------------- Main Cycle Loop ---------------- */
 async function runCycle(conn, kp, ammPda, vaultPda) {
-  const cycleStartTime = Date.now();
+  // Wait until the next aligned time boundary (minute ending in 0)
+  const nextStart = getNextStartTime();
+  const now = Date.now();
+  const waitMs = nextStart.getTime() - now;
+
+  if (waitMs > 1000) {
+    log(C.bold(`\n⏰ Waiting ${formatCountdown(waitMs)} until next cycle at ${formatTime(nextStart)}`));
+    await new Promise(r => setTimeout(r, waitMs));
+  }
+
+  // Use the aligned start time for all calculations
+  const cycleStartTime = nextStart.getTime();
   const snapshotTime = cycleStartTime + PREMARKET_DURATION_MS;
   const marketEndTime = snapshotTime + ACTIVE_DURATION_MS;
   const nextCycleStartTime = cycleStartTime + CYCLE_DURATION_MS;
@@ -537,9 +548,18 @@ async function runCycle(conn, kp, ammPda, vaultPda) {
 
     // Step 5: Continue active trading period, updating status regularly
     const activeWaitStart = Date.now();
-    while (Date.now() < marketEndTime) {
-      const remaining = marketEndTime - Date.now();
-      if (remaining > 0) {
+    log(`Market will close at exactly: ${formatTime(new Date(marketEndTime))}`);
+
+    while (true) {
+      const now = Date.now();
+      const remaining = marketEndTime - now;
+
+      if (remaining <= 0) {
+        break;
+      }
+
+      // Only log status if more than 5 seconds remaining
+      if (remaining > 5000) {
         logInfo(`Market active (post-snapshot) - ${formatCountdown(remaining)} remaining`);
         writeStatus({
           state: "ACTIVE",
@@ -548,14 +568,31 @@ async function runCycle(conn, kp, ammPda, vaultPda) {
           marketEndTime,
           nextCycleStartTime,
           timeRemaining: remaining,
-          lastUpdate: Date.now()
+          lastUpdate: now
         });
-        await new Promise(r => setTimeout(r, Math.min(10000, remaining))); // Update every 10s
       }
+
+      // Check more frequently as we approach close time
+      let waitTime;
+      if (remaining > 60000) {
+        waitTime = 10000; // 10s intervals when > 1 min remaining
+      } else if (remaining > 10000) {
+        waitTime = 1000; // 1s intervals when > 10s remaining
+      } else if (remaining > 1000) {
+        waitTime = 100; // 100ms intervals when > 1s remaining
+      } else {
+        waitTime = remaining; // Precise wait for final second
+      }
+
+      await new Promise(r => setTimeout(r, Math.min(waitTime, remaining)));
     }
 
     // Step 6: Stop and settle market
+    const actualStopTime = Date.now();
+    const timingError = actualStopTime - marketEndTime;
     log(C.bold("\n=== CLOSING MARKET ==="));
+    log(`Target time: ${formatTime(new Date(marketEndTime))}`);
+    log(`Actual time: ${formatTime(new Date(actualStopTime))} (${timingError > 0 ? '+' : ''}${timingError}ms)`);
     await stopMarket(conn, kp, ammPda);
     await new Promise(r => setTimeout(r, 1500));
 
@@ -681,13 +718,35 @@ async function main() {
     lastUpdate: Date.now()
   });
 
-  // Wait for active trading period to end
-  const activeWaitMs = ACTIVE_DURATION_MS;
-  log(`Active trading: ${formatCountdown(activeWaitMs)} until market closes\n`);
-  await new Promise(r => setTimeout(r, activeWaitMs));
+  // Wait for active trading period to end (precise timing)
+  log(`Market will close at exactly: ${formatTime(new Date(marketEndTime))}`);
+  log(`Active trading: ${formatCountdown(marketEndTime - Date.now())} until market closes\n`);
+
+  // Check every second for precise timing
+  while (true) {
+    const now = Date.now();
+    const remaining = marketEndTime - now;
+
+    if (remaining <= 100) { // Stop within 100ms of target
+      break;
+    }
+
+    const waitTime = Math.min(1000, remaining - 100);
+    await new Promise(r => setTimeout(r, waitTime));
+  }
+
+  // Wait until exactly marketEndTime
+  const finalWait = marketEndTime - Date.now();
+  if (finalWait > 0) {
+    await new Promise(r => setTimeout(r, finalWait));
+  }
 
   // Stop and settle the first cycle
+  const actualStopTime = Date.now();
+  const timingError = actualStopTime - marketEndTime;
   log(C.bold("\n🛑 STOPPING MARKET\n"));
+  log(`Target time: ${formatTime(new Date(marketEndTime))}`);
+  log(`Actual time: ${formatTime(new Date(actualStopTime))} (${timingError > 0 ? '+' : ''}${timingError}ms)`);
   await stopMarket(conn, kp, ammPda);
   await new Promise(r => setTimeout(r, 1500));
 
