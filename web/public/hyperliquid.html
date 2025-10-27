@@ -70,6 +70,22 @@
                     </div>
                 </div>
 
+                <!-- Volume Stats Row -->
+                <div class="volume-stats-row">
+                    <div class="volume-stat volume-up">
+                        <div class="volume-label">UP VOLUME</div>
+                        <div class="volume-value" id="volumeUp">0 XNT</div>
+                    </div>
+                    <div class="volume-stat volume-down">
+                        <div class="volume-label">DOWN VOLUME</div>
+                        <div class="volume-value" id="volumeDown">0 XNT</div>
+                    </div>
+                    <div class="volume-stat volume-total">
+                        <div class="volume-label">TOTAL VOLUME</div>
+                        <div class="volume-value" id="volumeTotal">0 XNT</div>
+                    </div>
+                </div>
+
                 <!-- Time Range Dropdown -->
                 <div class="chart-timerange-dropdown">
                     <div class="timerange-dropdown-trigger" onclick="toggleTimeRangeDropdown()">
@@ -436,6 +452,34 @@
             }
         }
 
+        // Calculate and update volume statistics
+        function updateVolumeStats() {
+            let upVolume = 0;
+            let downVolume = 0;
+
+            tradeHistory.forEach(trade => {
+                const amount = parseFloat(trade.amount) || 0;
+                const side = trade.side.toLowerCase();
+                const action = trade.action.toLowerCase();
+
+                // Only count BUY trades (not SELL or REDEEM)
+                if (action === 'buy') {
+                    if (side === 'yes') {
+                        upVolume += amount;
+                    } else if (side === 'no') {
+                        downVolume += amount;
+                    }
+                }
+            });
+
+            const totalVolume = upVolume + downVolume;
+
+            // Update UI
+            document.getElementById('volumeUp').textContent = upVolume.toFixed(2) + ' XNT';
+            document.getElementById('volumeDown').textContent = downVolume.toFixed(2) + ' XNT';
+            document.getElementById('volumeTotal').textContent = totalVolume.toFixed(2) + ' XNT';
+        }
+
         function addTradeToHistory(trade, shouldSave = true) {
             // Remove empty state if present
             const tradeFeed = document.getElementById('tradeFeed');
@@ -520,6 +564,9 @@
             }
 
             document.getElementById('tradeCount').textContent = tradeHistory.length;
+
+            // Update volume stats after adding trade
+            updateVolumeStats();
         }
 
         // ============= WEBSOCKET TRADE MONITOR =============
