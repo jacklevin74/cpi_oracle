@@ -534,12 +534,15 @@
                     </div>
                 `;
             } else {
+                const avgPrice = trade.avgPrice || trade.price || '0.0000';
+                const shares = trade.shares || '0.00';
+
                 tradeItem.innerHTML = `
                     <div class="trade-side ${tradeClass}">
                         ${action.toUpperCase()}<br>${sideDisplay}
                     </div>
                     <div class="trade-info">
-                        <div class="trade-action">${trade.shares} @ ${trade.avgPrice}</div>
+                        <div class="trade-action">${shares} @ ${avgPrice}</div>
                         <div class="trade-user">${shortAddr}</div>
                     </div>
                     <div class="trade-meta">
@@ -610,8 +613,8 @@
                                     action: trade.action,
                                     side: trade.side,
                                     shares: trade.shares,
-                                    price: trade.avgPrice,
-                                    cost: trade.amount,
+                                    avgPrice: trade.avgPrice,
+                                    amount: trade.amount,
                                     user: 'Global',
                                     timestamp: trade.timestamp
                                 }, true);
@@ -625,8 +628,8 @@
                             action: trade.action,
                             side: trade.side,
                             shares: trade.shares,
-                            price: trade.avgPrice,
-                            cost: trade.amount,
+                            avgPrice: trade.avgPrice,
+                            amount: trade.amount,
                             user: trade.user || 'Unknown',
                             timestamp: trade.timestamp
                         }, true);
