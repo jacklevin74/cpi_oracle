@@ -546,7 +546,7 @@ body {
 .premarket-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
     margin-bottom: 16px;
     padding-bottom: 16px;
     border-bottom: 1px solid rgba(0, 200, 150, 0.1);
@@ -555,7 +555,7 @@ body {
 .premarket-status {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .status-label {
@@ -564,15 +564,17 @@ body {
     letter-spacing: 1px;
     color: rgba(255, 255, 255, 0.4);
     font-family: 'SF Mono', Monaco, Consolas, monospace;
+    text-transform: uppercase;
 }
 
 .status-badge {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
     color: var(--green);
     font-family: 'SF Mono', Monaco, Consolas, monospace;
     text-shadow: 0 0 20px rgba(0, 200, 150, 0.3);
     animation: statusPulse 2s ease-in-out infinite;
+    line-height: 1;
 }
 
 @keyframes statusPulse {
@@ -595,23 +597,26 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 16px;
+    padding: 10px 18px;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(0, 200, 150, 0.2);
     border-radius: 6px;
+    height: fit-content;
 }
 
 .clock-icon {
     color: var(--green);
     flex-shrink: 0;
+    opacity: 0.8;
 }
 
 .clock-time {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     font-family: 'SF Mono', Monaco, Consolas, monospace;
     color: var(--text-primary);
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
+    line-height: 1;
 }
 
 .premarket-details {
