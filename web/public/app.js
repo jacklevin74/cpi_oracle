@@ -2757,6 +2757,9 @@ async function withdrawToBackpack() {
         addLog(`Withdrawal SUCCESS: ${amount.toFixed(4)} XNT transferred`, 'success');
         showStatus('Withdrawal success! Tx: ' + signature.substring(0, 16) + '...');
 
+        // Show toast notification
+        showToast('success', 'Withdrawal Complete', `${amount.toFixed(4)} XNT transferred to Backpack wallet`);
+
         // Clear input and update balance
         document.getElementById('withdrawAmount').value = '';
         setTimeout(() => {
@@ -2766,6 +2769,7 @@ async function withdrawToBackpack() {
     } catch (err) {
         addLog('Withdrawal FAILED: ' + err.message, 'error');
         showError('Withdrawal failed: ' + err.message);
+        showToast('error', 'Withdrawal Failed', err.message);
         console.error(err);
     }
 }

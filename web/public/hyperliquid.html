@@ -278,17 +278,6 @@
                     </div>
                 </div>
 
-                <!-- Redeemable -->
-                <div class="redeem-panel" id="redeemableSection">
-                    <div class="panel-header">REDEEMABLE</div>
-                    <div class="redeem-amount" id="redeemableAmount">0.00 XNT</div>
-                    <div class="redeem-breakdown" id="redeemableBreakdown">
-                        <div>UP: 0 × 0.00 = 0.00</div>
-                        <div>DOWN: 0 × 0.00 = 0.00</div>
-                    </div>
-                    <button class="btn-redeem" id="btnRedeem" onclick="redeemWinnings()" disabled>REDEEM</button>
-                </div>
-
                 <!-- Wallet Info -->
                 <div class="wallet-panel" id="walletPanel">
                     <div class="panel-header">WALLET</div>
@@ -319,8 +308,19 @@
                     </div>
                 </div>
 
-                <!-- Activity Log (Hidden for minimal UI) -->
-                <div id="logContent" style="display: none;"></div>
+                <!-- Activity Log -->
+                <div class="activity-panel">
+                    <div class="panel-header">
+                        <span>ACTIVITY</span>
+                        <button class="btn-clear" onclick="clearLog()">CLEAR</button>
+                    </div>
+                    <div class="activity-log" id="logContent">
+                        <div class="log-entry log-info">
+                            <span class="log-time">--:--:--</span>
+                            <span class="log-message">Initializing...</span>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Hidden elements for compatibility -->
                 <div id="yesPercentage" style="display: none;">0.50</div>

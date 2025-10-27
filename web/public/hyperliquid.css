@@ -989,6 +989,10 @@ body {
 
 .trade-feed-list {
     padding: 8px;
+    max-height: 400px;
+    min-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .trade-feed-empty {
@@ -2160,4 +2164,101 @@ body {
         grid-template-columns: repeat(2, 1fr);
         gap: 4px;
     }
+}
+
+/* ===== ACTIVITY LOG ===== */
+
+.activity-panel {
+    margin-top: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.activity-log {
+    max-height: 300px;
+    min-height: 150px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column-reverse;
+    padding: 8px;
+}
+
+.log-entry {
+    padding: 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 11px;
+    display: flex;
+    gap: 10px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+}
+
+.log-entry:first-child {
+    border-bottom: none;
+}
+
+.log-time {
+    color: var(--text-dim);
+    flex-shrink: 0;
+    min-width: 60px;
+}
+
+.log-message {
+    color: var(--text-secondary);
+    flex: 1;
+    word-break: break-all;
+}
+
+.log-success .log-message {
+    color: var(--green);
+}
+
+.log-error .log-message {
+    color: var(--red);
+}
+
+.log-warning .log-message {
+    color: #ffaa00;
+}
+
+.btn-clear {
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    color: var(--text-secondary);
+    font-size: 9px;
+    font-weight: 700;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-clear:hover {
+    background: var(--bg-hover);
+    border-color: var(--text-dim);
+    color: var(--text-primary);
+}
+
+.activity-panel .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
+}
+
+.log-tx .log-message {
+    color: var(--blue);
+    font-weight: 500;
+}
+
+.log-tx a {
+    color: var(--green);
+    text-decoration: underline;
 }
