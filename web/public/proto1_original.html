@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X1 Markets - Proto</title>
+    <link rel="stylesheet" href="proto1.css">
+    <script src="chart.min.js"></script>
+</head>
+<body>
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer"></div>
+
+    <div class="trading-platform">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <div class="nav-brand">
+                <span class="brand-icon">⬡</span>
+                <span class="brand-name">X1 Proto</span>
+            </div>
+            <div class="nav-center">
+                <div class="oracle-ticker">
+                    <span class="ticker-label">BTC</span>
+                    <span class="ticker-price" id="tickerPrice">$--</span>
+                    <div class="market-status-badge" id="marketStatusBadge">OPEN</div>
+                    <div class="ws-status" id="wsStatus" title="Live Trade Feed">
+                        <span class="ws-dot"></span>
+                        <span class="ws-label">Feed</span>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-right">
+                <div id="walletNavDisconnected" class="hidden">
+                    <button class="btn-connect" onclick="connectBackpack()">Connect Wallet</button>
+                </div>
+                <div id="walletNavConnected" class="hidden">
+                    <div class="wallet-dropdown">
+                        <div class="wallet-balance">
+                            <span class="balance-amount" id="navWalletBal">0.00</span>
+                            <span class="balance-unit">XNT</span>
+                        </div>
+                        <div class="wallet-address-short">
+                            <span id="navWalletAddr">--</span>
+                            <button class="key-icon-btn" onclick="exportPrivateKey()" title="Export Private Key">🔑</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Grid Layout -->
+        <div class="main-grid">
+            <!-- Left: Chart + Market Info -->
+            <div class="grid-left">
+                <!-- Market Question -->
+                <div class="market-card">
+                    <div class="market-question">Will BTC go UP or DOWN?</div>
+                    <div class="market-cycle-info">
+                        <div class="cycle-status" id="cycleState">LOADING...</div>
+                        <div class="cycle-times">
+                            <span id="currentTime">--:--:--</span>
+                            <span class="next-label">Next: <span id="nextMarketTime">--:--</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Winner Banner -->
+                <div class="winner-banner" id="winnerBanner" style="display: none;">
+                    <span class="winner-outcome" id="winnerOutcome">UP WON</span>
+                    <span class="winner-reason" id="winnerReason">$95,000 → $96,500</span>
+                </div>
+
+                <!-- Price Header with Indicator -->
+                <div class="price-header">
+                    <div class="price-item">
+                        <div class="price-label">Price to Beat</div>
+                        <div id="chartBeatPrice" class="price-value price-beat">--</div>
+                    </div>
+                    <div class="price-item price-center">
+                        <div class="price-indicator" id="priceArrowIndicator">
+                            <div class="arrow-icon" id="arrowIcon">↑</div>
+                            <div class="arrow-content">
+                                <div class="arrow-change" id="arrowLabelChange">+$0</div>
+                                <div class="arrow-percent" id="arrowLabelPercent">+0.00%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="price-item price-right">
+                        <div class="price-label">Current Price</div>
+                        <div id="chartCurrentPrice" class="price-value price-current">$0.00</div>
+                    </div>
+                </div>
+
+                <!-- Time Range Selector - TradingView Style -->
+                <div class="chart-timerange-dropdown">
+                    <div class="timerange-dropdown-trigger" onclick="toggleTimeRangeDropdown()">
+                        <span id="selectedTimeRange">1m</span>
+                        <svg class="dropdown-arrow" width="12" height="8" viewBox="0 0 12 8">
+                            <path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" fill="none"/>
+                        </svg>
+                    </div>
+                    <div class="timerange-dropdown-menu" id="timeRangeMenu">
+                        <div class="timerange-option active" data-seconds="60" onclick="selectTimeRange(60)">1m</div>
+                        <div class="timerange-option" data-seconds="300" onclick="selectTimeRange(300)">5m</div>
+                        <div class="timerange-option" data-seconds="900" onclick="selectTimeRange(900)">15m</div>
+                        <div class="timerange-option" data-seconds="1800" onclick="selectTimeRange(1800)">30m</div>
+                        <div class="timerange-option" data-seconds="3600" onclick="selectTimeRange(3600)">1h</div>
+                    </div>
+                </div>
+
+                <!-- BTC Chart -->
+                <div class="chart-section">
+                    <canvas id="btcChart"></canvas>
+                </div>
+
+                <!-- Pre-Market Status Section -->
+                <div class="premarket-section">
+                    <div class="premarket-header">
+                        <div class="premarket-status">
+                            <span class="status-label">MARKET STATUS</span>
+                            <span class="status-badge" id="preMarketStatus">OPEN</span>
+                        </div>
+                        <div class="premarket-clock">
+                            <svg class="clock-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M8 4V8L11 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            <span class="clock-time" id="preMarketClock">--:--:--</span>
+                        </div>
+                    </div>
+                    <div class="premarket-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Next Market</span>
+                            <span class="detail-value" id="preMarketNext">--:--</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Start Price</span>
+                            <span class="detail-value" id="preMarketStartPrice">--</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Liquidity</span>
+                            <span class="detail-value" id="preMarketLiquidity">0 XNT</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Market Overview Stats -->
+                <div class="market-stats">
+                    <div class="stat-card">
+                        <div class="stat-label">UP PRICE</div>
+                        <div class="stat-value stat-up"><span id="yesPercentage">0.50</span> XNT</div>
+                        <div class="stat-sub" id="yesShares">0 shares</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">DOWN PRICE</div>
+                        <div class="stat-value stat-down"><span id="noPercentage">0.50</span> XNT</div>
+                        <div class="stat-sub" id="noShares">0 shares</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">LIQUIDITY</div>
+                        <div class="stat-value"><span id="vaultTotalDisplay">0</span> XNT</div>
+                        <div class="stat-sub">Total Vault</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">START PRICE</div>
+                        <div class="stat-value" id="oracleSnapshotPrice">--</div>
+                        <div class="stat-sub">BTC Snapshot</div>
+                    </div>
+                </div>
+
+                <!-- Global Trade History -->
+                <div class="trade-history-section">
+                    <div class="history-header">
+                        <span class="history-title">Live Trades</span>
+                        <span class="history-count" id="tradeCount">0 trades</span>
+                    </div>
+                    <div class="trade-feed" id="tradeFeed">
+                        <div class="trade-feed-empty">
+                            <span class="empty-icon">📊</span>
+                            <span class="empty-text">Waiting for trades...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trollbox -->
+                <div class="trollbox-section">
+                    <div class="trollbox-header">
+                        <span class="trollbox-title">💬 Trollbox</span>
+                        <span class="trollbox-count" id="chatCount">0 messages</span>
+                    </div>
+                    <div class="trollbox-messages" id="trollboxMessages">
+                        <div class="trollbox-empty">
+                            <span class="empty-icon">💬</span>
+                            <span class="empty-text">No messages yet...</span>
+                        </div>
+                    </div>
+                    <div class="trollbox-input-wrapper">
+                        <input
+                            type="text"
+                            id="trollboxInput"
+                            class="trollbox-input"
+                            placeholder="Type a message... (max 300 chars)"
+                            maxlength="300"
+                            onkeypress="if(event.key==='Enter') sendChatMessage()"
+                        >
+                        <button class="trollbox-send-btn" onclick="sendChatMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Trading + Position -->
+            <div class="grid-right">
+                <!-- Trade Panel -->
+                <div class="panel trade-panel">
+                    <div class="panel-header">TRADE</div>
+
+                    <div class="trade-tabs">
+                        <button class="tab-btn active" id="buyTab" onclick="switchTab('buy')">Buy</button>
+                        <button class="tab-btn" id="sellTab" onclick="switchTab('sell')">Sell</button>
+                    </div>
+
+                    <div class="outcome-selector">
+                        <button class="outcome-btn outcome-yes active" id="yesBtn" onclick="selectOutcome('yes')">
+                            <span class="outcome-label">UP</span>
+                            <span class="outcome-price"><span id="yesBtnPrice">0.50</span> XNT</span>
+                        </button>
+                        <button class="outcome-btn outcome-no" id="noBtn" onclick="selectOutcome('no')">
+                            <span class="outcome-label">DOWN</span>
+                            <span class="outcome-price"><span id="noBtnPrice">0.50</span> XNT</span>
+                        </button>
+                    </div>
+
+                    <div class="trade-amount">
+                        <!-- Input Mode Toggle -->
+                        <div class="input-mode-toggle">
+                            <button class="mode-btn active" id="modeShares" onclick="setInputMode('shares')">Shares</button>
+                            <button class="mode-btn" id="modeXnt" onclick="setInputMode('xnt')">XNT</button>
+                        </div>
+
+                        <!-- Shares Input -->
+                        <div class="input-section" id="sharesInputSection">
+                            <label class="input-label">Number of Shares</label>
+                            <input type="number" id="tradeAmountShares" class="amount-input" placeholder="10" step="1" value="10" oninput="updateFromInput()">
+                            <input type="range" id="sharesSlider" class="amount-slider" min="1" max="500" value="10" step="1" oninput="updateFromSlider('shares')">
+                            <div class="slider-labels">
+                                <span>1</span>
+                                <span>500</span>
+                            </div>
+                            <div class="quick-amounts">
+                                <button class="quick-btn" onclick="setShares(1)">1</button>
+                                <button class="quick-btn" onclick="setShares(10)">10</button>
+                                <button class="quick-btn" onclick="setShares(50)">50</button>
+                                <button class="quick-btn" onclick="setShares(100)">100</button>
+                                <button class="quick-btn" onclick="setShares(500)">500</button>
+                            </div>
+                        </div>
+
+                        <!-- XNT Input -->
+                        <div class="input-section hidden" id="xntInputSection">
+                            <label class="input-label">Amount to Spend (XNT)</label>
+                            <input type="number" id="tradeAmountXnt" class="amount-input" placeholder="5.00" step="0.01" value="5.00" oninput="updateFromInput()">
+                            <input type="range" id="xntSlider" class="amount-slider" min="0.1" max="100" value="5" step="0.1" oninput="updateFromSlider('xnt')">
+                            <div class="slider-labels">
+                                <span>0.1</span>
+                                <span>100</span>
+                            </div>
+                            <div class="quick-amounts">
+                                <button class="quick-btn" onclick="setXnt(1)">1</button>
+                                <button class="quick-btn" onclick="setXnt(5)">5</button>
+                                <button class="quick-btn" onclick="setXnt(10)">10</button>
+                                <button class="quick-btn" onclick="setXnt(25)">25</button>
+                                <button class="quick-btn" onclick="setXnt(50)">50</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="trade-cost">
+                        <span id="tradeCostLabel">Est. Cost</span>
+                        <span id="tradeCost">~5.00 XNT</span>
+                    </div>
+
+                    <button class="btn-trade" id="tradeBtn" onclick="executeTrade()">
+                        <span id="tradeBtnText">Buy 10 UP shares (~5.00 XNT)</span>
+                    </button>
+                </div>
+
+                <!-- Position Panel -->
+                <div class="panel position-panel" id="positionStatusConnected">
+                    <div class="panel-header">HOLDINGS</div>
+                    <div class="position-grid">
+                        <div class="position-card position-up">
+                            <div class="position-label">UP</div>
+                            <div class="position-amount" id="posYesDisplay">0.00</div>
+                            <div class="position-value" id="posYesValue">$0.00</div>
+                        </div>
+                        <div class="position-card position-down">
+                            <div class="position-label">DOWN</div>
+                            <div class="position-amount" id="posNoDisplay">0.00</div>
+                            <div class="position-value" id="posNoValue">$0.00</div>
+                        </div>
+                    </div>
+                    <div class="position-summary">
+                        <div class="summary-row">
+                            <span>Total Value</span>
+                            <span id="totalPosValue">$0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Net Exposure</span>
+                            <span id="netExposure">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Redeem Panel -->
+                <div class="panel redeem-panel" id="redeemableSection">
+                    <div class="panel-header">REDEEM</div>
+                    <div class="redeem-amount" id="redeemableAmount">0.00 XNT</div>
+                    <div class="redeem-breakdown" id="redeemableBreakdown">
+                        UP: 0 × 0.00 = 0.00<br>
+                        DOWN: 0 × 0.00 = 0.00
+                    </div>
+                    <button class="btn-redeem" id="btnRedeem" onclick="redeemWinnings()" disabled>REDEEM</button>
+                </div>
+
+                <!-- Wallet Panel -->
+                <div class="panel wallet-panel">
+                    <div class="panel-header">WALLET</div>
+                    <div id="sidebarWalletDisconnected">
+                        <p class="empty-text">Connect wallet to start trading</p>
+                    </div>
+                    <div id="sidebarWalletConnected" class="hidden">
+                        <div class="wallet-info">
+                            <div class="wallet-label">Trading Wallet</div>
+                            <div class="wallet-address-container">
+                                <div class="wallet-address" id="sessionAddr">--</div>
+                                <button class="copy-icon" onclick="copySessionWallet()" title="Copy session wallet address">
+                                    📋
+                                </button>
+                            </div>
+                            <div class="wallet-balance-large">
+                                <span id="walletBal">0.0000</span> XNT
+                            </div>
+                        </div>
+                        <div class="wallet-actions">
+                            <input type="number" id="withdrawAmount" class="input-compact" placeholder="Amount to withdraw" step="0.01">
+                            <button class="btn-compact" onclick="withdrawToBackpack()">Withdraw</button>
+                            <button class="btn-compact btn-ghost" onclick="disconnectWallet()">Disconnect</button>
+                            <button class="btn-compact btn-export" onclick="exportPrivateKey()" title="Export session wallet private key">
+                                🔑 Export Key
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Log -->
+                <div class="panel activity-panel">
+                    <div class="panel-header">
+                        Activity
+                        <button class="btn-clear" onclick="clearLog()">Clear</button>
+                    </div>
+                    <div class="activity-log" id="logContent">
+                        <div class="log-entry log-info">
+                            <span class="log-time">--:--:--</span>
+                            <span class="log-message">Initializing...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden compatibility elements -->
+        <div id="positionStatusDisconnected" style="display: none;"></div>
+        <div id="vaultDisplay" style="display: none;"></div>
+        <div id="buyTab" style="display: none;"></div>
+        <div id="sellTab" style="display: none;"></div>
+        <div id="redeemableSectionSidebar" style="display: none;"></div>
+        <div id="redeemableAmountSidebar" style="display: none;"></div>
+        <div id="redeemableBreakdownSidebar" style="display: none;"></div>
+        <div id="btnRedeemSidebar" style="display: none;"></div>
+        <div id="lastTradeAction" style="display: none;"></div>
+        <div id="lastTradeSize" style="display: none;"></div>
+        <div id="snapshotBtn" style="display: none;"></div>
+        <div id="snapshotLabel" style="display: none;"></div>
+        <div id="oracleAge" style="display: none;"></div>
+        <div id="oracleCurrentPrice" style="display: none;"></div>
+        <div id="winningIndicator" style="display: none;"></div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // Input mode management
+        let currentInputMode = 'shares'; // 'shares' or 'xnt'
+
+        function setInputMode(mode) {
+            currentInputMode = mode;
+
+            // Toggle mode buttons
+            document.getElementById('modeShares').classList.toggle('active', mode === 'shares');
+            document.getElementById('modeXnt').classList.toggle('active', mode === 'xnt');
+
+            // Toggle input sections
+            document.getElementById('sharesInputSection').classList.toggle('hidden', mode !== 'shares');
+            document.getElementById('xntInputSection').classList.toggle('hidden', mode !== 'xnt');
+
+            // Update cost label
+            document.getElementById('tradeCostLabel').textContent = mode === 'shares' ? 'Est. Cost' : 'Est. Shares';
+
+            // Update from current values
+            updateFromInput();
+        }
+
+        function updateFromSlider(mode) {
+            if (mode === 'shares') {
+                const value = document.getElementById('sharesSlider').value;
+                document.getElementById('tradeAmountShares').value = value;
+            } else {
+                const value = document.getElementById('xntSlider').value;
+                document.getElementById('tradeAmountXnt').value = parseFloat(value).toFixed(2);
+            }
+            updateFromInput();
+        }
+
+        function updateFromInput() {
+            // This will be called by app.js's existing logic
+            // Just sync slider with input
+            if (currentInputMode === 'shares') {
+                const sharesInput = document.getElementById('tradeAmountShares');
+                const sharesSlider = document.getElementById('sharesSlider');
+                if (sharesInput.value) {
+                    sharesSlider.value = Math.min(Math.max(sharesInput.value, 1), 500);
+                }
+            } else {
+                const xntInput = document.getElementById('tradeAmountXnt');
+                const xntSlider = document.getElementById('xntSlider');
+                if (xntInput.value) {
+                    xntSlider.value = Math.min(Math.max(xntInput.value, 0.1), 100);
+                }
+            }
+        }
+
+        function setXnt(amount) {
+            document.getElementById('tradeAmountXnt').value = amount.toFixed(2);
+            document.getElementById('xntSlider').value = amount;
+            updateFromInput();
+        }
+
+        // Override existing setShares to also update slider
+        const originalSetShares = window.setShares;
+        window.setShares = function(shares) {
+            if (originalSetShares) {
+                originalSetShares(shares);
+            }
+            document.getElementById('tradeAmountShares').value = shares;
+            document.getElementById('sharesSlider').value = shares;
+            updateFromInput();
+        };
+
+        // Trade History Management
+        const MAX_TRADES = 20;
+        const TRADE_HISTORY_KEY = 'proto1_trade_history';
+        let tradeHistory = [];
+
+        // Load trade history from localStorage
+        function loadTradeHistory() {
+            try {
+                const saved = localStorage.getItem(TRADE_HISTORY_KEY);
+                if (saved) {
+                    const loaded = JSON.parse(saved);
+                    console.log(`💾 Restored ${loaded.length} trades from localStorage`);
+                    // Render each trade (in reverse to maintain order)
+                    loaded.reverse().forEach(trade => {
+                        addTradeToHistory(trade, false); // Don't save back to localStorage
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load trade history:', err);
+            }
+        }
+
+        // Save trade history to localStorage
+        function saveTradeHistory() {
+            try {
+                localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(tradeHistory));
+            } catch (err) {
+                console.error('Failed to save trade history:', err);
+            }
+        }
+
+        function addTradeToHistory(trade, shouldSave = true) {
+            // Remove empty state if present
+            const tradeFeed = document.getElementById('tradeFeed');
+            const emptyState = tradeFeed.querySelector('.trade-feed-empty');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            // Add to history array
+            tradeHistory.unshift(trade);
+            if (tradeHistory.length > MAX_TRADES) {
+                tradeHistory.pop();
+            }
+
+            // Save to localStorage
+            if (shouldSave) {
+                saveTradeHistory();
+            }
+
+            // Create trade item
+            const tradeItem = document.createElement('div');
+            tradeItem.className = 'trade-item';
+
+            // Determine trade class
+            const action = trade.action.toLowerCase(); // 'buy' or 'sell'
+            const side = trade.side.toLowerCase(); // 'yes' or 'no'
+            const sideDisplay = side === 'yes' ? 'UP' : 'DOWN';
+            const tradeClass = `${action}-${side === 'yes' ? 'up' : 'down'}`;
+
+            // Format user address (first 5 chars)
+            const userAddr = trade.user || 'Unknown';
+            const shortAddr = userAddr.length > 5 ?
+                userAddr.slice(0, 5) : userAddr;
+
+            // Format time
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            tradeItem.innerHTML = `
+                <div class="trade-side ${tradeClass}">
+                    ${action.toUpperCase()}<br>${sideDisplay}
+                </div>
+                <div class="trade-info">
+                    <div class="trade-action">${trade.shares} shares @ ${trade.price} XNT</div>
+                    <div class="trade-user">${shortAddr}</div>
+                </div>
+                <div class="trade-meta">
+                    <div class="trade-amount">${trade.cost} XNT</div>
+                    <div class="trade-time">${timeStr}</div>
+                </div>
+            `;
+
+            // Add to feed (prepend for newest first)
+            tradeFeed.insertBefore(tradeItem, tradeFeed.firstChild);
+
+            // Remove oldest if too many
+            const items = tradeFeed.querySelectorAll('.trade-item');
+            if (items.length > MAX_TRADES) {
+                items[items.length - 1].remove();
+            }
+
+            // Update count
+            document.getElementById('tradeCount').textContent = `${tradeHistory.length} trade${tradeHistory.length !== 1 ? 's' : ''}`;
+        }
+
+        // Note: We no longer add trades immediately on user action.
+        // Instead, we wait for the WebSocket to broadcast the confirmed on-chain trade.
+        // This ensures we only show trades that are actually confirmed on the blockchain.
+
+        // ============= WEBSOCKET TRADE MONITOR =============
+        let tradeSocket = null;
+
+        function updateWsStatus(status) {
+            const wsStatus = document.getElementById('wsStatus');
+            if (wsStatus) {
+                wsStatus.className = `ws-status ${status}`;
+            }
+        }
+
+        function connectTradeMonitor() {
+            // Use wss:// if page is served over https://, otherwise ws://
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+            // Try without port first (for nginx proxy), fallback to :3435
+            let wsUrl;
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                // Local development: use explicit port
+                wsUrl = `${wsProtocol}//${window.location.hostname}:3435`;
+            } else {
+                // Production: assume nginx proxy on /ws path
+                wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+            }
+
+            console.log('Connecting to trade monitor:', wsUrl);
+            updateWsStatus('connecting');
+
+            tradeSocket = new WebSocket(wsUrl);
+
+            tradeSocket.onopen = () => {
+                console.log('✅ Connected to live trade feed');
+                updateWsStatus('connected');
+            };
+
+            tradeSocket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'history') {
+                        // Load historical trades from server (only if we don't have localStorage data)
+                        if (tradeHistory.length === 0) {
+                            console.log(`📜 Loaded ${data.trades.length} historical trades from server`);
+                            data.trades.forEach(trade => {
+                                addTradeToHistory({
+                                    action: trade.action,
+                                    side: trade.side,
+                                    shares: trade.shares,
+                                    price: trade.avgPrice,
+                                    cost: trade.amount,
+                                    user: 'Global', // Mark as global trade
+                                    timestamp: trade.timestamp
+                                }, true); // Save to localStorage
+                            });
+                        } else {
+                            console.log(`📜 Skipping server history (already have ${tradeHistory.length} trades from cache)`);
+                        }
+                    } else if (data.type === 'trade') {
+                        // New trade from ANY user
+                        const trade = data.trade;
+                        console.log(`📊 NEW TRADE: ${trade.action} ${trade.side} - ${trade.shares} shares @ ${trade.avgPrice}`);
+
+                        addTradeToHistory({
+                            action: trade.action,
+                            side: trade.side,
+                            shares: trade.shares,
+                            price: trade.avgPrice,
+                            cost: trade.amount,
+                            user: trade.user || 'Unknown', // Show actual user public key
+                            timestamp: trade.timestamp
+                        }, true); // Save to localStorage
+                    } else if (data.type === 'chat_history') {
+                        // Load historical chat messages
+                        console.log(`💬 Loaded ${data.messages.length} chat messages`);
+                        data.messages.forEach(msg => {
+                            displayChatMessage(msg);
+                        });
+                    } else if (data.type === 'chat') {
+                        // New chat message
+                        console.log(`💬 NEW CHAT: ${data.message.user}: ${data.message.text}`);
+                        displayChatMessage(data.message);
+                    } else if (data.type === 'error') {
+                        // Rate limit or other error
+                        console.warn(`⚠️ Server error: ${data.message}`);
+                        displayChatError(data.message);
+                    }
+                } catch (err) {
+                    console.error('Failed to parse trade message:', err);
+                }
+            };
+
+            tradeSocket.onerror = (error) => {
+                console.error('❌ Trade feed error:', error);
+                updateWsStatus('disconnected');
+            };
+
+            tradeSocket.onclose = () => {
+                console.log('Trade feed disconnected. Reconnecting in 5s...');
+                updateWsStatus('disconnected');
+                setTimeout(connectTradeMonitor, 5000);
+            };
+        }
+
+        // Start trade monitor on page load
+        window.addEventListener('load', () => {
+            // Load cached trades immediately (instant restore)
+            loadTradeHistory();
+
+            // Then connect to WebSocket for live updates
+            setTimeout(connectTradeMonitor, 2000); // Wait for page to settle
+        });
+
+        // Trollbox functions
+        let chatMessages = [];
+
+        function displayChatMessage(msg) {
+            const messagesDiv = document.getElementById('trollboxMessages');
+
+            // Remove empty state if present
+            const emptyState = messagesDiv.querySelector('.trollbox-empty');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            // Create message element
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'trollbox-message';
+
+            const timestamp = new Date(msg.timestamp).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+
+            msgDiv.innerHTML = `
+                <span class="chat-time">${timestamp}</span>
+                <span class="chat-user">${msg.user}:</span>
+                <span class="chat-text">${escapeHtml(msg.text)}</span>
+            `;
+
+            messagesDiv.appendChild(msgDiv);
+
+            // Auto-scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Add to array
+            chatMessages.push(msg);
+
+            // Update count
+            const chatCount = document.getElementById('chatCount');
+            if (chatCount) {
+                chatCount.textContent = `${chatMessages.length} message${chatMessages.length !== 1 ? 's' : ''}`;
+            }
+
+            // Keep max 100 messages in DOM
+            const messages = messagesDiv.querySelectorAll('.trollbox-message');
+            if (messages.length > 100) {
+                messages[0].remove();
+            }
+        }
+
+        function displayChatError(message) {
+            const messagesDiv = document.getElementById('trollboxMessages');
+
+            // Create error message element
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'trollbox-message trollbox-error';
+            msgDiv.style.color = '#ff5353';
+            msgDiv.style.fontStyle = 'italic';
+
+            const timestamp = new Date().toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+
+            msgDiv.innerHTML = `
+                <span class="chat-time">${timestamp}</span>
+                <span class="chat-text">⚠️ ${escapeHtml(message)}</span>
+            `;
+
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (msgDiv.parentNode) {
+                    msgDiv.remove();
+                }
+            }, 5000);
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('trollboxInput');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            if (!tradeSocket || tradeSocket.readyState !== WebSocket.OPEN) {
+                alert('Not connected to chat server');
+                return;
+            }
+
+            // Get username from wallet or use "Anon"
+            let username = 'Anon';
+            if (window.backpackConnected && window.publicKey) {
+                username = window.publicKey.toString().slice(0, 5);
+            }
+
+            // Send to server
+            tradeSocket.send(JSON.stringify({
+                type: 'chat',
+                user: username,
+                text: text
+            }));
+
+            // Clear input
+            input.value = '';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Update premarket section
+        function updatePreMarketSection() {
+            // Update clock
+            const now = new Date();
+            const clockEl = document.getElementById('preMarketClock');
+            if (clockEl) {
+                clockEl.textContent = now.toLocaleTimeString('en-US', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
+
+            // Update status badge from existing cycleState
+            const cycleState = document.getElementById('cycleState');
+            const preMarketStatus = document.getElementById('preMarketStatus');
+            if (cycleState && preMarketStatus) {
+                const status = cycleState.textContent;
+                preMarketStatus.textContent = status;
+
+                // Update badge styling based on status
+                preMarketStatus.className = 'status-badge';
+                if (status.includes('SETTLED') || status.includes('SETTLING')) {
+                    preMarketStatus.classList.add('settled');
+                } else if (status.includes('CLOSED')) {
+                    preMarketStatus.classList.add('closed');
+                }
+            }
+
+            // Update next market time
+            const nextMarketTime = document.getElementById('nextMarketTime');
+            const preMarketNext = document.getElementById('preMarketNext');
+            if (nextMarketTime && preMarketNext) {
+                preMarketNext.textContent = nextMarketTime.textContent;
+            }
+
+            // Update start price
+            const oracleSnapshotPrice = document.getElementById('oracleSnapshotPrice');
+            const preMarketStartPrice = document.getElementById('preMarketStartPrice');
+            if (oracleSnapshotPrice && preMarketStartPrice) {
+                preMarketStartPrice.textContent = oracleSnapshotPrice.textContent;
+            }
+
+            // Update liquidity
+            const vaultTotalDisplay = document.getElementById('vaultTotalDisplay');
+            const preMarketLiquidity = document.getElementById('preMarketLiquidity');
+            if (vaultTotalDisplay && preMarketLiquidity) {
+                preMarketLiquidity.textContent = vaultTotalDisplay.textContent + ' XNT';
+            }
+        }
+
+        // Update premarket section every second
+        setInterval(updatePreMarketSection, 1000);
+
+        // Initial update
+        setTimeout(updatePreMarketSection, 500);
+    </script>
+</body>
+</html>
