@@ -983,7 +983,7 @@ fn lmsr_sell_yes(amm: &mut Amm, shares_e6: i64) -> Result<(i64, f64, f64)> {
     amm.q_yes = amm.q_yes.saturating_sub(sell_e6);
     amm.vault_e6 = amm.vault_e6.saturating_sub(net_e6);
 
-    let avg_h = if sell_e6 > 0 { (net_e6_f / (sell_e6 as f64)) / 1_000_000.0 } else { 0.0 };
+    let avg_h = if sell_e6 > 0 { net_e6_f / (sell_e6 as f64) } else { 0.0 };
     Ok((net_e6, avg_h, sell_e6 as f64))
 }
 
@@ -1009,7 +1009,7 @@ fn lmsr_sell_no(amm: &mut Amm, shares_e6: i64) -> Result<(i64, f64, f64)> {
     amm.q_no = amm.q_no.saturating_sub(sell_e6);
     amm.vault_e6 = amm.vault_e6.saturating_sub(net_e6);
 
-    let avg_h = if sell_e6 > 0 { (net_e6_f / (sell_e6 as f64)) / 1_000_000.0 } else { 0.0 };
+    let avg_h = if sell_e6 > 0 { net_e6_f / (sell_e6 as f64) } else { 0.0 };
     Ok((net_e6, avg_h, sell_e6 as f64))
 }
 
