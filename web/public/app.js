@@ -1696,6 +1696,11 @@ async function fetchMarketData() {
             document.getElementById('noShares').textContent = noShares.toFixed(0) + ' shares';
         }
 
+        // Update volume stats from market data (for /hl page)
+        if (typeof window.updateVolumeStatsFromMarket === 'function') {
+            window.updateVolumeStatsFromMarket(qY, qN);
+        }
+
         // Update outcome button prices
         if (document.getElementById('yesBtnPrice')) {
             document.getElementById('yesBtnPrice').textContent = yesProb.toFixed(2);

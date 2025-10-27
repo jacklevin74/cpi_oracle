@@ -452,7 +452,28 @@
             }
         }
 
-        // Calculate and update volume statistics
+        // Calculate and update volume statistics from market state
+        // This function will be called from app.js after fetching market data
+        window.updateVolumeStatsFromMarket = function(qYes, qNo) {
+            // qY and qN are in e6 units (1 share = 10_000_000 e6)
+            // Convert to shares then multiply by average price to get volume
+
+            // For a rough estimate of volume, we can use the quantum values
+            // which represent total activity on each side
+            const yesShares = Math.abs(qYes) / 10_000_000;
+            const noShares = Math.abs(qNo) / 10_000_000;
+
+            // Since we don't have exact volume, use shares as a proxy
+            // In LMSR, higher |q| means more volume on that side
+            const totalShares = yesShares + noShares;
+
+            // Update UI with share counts as volume proxy
+            document.getElementById('volumeUp').textContent = yesShares.toFixed(2) + ' shares';
+            document.getElementById('volumeDown').textContent = noShares.toFixed(2) + ' shares';
+            document.getElementById('volumeTotal').textContent = totalShares.toFixed(2) + ' shares';
+        };
+
+        // Fallback: Calculate from trade history (for when market data not available)
         function updateVolumeStats() {
             let upVolume = 0;
             let downVolume = 0;
@@ -474,10 +495,12 @@
 
             const totalVolume = upVolume + downVolume;
 
-            // Update UI
-            document.getElementById('volumeUp').textContent = upVolume.toFixed(2) + ' XNT';
-            document.getElementById('volumeDown').textContent = downVolume.toFixed(2) + ' XNT';
-            document.getElementById('volumeTotal').textContent = totalVolume.toFixed(2) + ' XNT';
+            // Only update if we have trade history, otherwise wait for market data
+            if (totalVolume > 0) {
+                document.getElementById('volumeUp').textContent = upVolume.toFixed(2) + ' XNT';
+                document.getElementById('volumeDown').textContent = downVolume.toFixed(2) + ' XNT';
+                document.getElementById('volumeTotal').textContent = totalVolume.toFixed(2) + ' XNT';
+            }
         }
 
         function addTradeToHistory(trade, shouldSave = true) {
