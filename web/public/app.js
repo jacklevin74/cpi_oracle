@@ -58,6 +58,56 @@ let connection = null;
 let ammPda = null;
 let vaultPda = null;
 
+// ============= OUTLIER DETECTION =============
+
+/**
+ * Remove outliers from price data using Median Absolute Deviation (MAD)
+ * This prevents chart rendering issues from data artifacts
+ */
+function removeOutliers(prices, threshold = 3) {
+    if (!prices || prices.length === 0) return prices;
+    if (prices.length < 5) return prices; // Not enough data to detect outliers
+
+    // Calculate median
+    const sorted = [...prices].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2 === 0
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
+
+    // Calculate MAD (Median Absolute Deviation)
+    const absoluteDeviations = prices.map(price => Math.abs(price - median));
+    const sortedDeviations = [...absoluteDeviations].sort((a, b) => a - b);
+    const madMid = Math.floor(sortedDeviations.length / 2);
+    const mad = sortedDeviations.length % 2 === 0
+        ? (sortedDeviations[madMid - 1] + sortedDeviations[madMid]) / 2
+        : sortedDeviations[madMid];
+
+    // If MAD is 0 (all values are the same), use standard deviation instead
+    let filterThreshold;
+    if (mad === 0) {
+        const mean = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+        const variance = prices.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / prices.length;
+        const stdDev = Math.sqrt(variance);
+        filterThreshold = stdDev * threshold;
+    } else {
+        // Use MAD-based threshold (scaled by 1.4826 to be consistent with standard deviation)
+        filterThreshold = 1.4826 * mad * threshold;
+    }
+
+    // Filter outliers: keep only values within threshold of median
+    const filtered = prices.filter(price =>
+        Math.abs(price - median) <= filterThreshold
+    );
+
+    const removedCount = prices.length - filtered.length;
+    if (removedCount > 0) {
+        console.log(`Removed ${removedCount} outliers from ${prices.length} prices (median: $${median.toFixed(2)}, threshold: ±$${filterThreshold.toFixed(2)})`);
+    }
+
+    return filtered;
+}
+
 // ============= BROWSER-COMPATIBLE BUFFER =============
 
 // Helper to convert string to Uint8Array (browser-compatible Buffer replacement)
@@ -167,6 +217,12 @@ window.addEventListener('load', async () => {
 
     // Initialize BTC chart
     initBTCChart();
+
+    // Immediately populate chart with last 1 minute of historical data
+    if (priceHistory.length > 0) {
+        rebuildChartFromHistory();
+        console.log('Chart prerendered with', priceHistory.length, 'seconds of historical data');
+    }
 
     // Start polling
     startPolling();
@@ -1030,11 +1086,14 @@ async function loadPriceHistory(seconds = null) {
         const data = await response.json();
         if (data.prices && Array.isArray(data.prices)) {
             // Extract just the price values (server stores {price, timestamp} objects)
-            priceHistory = data.prices.map(item => {
+            let rawPrices = data.prices.map(item => {
                 return typeof item === 'number' ? item : item.price;
             });
 
-            console.log('Loaded', priceHistory.length, 'price points from server (total available:', data.totalPoints || priceHistory.length, ')');
+            console.log('Loaded', rawPrices.length, 'price points from server (total available:', data.totalPoints || rawPrices.length, ')');
+
+            // Remove outliers to prevent chart rendering issues
+            priceHistory = removeOutliers(rawPrices, 3);
 
             // Update chart if already initialized
             if (btcChart && priceHistory.length > 0) {
