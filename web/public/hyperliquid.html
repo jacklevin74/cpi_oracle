@@ -553,6 +553,7 @@
 
             // Special handling for REDEEM actions
             if (action === 'redeem') {
+                const amount = trade.amount || '0.00';
                 tradeItem.innerHTML = `
                     <div class="trade-side redeem-${side === 'yes' ? 'up' : 'down'}">
                         REDEEM<br>${sideDisplay}
@@ -562,13 +563,14 @@
                         <div class="trade-user">${shortAddr}</div>
                     </div>
                     <div class="trade-meta">
-                        <div class="trade-amount">${trade.amount} XNT</div>
+                        <div class="trade-amount">${amount} XNT</div>
                         <div class="trade-time">${timeStr}</div>
                     </div>
                 `;
             } else {
                 const avgPrice = trade.avgPrice || trade.price || '0.0000';
                 const shares = trade.shares || '0.00';
+                const amount = trade.amount || '0.00';
 
                 tradeItem.innerHTML = `
                     <div class="trade-side ${tradeClass}">
@@ -579,7 +581,7 @@
                         <div class="trade-user">${shortAddr}</div>
                     </div>
                     <div class="trade-meta">
-                        <div class="trade-amount">${trade.amount} XNT</div>
+                        <div class="trade-amount">${amount} XNT</div>
                         <div class="trade-time">${timeStr}</div>
                     </div>
                 `;
