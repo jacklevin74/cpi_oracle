@@ -961,6 +961,35 @@ button.disabled {
     font-family: 'SF Mono', Monaco, Consolas, monospace;
 }
 
+.feed-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.feed-tab {
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.feed-tab:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.feed-tab.active {
+    background: var(--green);
+    border-color: var(--green);
+    color: #000;
+}
+
 .feed-status {
     display: flex;
     align-items: center;

@@ -3702,6 +3702,101 @@ function clearLog() {
     logContent.innerHTML = '<div class="log-entry log-info"><span class="log-time">--:--:--</span><span class="log-message">Log cleared</span></div>';
 }
 
+// ============= SETTLEMENT HISTORY =============
+
+async function loadSettlementHistory() {
+    try {
+        const response = await fetch('/api/settlement-history');
+        if (!response.ok) {
+            console.warn('Failed to load settlement history:', response.status);
+            return;
+        }
+
+        const data = await response.json();
+        if (data.history && Array.isArray(data.history)) {
+            displaySettlementHistory(data.history);
+        }
+    } catch (err) {
+        console.warn('Failed to load settlement history:', err);
+    }
+}
+
+function displaySettlementHistory(history) {
+    const historyFeed = document.getElementById('historyFeed');
+    if (!historyFeed) return;
+
+    // Remove empty state
+    const emptyState = historyFeed.querySelector('.trade-feed-empty');
+    if (emptyState && history.length > 0) {
+        emptyState.remove();
+    }
+
+    // Clear existing items
+    historyFeed.innerHTML = '';
+
+    if (history.length === 0) {
+        historyFeed.innerHTML = '<div class="trade-feed-empty"><span class="empty-icon">📜</span><span class="empty-text">No settlement history</span></div>';
+        return;
+    }
+
+    // Display history items
+    history.forEach(item => {
+        const historyItem = document.createElement('div');
+        historyItem.className = 'trade-item';
+
+        const isWin = item.result === 'WIN';
+        const resultClass = isWin ? 'buy yes' : 'sell no';
+        const resultText = isWin ? 'WIN' : 'LOSE';
+        const sideDisplay = item.side === 'YES' ? 'UP' : 'DOWN';
+        const amount = parseFloat(item.amount).toFixed(4);
+
+        const time = new Date(item.timestamp);
+        const timeStr = time.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+
+        historyItem.innerHTML = `
+            <div class="trade-side ${resultClass}">
+                ${resultText}<br>${sideDisplay}
+            </div>
+            <div class="trade-info">
+                <div class="trade-action">${item.user_prefix}...</div>
+                <div class="trade-user">Settlement</div>
+            </div>
+            <div class="trade-meta">
+                <div class="trade-amount">${amount} XNT</div>
+                <div class="trade-time">${timeStr}</div>
+            </div>
+        `;
+
+        historyFeed.appendChild(historyItem);
+    });
+}
+
+function switchFeedTab(tab) {
+    const liveFeedTab = document.getElementById('liveFeedTab');
+    const historyFeedTab = document.getElementById('historyFeedTab');
+    const tradeFeed = document.getElementById('tradeFeed');
+    const historyFeed = document.getElementById('historyFeed');
+
+    if (tab === 'live') {
+        liveFeedTab.classList.add('active');
+        historyFeedTab.classList.remove('active');
+        tradeFeed.classList.remove('hidden');
+        historyFeed.classList.add('hidden');
+    } else if (tab === 'history') {
+        historyFeedTab.classList.add('active');
+        liveFeedTab.classList.remove('active');
+        historyFeed.classList.remove('hidden');
+        tradeFeed.classList.add('hidden');
+
+        // Load history when switching to tab
+        loadSettlementHistory();
+    }
+}
+
 // ============= INITIALIZATION =============
 
 window.addEventListener('DOMContentLoaded', () => {

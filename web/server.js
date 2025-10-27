@@ -21,9 +21,20 @@ db.exec(`
         timestamp INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_timestamp ON price_history(timestamp);
+
+    CREATE TABLE IF NOT EXISTS settlement_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_prefix TEXT NOT NULL,
+        result TEXT NOT NULL,
+        amount REAL NOT NULL,
+        side TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_settlement_timestamp ON settlement_history(timestamp);
 `);
 
 const MAX_PRICE_HISTORY_HOURS = 24; // Keep up to 24 hours of price data
+const MAX_SETTLEMENT_HISTORY_HOURS = 168; // Keep 7 days of settlement history
 
 // Cumulative volume storage (never decreases)
 let cumulativeVolume = {
@@ -128,19 +139,59 @@ function saveCumulativeVolume() {
     }, 1000); // Batch writes every 1 second
 }
 
+// Settlement history functions
+function addSettlementHistory(userPrefix, result, amount, side) {
+    try {
+        const stmt = db.prepare('INSERT INTO settlement_history (user_prefix, result, amount, side, timestamp) VALUES (?, ?, ?, ?, ?)');
+        stmt.run(userPrefix, result, amount, side, Date.now());
+        return true;
+    } catch (err) {
+        console.error('Failed to add settlement:', err.message);
+        return false;
+    }
+}
+
+function getSettlementHistory(limit = 100) {
+    try {
+        const stmt = db.prepare('SELECT * FROM settlement_history ORDER BY timestamp DESC LIMIT ?');
+        return stmt.all(limit);
+    } catch (err) {
+        console.error('Failed to get settlement history:', err.message);
+        return [];
+    }
+}
+
+function cleanupOldSettlements() {
+    try {
+        const cutoffTime = Date.now() - (MAX_SETTLEMENT_HISTORY_HOURS * 60 * 60 * 1000);
+        const stmt = db.prepare('DELETE FROM settlement_history WHERE timestamp < ?');
+        const result = stmt.run(cutoffTime);
+        if (result.changes > 0) {
+            console.log(`Cleaned up ${result.changes} old settlement records`);
+        }
+        return result.changes;
+    } catch (err) {
+        console.error('Failed to cleanup old settlements:', err.message);
+        return 0;
+    }
+}
+
 // Initialize volume and show DB stats
 loadCumulativeVolume();
 
 // Log database statistics
 const priceCount = getPriceHistoryCount();
-console.log(`SQLite database loaded with ${priceCount} price records`);
+const settlementCount = db.prepare('SELECT COUNT(*) as count FROM settlement_history').get().count;
+console.log(`SQLite database loaded with ${priceCount} price records and ${settlementCount} settlement records`);
 
 // Run cleanup on startup
 cleanupOldPrices();
+cleanupOldSettlements();
 
 // Schedule periodic cleanup (every hour)
 setInterval(() => {
     cleanupOldPrices();
+    cleanupOldSettlements();
 }, 60 * 60 * 1000);
 
 // Security headers
@@ -288,6 +339,63 @@ const server = http.createServer((req, res) => {
                         ...SECURITY_HEADERS
                     });
                     res.end(JSON.stringify({ error: 'Invalid price' }));
+                }
+            } catch (err) {
+                res.writeHead(400, {
+                    'Content-Type': 'application/json',
+                    ...SECURITY_HEADERS
+                });
+                res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            }
+        });
+        return;
+    }
+
+    // API: Get settlement history
+    if (req.url === '/api/settlement-history' && req.method === 'GET') {
+        const history = getSettlementHistory(100);
+        res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            ...SECURITY_HEADERS
+        });
+        res.end(JSON.stringify({ history: history }));
+        return;
+    }
+
+    // API: Add settlement to history
+    if (req.url === '/api/settlement-history' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+            if (body.length > 1000) {
+                req.connection.destroy();
+            }
+        });
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                if (data.userPrefix && data.result && typeof data.amount === 'number' && data.side) {
+                    const success = addSettlementHistory(data.userPrefix, data.result, data.amount, data.side);
+                    if (success) {
+                        res.writeHead(200, {
+                            'Content-Type': 'application/json',
+                            ...SECURITY_HEADERS
+                        });
+                        res.end(JSON.stringify({ success: true }));
+                    } else {
+                        res.writeHead(500, {
+                            'Content-Type': 'application/json',
+                            ...SECURITY_HEADERS
+                        });
+                        res.end(JSON.stringify({ error: 'Failed to save settlement' }));
+                    }
+                } else {
+                    res.writeHead(400, {
+                        'Content-Type': 'application/json',
+                        ...SECURITY_HEADERS
+                    });
+                    res.end(JSON.stringify({ error: 'Invalid settlement data' }));
                 }
             } catch (err) {
                 res.writeHead(400, {

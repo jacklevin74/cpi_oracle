@@ -5,6 +5,7 @@
 
 const fs = require("fs");
 const crypto = require("crypto");
+const http = require("http");
 const {
   Connection, PublicKey, Keypair, SystemProgram,
   Transaction, TransactionInstruction, sendAndConfirmTransaction,
@@ -93,8 +94,53 @@ function broadcastRedemption(userAddress, amountXnt, winningSide) {
     // Write back
     fs.writeFileSync(TRADES_FILE, JSON.stringify(trades, null, 2));
 
+    // Also post to settlement history API
+    postSettlementHistory(userAddress, amountXnt, winningSide);
+
   } catch (err) {
     logError("Failed to broadcast redemption:", err.message);
+  }
+}
+
+/* ---------------- Post Settlement to History API ---------------- */
+function postSettlementHistory(userAddress, amountXnt, winningSide) {
+  try {
+    const userPrefix = userAddress.substring(0, 6);
+    const result = amountXnt > 0 ? 'WIN' : 'LOSE';
+
+    const postData = JSON.stringify({
+      userPrefix: userPrefix,
+      result: result,
+      amount: amountXnt,
+      side: winningSide
+    });
+
+    const options = {
+      hostname: 'localhost',
+      port: 3434,
+      path: '/api/settlement-history',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+
+    const req = http.request(options, (res) => {
+      if (res.statusCode === 200) {
+        logInfo(`  → Settlement history saved for ${userPrefix}...`);
+      }
+    });
+
+    req.on('error', (err) => {
+      // Silently fail if web server is not running
+    });
+
+    req.write(postData);
+    req.end();
+
+  } catch (err) {
+    // Silently fail - settlement history is optional
   }
 }
 

@@ -135,7 +135,10 @@
                 <!-- Live Trade Feed -->
                 <div class="trade-feed-section">
                     <div class="feed-header">
-                        <span class="feed-title">LIVE TRADES</span>
+                        <div class="feed-tabs">
+                            <button class="feed-tab active" id="liveFeedTab" onclick="switchFeedTab('live')">LIVE</button>
+                            <button class="feed-tab" id="historyFeedTab" onclick="switchFeedTab('history')">HISTORY</button>
+                        </div>
                         <div class="feed-status">
                             <div class="ws-status" id="wsStatus" title="Live Trade Feed">
                                 <span class="ws-dot"></span>
@@ -148,6 +151,12 @@
                         <div class="trade-feed-empty">
                             <span class="empty-icon">📊</span>
                             <span class="empty-text">Waiting for trades...</span>
+                        </div>
+                    </div>
+                    <div class="trade-feed-list hidden" id="historyFeed">
+                        <div class="trade-feed-empty">
+                            <span class="empty-icon">📜</span>
+                            <span class="empty-text">No settlement history</span>
                         </div>
                     </div>
                 </div>
