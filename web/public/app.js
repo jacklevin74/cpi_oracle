@@ -494,6 +494,15 @@ async function connectBackpack() {
         showHasWallet(backpackAddress);
         console.log('[DEBUG] showHasWallet completed');
 
+        // Automatically initialize position with master_wallet security
+        addLog('Checking position account...', 'info');
+        const posInitialized = await initPosition();
+        if (posInitialized) {
+            addLog('✅ Position ready with withdrawal security enabled', 'success');
+        } else {
+            addLog('⚠️ Position initialization failed - you may need to initialize manually', 'warning');
+        }
+
         updateWalletBalance();
         fetchPositionData();
         showStatus('Connected! Session wallet: ' + sessionAddr);
