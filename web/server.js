@@ -636,13 +636,13 @@ const server = http.createServer((req, res) => {
                 res.end('500 Internal Server Error');
             }
         } else {
-            // Add no-cache headers for JavaScript files to prevent stale code
+            // Add no-cache headers for JavaScript and HTML files to prevent stale code
             const headers = {
                 'Content-Type': contentType,
                 ...SECURITY_HEADERS
             };
 
-            if (ext === '.js') {
+            if (ext === '.js' || ext === '.html') {
                 headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
                 headers['Pragma'] = 'no-cache';
                 headers['Expires'] = '0';

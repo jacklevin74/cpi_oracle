@@ -1068,6 +1068,52 @@ function showHasWallet(backpackAddr) {
     console.log('[DEBUG showHasWallet] Function completed');
 }
 
+async function fetchPositionAccount() {
+    if (!wallet) {
+        return null;
+    }
+
+    try {
+        const [ammPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('amm_btc_v3')],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const accountInfo = await connection.getAccountInfo(posPda);
+
+        if (!accountInfo) {
+            return null;
+        }
+
+        const d = accountInfo.data;
+        // Position struct: discriminator(8) + owner(32) + yes_shares_e6(8) + no_shares_e6(8) + master_wallet(32) + vault_balance_e6(8) + vault_bump(1)
+        if (d.length >= 8 + 32 + 8 + 8 + 32 + 8) {
+            let o = 8; // Skip discriminator
+            o += 32; // Skip owner pubkey
+            const sharesY = readI64LE(d, o); o += 8;
+            const sharesN = readI64LE(d, o); o += 8;
+            o += 32; // Skip master_wallet
+            const vaultBalance = readI64LE(d, o); o += 8;
+
+            return {
+                yes_shares_e6: sharesY,
+                no_shares_e6: sharesN,
+                vault_balance_e6: vaultBalance
+            };
+        }
+
+        return null;
+    } catch (err) {
+        console.error('Failed to fetch position account:', err);
+        return null;
+    }
+}
+
 async function updateWalletBalance() {
     if (!wallet) {
         console.log('No wallet to update balance');
@@ -1075,17 +1121,28 @@ async function updateWalletBalance() {
     }
 
     try {
-        const balance = await connection.getBalance(wallet.publicKey);
-        const solBalance = (balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4);
-        const solBalanceShort = (balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(2);
-        const balanceNum = balance / solanaWeb3.LAMPORTS_PER_SOL;
+        // Get vault balance from Position account (this is the tradeable balance)
+        const position = await fetchPositionAccount();
+        let vaultBalance = 0;
+
+        if (position && position.vault_balance_e6 !== undefined) {
+            // vault_balance_e6 uses LAMPORTS_PER_E6 = 100, so 1 XNT = 10_000_000 e6 units
+            vaultBalance = position.vault_balance_e6 / 1e7;
+        }
+
+        const solBalance = vaultBalance.toFixed(4);
+        const solBalanceShort = vaultBalance.toFixed(2);
+        const balanceNum = vaultBalance;
+
+        // Set global wallet balance for trading functions
+        window.walletBalance = vaultBalance;
 
         // Update nav bar
         if (document.getElementById('navWalletBal')) {
             document.getElementById('navWalletBal').textContent = solBalanceShort;
         }
 
-        // Update sidebar
+        // Update sidebar (showing vault balance, not session wallet)
         if (document.getElementById('walletBal')) {
             document.getElementById('walletBal').textContent = solBalance;
         }
@@ -2536,7 +2593,7 @@ async function executeTrade() {
 
         const budgetIxs = createComputeBudgetInstructions();
         const transaction = new solanaWeb3.Transaction().add(...budgetIxs, instruction);
-        transaction.feePayer = wallet.publicKey;
+        transaction.feePayer = wallet.publicKey;  // Session wallet pays fees (has 0.01 XNT reserve)
         transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         transaction.sign(wallet);
 
@@ -3103,13 +3160,20 @@ async function initPosition() {
 
         addLog('Initializing position account...', 'info');
 
+        // Calculate user_vault PDA
+        const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('user_vault'), posPda.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
         const discriminator = await createDiscriminator('init_position');
 
         const keys = [
             { pubkey: ammPda, isSigner: false, isWritable: false },
             { pubkey: posPda, isSigner: false, isWritable: true },
+            { pubkey: userVaultPda, isSigner: false, isWritable: false }, // user_vault PDA
             { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
-            { pubkey: backpackWallet.publicKey, isSigner: false, isWritable: false }, // master_wallet
+            { pubkey: backpackWallet.publicKey, isSigner: true, isWritable: true }, // master_wallet (pays rent)
             { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
         ];
 
@@ -3119,18 +3183,31 @@ async function initPosition() {
             data: discriminator
         });
 
+        // Also fund session wallet with small amount for transaction fees (0.01 XNT)
+        const feeReserve = 0.01 * solanaWeb3.LAMPORTS_PER_SOL;
+        const fundSessionIx = solanaWeb3.SystemProgram.transfer({
+            fromPubkey: backpackWallet.publicKey,
+            toPubkey: wallet.publicKey,
+            lamports: feeReserve
+        });
+
         const budgetIxs = createComputeBudgetInstructions(200000, 0);
-        const transaction = new solanaWeb3.Transaction().add(...budgetIxs, instruction);
-        transaction.feePayer = wallet.publicKey;
+        const transaction = new solanaWeb3.Transaction().add(...budgetIxs, fundSessionIx, instruction);
+        transaction.feePayer = backpackWallet.publicKey; // Backpack pays fees
         transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+        // Sign with session wallet first
         transaction.sign(wallet);
 
-        addLog('Submitting init position transaction...', 'tx');
-        const signature = await connection.sendRawTransaction(transaction.serialize());
+        // Then sign with Backpack
+        const signedTx = await backpackWallet.signTransaction(transaction);
+
+        addLog('Submitting init position transaction (+ funding session wallet with 0.01 XNT for fees)...', 'tx');
+        const signature = await connection.sendRawTransaction(signedTx.serialize());
         addLog('TX: ' + signature, 'tx');
 
         await connection.confirmTransaction(signature, 'confirmed');
-        addLog('Position initialized successfully!', 'success');
+        addLog('Position initialized! Session wallet funded with 0.01 XNT for transaction fees.', 'success');
         return true;
 
     } catch (err) {

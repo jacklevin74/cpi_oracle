@@ -3,7 +3,7 @@ use anchor_lang::solana_program::{
     program::{invoke, invoke_signed},
     system_instruction,
 };
-use anchor_lang::system_program::{self, System};
+use anchor_lang::system_program::System;
 
 declare_id!("EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF");
 
@@ -87,14 +87,17 @@ impl Amm {
 // Per-user position (PDA is per-market: [b"pos", amm, user])
 #[account]
 pub struct Position {
-    pub owner: Pubkey,
+    pub owner: Pubkey,           // Session wallet address
     pub yes_shares_e6: i64,
     pub no_shares_e6: i64,
-    pub master_wallet: Pubkey,  // NEW: Backpack wallet that authorized this session wallet
+    pub master_wallet: Pubkey,   // Backpack wallet that authorized this session wallet
+    pub vault_balance_e6: i64,   // User's SOL balance in vault (1e6 scale)
+    pub vault_bump: u8,          // Bump for user_vault PDA
 }
 impl Position {
     pub const SEED: &'static [u8] = b"pos";
-    pub const SPACE: usize = 32 + 8 + 8 + 32;  // owner + yes + no + master_wallet
+    pub const USER_VAULT_SEED: &'static [u8] = b"user_vault";
+    pub const SPACE: usize = 32 + 8 + 8 + 32 + 8 + 1;  // owner + yes + no + master_wallet + vault_balance + vault_bump
 }
 
 // ---- Limits (all scaled 1e6) ----
@@ -170,17 +173,25 @@ pub struct InitPosition<'info> {
 
     #[account(
         init,
-        payer = user,
+        payer = master_wallet,
         space = 8 + Position::SPACE,
         seeds = [Position::SEED, amm.key().as_ref(), user.key().as_ref()],
         bump
     )]
     pub pos: Account<'info, Position>,
 
+    /// CHECK: User vault PDA (system-owned, holds SOL)
+    #[account(
+        seeds = [Position::USER_VAULT_SEED, pos.key().as_ref()],
+        bump
+    )]
+    pub user_vault: AccountInfo<'info>,
+
     #[account(mut)]
     pub user: Signer<'info>,
-    /// CHECK: This is the master wallet (Backpack) that authorized the session wallet
-    pub master_wallet: AccountInfo<'info>,
+    /// CHECK: This is the master wallet (Backpack) that authorized the session wallet and pays for initialization
+    #[account(mut)]
+    pub master_wallet: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -200,6 +211,14 @@ pub struct Trade<'info> {
     )]
     pub pos: Account<'info, Position>,
 
+    /// CHECK: User vault PDA (system-owned, holds user's SOL)
+    #[account(
+        mut,
+        seeds = [Position::USER_VAULT_SEED, pos.key().as_ref()],
+        bump = pos.vault_bump
+    )]
+    pub user_vault: AccountInfo<'info>,
+
     /// CHECK: writable lamport recipient for fees; address checked against `amm.fee_dest`.
     #[account(mut, address = amm.fee_dest)]
     pub fee_dest: UncheckedAccount<'info>,
@@ -214,6 +233,67 @@ pub struct Trade<'info> {
 
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+pub struct UserVault<'info> {
+    #[account(seeds = [Amm::SEED], bump = amm.bump)]
+    pub amm: Account<'info, Amm>,
+
+    #[account(
+        mut,
+        seeds = [Position::SEED, amm.key().as_ref(), user.key().as_ref()],
+        bump,
+        constraint = pos.owner == user.key() @ ReaderError::NotOwner
+    )]
+    pub pos: Account<'info, Position>,
+
+    /// CHECK: User vault PDA (system-owned, holds user's SOL)
+    #[account(
+        mut,
+        seeds = [Position::USER_VAULT_SEED, pos.key().as_ref()],
+        bump = pos.vault_bump
+    )]
+    pub user_vault: AccountInfo<'info>,
+
+    pub user: Signer<'info>,
+
+    /// Master wallet (Backpack) that funds the deposit
+    #[account(mut)]
+    pub master_wallet: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UserVaultWithdraw<'info> {
+    #[account(seeds = [Amm::SEED], bump = amm.bump)]
+    pub amm: Account<'info, Amm>,
+
+    #[account(
+        mut,
+        seeds = [Position::SEED, amm.key().as_ref(), user.key().as_ref()],
+        bump,
+        constraint = pos.owner == user.key() @ ReaderError::NotOwner
+    )]
+    pub pos: Account<'info, Position>,
+
+    /// CHECK: User vault PDA (system-owned, holds user's SOL)
+    #[account(
+        mut,
+        seeds = [Position::USER_VAULT_SEED, pos.key().as_ref()],
+        bump = pos.vault_bump
+    )]
+    pub user_vault: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    /// CHECK: Master wallet (Backpack) - must sign withdrawals
+    #[account(mut)]
+    pub master_wallet: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -416,7 +496,93 @@ pub mod cpi_oracle {
         pos.yes_shares_e6 = 0;
         pos.no_shares_e6 = 0;
         pos.master_wallet = ctx.accounts.master_wallet.key();
-        msg!("✅ Position initialized for {} (master: {})", pos.owner, pos.master_wallet);
+        pos.vault_balance_e6 = 0;
+        pos.vault_bump = ctx.bumps.user_vault;
+        msg!("✅ Position initialized for {} (master: {}, vault: {})",
+             pos.owner, pos.master_wallet, ctx.accounts.user_vault.key());
+        Ok(())
+    }
+
+    // ---------- DEPOSIT (move SOL from master wallet directly into user vault) ----------
+    pub fn deposit(ctx: Context<UserVault>, amount_lamports: u64) -> Result<()> {
+        let pos = &mut ctx.accounts.pos;
+
+        // SECURITY: Verify the master_wallet matches the stored one
+        require_keys_eq!(
+            ctx.accounts.master_wallet.key(),
+            pos.master_wallet,
+            ReaderError::Unauthorized
+        );
+
+        // Transfer SOL from master wallet (Backpack) directly to user_vault PDA
+        invoke(
+            &system_instruction::transfer(
+                ctx.accounts.master_wallet.key,
+                ctx.accounts.user_vault.key,
+                amount_lamports,
+            ),
+            &[
+                ctx.accounts.master_wallet.to_account_info(),
+                ctx.accounts.user_vault.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+
+        // Update vault balance tracking (convert lamports to e6 scale)
+        let amount_e6 = lamports_to_e6(amount_lamports);
+        pos.vault_balance_e6 += amount_e6;
+
+        msg!("✅ Deposited {} lamports ({} e6) from master wallet to vault. New balance: {} e6",
+             amount_lamports, amount_e6, pos.vault_balance_e6);
+        Ok(())
+    }
+
+    // ---------- WITHDRAW (move SOL from user vault to master wallet ONLY) ----------
+    pub fn withdraw(ctx: Context<UserVaultWithdraw>, amount_lamports: u64) -> Result<()> {
+        let pos = &mut ctx.accounts.pos;
+
+        // SECURITY: Verify signer is the master wallet
+        require_keys_eq!(
+            ctx.accounts.master_wallet.key(),
+            pos.master_wallet,
+            ReaderError::Unauthorized
+        );
+
+        // Check vault balance
+        let amount_e6 = lamports_to_e6(amount_lamports);
+        require!(
+            pos.vault_balance_e6 >= amount_e6,
+            ReaderError::InsufficientBalance
+        );
+
+        // Transfer SOL from user_vault PDA to master wallet using signed PDA
+        let pos_key = pos.key();
+        let seeds = &[
+            Position::USER_VAULT_SEED,
+            pos_key.as_ref(),
+            &[pos.vault_bump],
+        ];
+        let signer_seeds = &[&seeds[..]];
+
+        invoke_signed(
+            &system_instruction::transfer(
+                ctx.accounts.user_vault.key,
+                ctx.accounts.master_wallet.key,
+                amount_lamports,
+            ),
+            &[
+                ctx.accounts.user_vault.to_account_info(),
+                ctx.accounts.master_wallet.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+            signer_seeds,
+        )?;
+
+        // Update vault balance
+        pos.vault_balance_e6 -= amount_e6;
+
+        msg!("✅ Withdrew {} lamports ({} e6) to master wallet. Remaining: {} e6",
+             amount_lamports, amount_e6, pos.vault_balance_e6);
         Ok(())
     }
 
@@ -451,34 +617,62 @@ pub mod cpi_oracle {
         match (side, action) {
             (1, 1) => { // BUY YES
                 require!(amount >= MIN_BUY_E6 && amount <= SPEND_MAX_E6, ReaderError::BadParam);
+
+                // Check user vault balance
+                require!(pos.vault_balance_e6 >= amount, ReaderError::InsufficientBalance);
+
                 let (dq_e6, avg_h) = lmsr_buy_yes(amm, amount)?;
                 pos.yes_shares_e6 = pos.yes_shares_e6.saturating_add(dq_e6.round() as i64);
 
-                // Collect lamports from user: fee + net
+                // Calculate fee and net
                 let fee_e6 = ((amount as i128) * (amm.fee_bps as i128) / 10_000) as i64;
                 let net_e6 = amount.saturating_sub(fee_e6);
 
-                transfer_sol(sys, &ctx.accounts.user.to_account_info(), &ctx.accounts.vault_sol.to_account_info(), e6_to_lamports(net_e6))?;
-                transfer_sol(sys, &ctx.accounts.user.to_account_info(), &ctx.accounts.fee_dest.to_account_info(), e6_to_lamports(fee_e6))?;
+                // Transfer from user_vault PDA (using signed transfer)
+                let pos_key = pos.key();
+                let seeds: &[&[u8]] = &[
+                    Position::USER_VAULT_SEED,
+                    pos_key.as_ref(),
+                    core::slice::from_ref(&pos.vault_bump),
+                ];
+                transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.vault_sol.to_account_info(), e6_to_lamports(net_e6), &[seeds])?;
+                transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.fee_dest.to_account_info(), e6_to_lamports(fee_e6), &[seeds])?;
+
+                // Update vault balance
+                pos.vault_balance_e6 -= amount;
 
                 emit_trade(amm, 1, 1, amount, dq_e6.round() as i64, avg_h);
                 log_trade_buy("BUY YES", amount, dq_e6, avg_h, lmsr_p_yes(amm), amm);
             }
             (2, 1) => { // BUY NO
                 require!(amount >= MIN_BUY_E6 && amount <= SPEND_MAX_E6, ReaderError::BadParam);
+
+                // Check user vault balance
+                require!(pos.vault_balance_e6 >= amount, ReaderError::InsufficientBalance);
+
                 let (dq_e6, avg_h) = lmsr_buy_no(amm, amount)?;
                 pos.no_shares_e6 = pos.no_shares_e6.saturating_add(dq_e6.round() as i64);
 
                 let fee_e6 = ((amount as i128) * (amm.fee_bps as i128) / 10_000) as i64;
                 let net_e6 = amount.saturating_sub(fee_e6);
 
-                transfer_sol(sys, &ctx.accounts.user.to_account_info(), &ctx.accounts.vault_sol.to_account_info(), e6_to_lamports(net_e6))?;
-                transfer_sol(sys, &ctx.accounts.user.to_account_info(), &ctx.accounts.fee_dest.to_account_info(), e6_to_lamports(fee_e6))?;
+                // Transfer from user_vault PDA (using signed transfer)
+                let pos_key = pos.key();
+                let seeds: &[&[u8]] = &[
+                    Position::USER_VAULT_SEED,
+                    pos_key.as_ref(),
+                    core::slice::from_ref(&pos.vault_bump),
+                ];
+                transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.vault_sol.to_account_info(), e6_to_lamports(net_e6), &[seeds])?;
+                transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.fee_dest.to_account_info(), e6_to_lamports(fee_e6), &[seeds])?;
+
+                // Update vault balance
+                pos.vault_balance_e6 -= amount;
 
                 emit_trade(amm, 2, 1, amount, dq_e6.round() as i64, avg_h);
                 log_trade_buy("BUY NO ", amount, dq_e6, avg_h, lmsr_p_yes(amm), amm);
             }
-            (1, 2) => { // SELL YES → pay user from vault_sol
+            (1, 2) => { // SELL YES → pay proceeds to user_vault
                 require!(amount >= MIN_SELL_E6 && amount <= DQ_MAX_E6, ReaderError::BadParam);
                 let sell_e6 = amount.min(pos.yes_shares_e6);
                 require!(sell_e6 > 0, ReaderError::InsufficientShares);
@@ -486,19 +680,23 @@ pub mod cpi_oracle {
                 let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_yes(amm, sell_e6)?;
                 require!(amm.vault_e6 >= proceeds_e6, ReaderError::NoCoverage);
 
+                // Transfer from vault_sol to user_vault
                 let amm_key = amm.key();
                 let seeds: &[&[u8]] = &[
                     Amm::VAULT_SOL_SEED,
                     amm_key.as_ref(),
                     core::slice::from_ref(&amm.vault_sol_bump),
                 ];
-                transfer_sol_signed(sys, &ctx.accounts.vault_sol.to_account_info(), &ctx.accounts.user.to_account_info(), e6_to_lamports(proceeds_e6), &[seeds])?;
+                transfer_sol_signed(sys, &ctx.accounts.vault_sol.to_account_info(), &ctx.accounts.user_vault.to_account_info(), e6_to_lamports(proceeds_e6), &[seeds])?;
 
+                // Update vault balance
+                pos.vault_balance_e6 += proceeds_e6;
                 pos.yes_shares_e6 = pos.yes_shares_e6.saturating_sub(sold_e6.round() as i64);
+
                 emit_trade(amm, 1, 2, proceeds_e6, sold_e6.round() as i64, avg_h);
                 log_trade_sell("SELL YES", sold_e6, proceeds_e6, avg_h, lmsr_p_yes(amm), amm);
             }
-            (2, 2) => { // SELL NO → pay user from vault_sol
+            (2, 2) => { // SELL NO → pay proceeds to user_vault
                 require!(amount >= MIN_SELL_E6 && amount <= DQ_MAX_E6, ReaderError::BadParam);
                 let sell_e6 = amount.min(pos.no_shares_e6);
                 require!(sell_e6 > 0, ReaderError::InsufficientShares);
@@ -506,15 +704,19 @@ pub mod cpi_oracle {
                 let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_no(amm, sell_e6)?;
                 require!(amm.vault_e6 >= proceeds_e6, ReaderError::NoCoverage);
 
+                // Transfer from vault_sol to user_vault
                 let amm_key = amm.key();
                 let seeds: &[&[u8]] = &[
                     Amm::VAULT_SOL_SEED,
                     amm_key.as_ref(),
                     core::slice::from_ref(&amm.vault_sol_bump),
                 ];
-                transfer_sol_signed(sys, &ctx.accounts.vault_sol.to_account_info(), &ctx.accounts.user.to_account_info(), e6_to_lamports(proceeds_e6), &[seeds])?;
+                transfer_sol_signed(sys, &ctx.accounts.vault_sol.to_account_info(), &ctx.accounts.user_vault.to_account_info(), e6_to_lamports(proceeds_e6), &[seeds])?;
 
+                // Update vault balance
+                pos.vault_balance_e6 += proceeds_e6;
                 pos.no_shares_e6 = pos.no_shares_e6.saturating_sub(sold_e6.round() as i64);
+
                 emit_trade(amm, 2, 2, proceeds_e6, sold_e6.round() as i64, avg_h);
                 log_trade_sell("SELL NO ", sold_e6, proceeds_e6, avg_h, lmsr_p_yes(amm), amm);
             }
@@ -1163,5 +1365,7 @@ pub enum ReaderError {
     #[msg("oracle snapshot already taken")]       AlreadySnapshotted,
     #[msg("oracle snapshot missing")]             NotSnapshotted,
     #[msg("stale oracle data")]                   StaleOracle,
+    #[msg("unauthorized access")]                 Unauthorized,
+    #[msg("insufficient vault balance")]          InsufficientBalance,
 }
 

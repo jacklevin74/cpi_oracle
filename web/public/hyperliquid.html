@@ -36,22 +36,45 @@
             <div class="modal-overlay" onclick="closeDepositModal()"></div>
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 class="modal-title">Deposit to Session Wallet</h3>
+                    <h3 class="modal-title">Deposit to Trading Vault</h3>
                     <button class="modal-close" onclick="closeDepositModal()">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="deposit-instructions">Send TESTNET XNT tokens only to this address:</p>
+                    <p class="deposit-instructions">Deposit funds from your Backpack wallet directly to your secure trading vault:</p>
+
+                    <div class="balance-info">
+                        <div class="balance-row">
+                            <span class="balance-label">Backpack Wallet Balance:</span>
+                            <span class="balance-value" id="sessionWalletBalance">Loading...</span>
+                        </div>
+                        <div class="balance-row">
+                            <span class="balance-label">Current Vault Balance:</span>
+                            <span class="balance-value" id="currentVaultBalance">Loading...</span>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="depositAmount">Amount (XNT):</label>
+                        <input type="number" id="depositAmount" placeholder="0.00" step="0.01" min="0.01">
+                        <button class="btn-max-deposit" onclick="setMaxDeposit()">MAX</button>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn-primary" onclick="executeDeposit()">Deposit to Vault</button>
+                        <button class="btn-secondary" onclick="closeDepositModal()">Cancel</button>
+                    </div>
+
+                    <p class="deposit-note">💡 Your session wallet can trade with vault funds. Only your Backpack wallet can deposit or withdraw.</p>
+                    <p class="deposit-note deposit-warning">⚠️ Funds go directly from Backpack → Vault. Session wallet never holds funds (more secure!).</p>
                     <div class="deposit-address-container">
-                        <div class="deposit-address" id="depositAddress">Loading...</div>
-                        <button class="btn-copy" onclick="copyDepositAddress()" title="Copy to clipboard">
-                            <svg id="copyIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <div class="deposit-address-small" id="depositAddress">Loading...</div>
+                        <button class="btn-copy-small" onclick="copyDepositAddress()" title="Copy session wallet address (for reference)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                             </svg>
                         </button>
                     </div>
-                    <p class="deposit-note deposit-warning">⚠️ <strong>TESTNET ONLY:</strong> Make sure your wallet is set to <code>https://rpc.testnet.x1.xyz</code>. Sending any other tokens on any other network will cause you to lose them.</p>
-                    <p class="deposit-note">This is a temporary session wallet. Funds will be available for trading immediately after deposit confirmation.</p>
                 </div>
             </div>
         </div>
@@ -982,12 +1005,35 @@
         }
 
         // Deposit Modal Functions
-        function openDepositModal() {
+        async function openDepositModal() {
             const modal = document.getElementById('depositModal');
             const depositAddress = document.getElementById('depositAddress');
+            const sessionBalanceEl = document.getElementById('sessionWalletBalance');
+            const vaultBalanceEl = document.getElementById('currentVaultBalance');
 
-            if (wallet && wallet.publicKey) {
+            if (wallet && wallet.publicKey && backpackWallet) {
                 depositAddress.textContent = wallet.publicKey.toString();
+
+                // Get Backpack wallet balance (this is where funds will come from)
+                try {
+                    const backpackBalance = await connection.getBalance(backpackWallet.publicKey);
+                    sessionBalanceEl.textContent = (backpackBalance / 1e9).toFixed(4) + ' XNT';
+                } catch (err) {
+                    sessionBalanceEl.textContent = 'Error loading';
+                }
+
+                // Get vault balance from Position account
+                try {
+                    const position = await fetchPositionAccount();
+                    if (position && position.vault_balance_e6 !== undefined) {
+                        vaultBalanceEl.textContent = (position.vault_balance_e6 / 1e6).toFixed(4) + ' XNT';
+                    } else {
+                        vaultBalanceEl.textContent = '0.0000 XNT';
+                    }
+                } catch (err) {
+                    vaultBalanceEl.textContent = 'Error loading';
+                }
+
                 modal.classList.remove('hidden');
             }
         }
@@ -995,24 +1041,144 @@
         function closeDepositModal() {
             const modal = document.getElementById('depositModal');
             modal.classList.add('hidden');
+            const amountInput = document.getElementById('depositAmount');
+            if (amountInput) amountInput.value = '';
+        }
+
+        function setMaxDeposit() {
+            const backpackBalanceText = document.getElementById('sessionWalletBalance').textContent;
+            const match = backpackBalanceText.match(/([0-9.]+)/);
+            if (match) {
+                const balance = parseFloat(match[1]);
+                // Reserve 0.02 XNT for transaction fees
+                const maxDeposit = Math.max(0, balance - 0.02);
+                document.getElementById('depositAmount').value = maxDeposit.toFixed(4);
+            }
+        }
+
+        async function executeDeposit() {
+            if (!wallet || !backpackWallet) {
+                showError('Wallet not connected');
+                return;
+            }
+
+            const amountInput = document.getElementById('depositAmount');
+            const amount = parseFloat(amountInput.value);
+
+            if (!amount || amount <= 0) {
+                showError('Please enter a valid amount');
+                return;
+            }
+
+            const amountLamports = Math.floor(amount * 1e9);
+
+            try {
+                // Check if position exists first, initialize if needed
+                const [ammPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+                    [stringToUint8Array('amm_btc_v3')],
+                    new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+                );
+
+                const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+                    [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+                    new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+                );
+
+                console.log('🔍 Session wallet:', wallet.publicKey.toString());
+                console.log('🔍 Backpack wallet:', backpackWallet.publicKey.toString());
+                console.log('🔍 Position PDA:', posPda.toString());
+
+                const positionExists = await connection.getAccountInfo(posPda);
+                console.log('🔍 Position exists:', !!positionExists);
+                if (positionExists) {
+                    console.log('🔍 Position size:', positionExists.data.length, 'bytes (expected:', 8 + 89, ')');
+                }
+                if (!positionExists) {
+                    addLog('Position not initialized. Initializing...', 'info');
+                    // Call the initPosition function from app.js
+                    if (typeof window.initPosition === 'function') {
+                        const success = await window.initPosition();
+                        if (!success) {
+                            showError('Failed to initialize position');
+                            return;
+                        }
+                    } else {
+                        showError('Position not initialized. Please reconnect wallet.');
+                        return;
+                    }
+                }
+
+                addLog(`Depositing ${amount.toFixed(4)} XNT to vault...`, 'info');
+
+                // Get user_vault PDA
+                const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+                    [stringToUint8Array('user_vault'), posPda.toBytes()],
+                    new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+                );
+
+                // Create deposit instruction
+                const discriminator = await createDiscriminator('deposit');
+
+                // Encode amount as u64 (8 bytes little-endian)
+                const amountBuffer = new ArrayBuffer(8);
+                const amountView = new DataView(amountBuffer);
+                amountView.setBigUint64(0, BigInt(amountLamports), true);
+
+                const data = new Uint8Array(discriminator.length + 8);
+                data.set(discriminator, 0);
+                data.set(new Uint8Array(amountBuffer), discriminator.length);
+
+                const keys = [
+                    { pubkey: ammPda, isSigner: false, isWritable: false },
+                    { pubkey: posPda, isSigner: false, isWritable: true },
+                    { pubkey: userVaultPda, isSigner: false, isWritable: true },
+                    { pubkey: wallet.publicKey, isSigner: true, isWritable: false },  // session wallet (for position lookup)
+                    { pubkey: backpackWallet.publicKey, isSigner: true, isWritable: true },  // master wallet (pays for deposit)
+                    { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+                ];
+
+                const depositIx = new solanaWeb3.TransactionInstruction({
+                    keys,
+                    programId: new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID),
+                    data,
+                });
+
+                const tx = new solanaWeb3.Transaction().add(depositIx);
+                tx.feePayer = backpackWallet.publicKey;  // Backpack pays fees
+                tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+                // Sign with session wallet (Keypair) first
+                tx.sign(wallet);
+
+                // Then sign with Backpack wallet
+                const fullySignedTx = await backpackWallet.signTransaction(tx);
+                const txid = await connection.sendRawTransaction(fullySignedTx.serialize());
+
+                addLog(`Deposit transaction sent: ${txid}`, 'success');
+                addLog('Waiting for confirmation...', 'info');
+
+                await connection.confirmTransaction(txid, 'confirmed');
+
+                addLog(`✅ Deposited ${amount.toFixed(4)} XNT to vault successfully!`, 'success');
+                closeDepositModal();
+
+                // Refresh balances
+                await fetchMarketState();
+                await fetchPositionAccount();
+
+            } catch (err) {
+                console.error('Deposit error:', err);
+                addLog(`ERROR: Deposit failed - ${err.message}`, 'error');
+                showError('Deposit failed: ' + err.message);
+            }
         }
 
         function copyDepositAddress() {
             const address = document.getElementById('depositAddress').textContent;
-            const copyIcon = document.getElementById('copyIcon');
-            const copyBtn = copyIcon.closest('.btn-copy');
 
             if (address && address !== 'Loading...') {
                 navigator.clipboard.writeText(address).then(() => {
-                    // Change to checkmark icon
-                    copyIcon.innerHTML = '<path d="M20 6L9 17l-5-5"></path>';
-                    copyBtn.style.color = '#00ff88';
-
-                    setTimeout(() => {
-                        // Restore copy icon
-                        copyIcon.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
-                        copyBtn.style.color = '';
-                    }, 2000);
+                    console.log('Session wallet address copied');
                 }).catch(err => {
                     console.error('Failed to copy:', err);
                 });
