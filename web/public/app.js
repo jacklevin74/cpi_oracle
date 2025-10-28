@@ -1538,8 +1538,9 @@ function startChartUpdateLoop() {
 
         updateCounter++;
 
-        // Always update price display (even if we skip chart update)
-        updatePriceDisplay(displayPrice);
+        // Update price display with actual target price (instant jump, no interpolation)
+        // Chart uses interpolated displayPrice for smoothness, but price display jumps immediately
+        updatePriceDisplay(currentTargetPrice);
     }, CHART_UPDATE_INTERVAL_MS);
 }
 
@@ -2435,6 +2436,15 @@ async function executeTrade() {
         if (amount_e6 < MIN_BUY_E6) {
             addLog(`ERROR: Trade amount ${amount_e6} below min ${MIN_BUY_E6}`, 'error');
             showError(`Trade too small (min $0.10)`);
+            return;
+        }
+
+        // Check if user has sufficient balance
+        const currentBalance = window.walletBalance || 0;
+        if (estimatedCost > currentBalance) {
+            const shortfall = estimatedCost - currentBalance;
+            addLog(`ERROR: Insufficient balance. Need ${estimatedCost.toFixed(4)} XNT, have ${currentBalance.toFixed(4)} XNT (short ${shortfall.toFixed(4)} XNT)`, 'error');
+            showError(`Insufficient balance: need ${estimatedCost.toFixed(2)} XNT, have ${currentBalance.toFixed(2)} XNT`);
             return;
         }
 

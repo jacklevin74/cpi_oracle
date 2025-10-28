@@ -1751,6 +1751,107 @@ body {
     transform: translateY(0);
 }
 
+/* ===== TRADING HISTORY TABLE ===== */
+
+.trading-table {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-size: 12px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.trading-table-header {
+    display: grid;
+    grid-template-columns: 100px 70px 90px 80px 80px 90px 80px;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+    font-weight: 700;
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.trading-table-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.trading-table-row {
+    display: grid;
+    grid-template-columns: 100px 70px 90px 80px 80px 90px 80px;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s;
+    font-family: 'SF Mono', Monaco, monospace;
+    align-items: center;
+}
+
+.trading-table-row:hover {
+    background: var(--bg-hover);
+}
+
+.trading-table-row.fade-in {
+    animation: tradeFadeIn 0.5s ease-out;
+}
+
+.trading-table-row .col-time {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.trading-table-row .time-date {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.trading-table-row .time-clock {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.trading-table-row .col-type {
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.trading-table-row .col-type.type-up {
+    color: #00c896;
+}
+
+.trading-table-row .col-type.type-down {
+    color: #ff4757;
+}
+
+.trading-table-row .col-direction {
+    font-weight: 600;
+    font-size: 11px;
+}
+
+.trading-table-row .col-direction.direction-open {
+    color: #4a9eff;
+}
+
+.trading-table-row .col-direction.direction-close {
+    color: #ff9500;
+}
+
+.trading-table-row .col-price,
+.trading-table-row .col-size,
+.trading-table-row .col-value,
+.trading-table-row .col-fees {
+    font-size: 12px;
+    color: var(--text-primary);
+    text-align: right;
+}
+
 /* ===== SCROLLBAR ===== */
 
 ::-webkit-scrollbar {

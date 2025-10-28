@@ -1,36 +1,1676 @@
 Loaded 100 historical trades
-Loaded 30 chat messages
+Loaded 62 chat messages
 Monitoring trades on program: EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF
 WebSocket server running on port 3435
 Subscription ID: 0
-node:events:486
-      throw er; // Unhandled 'error' event
-      ^
-
-Error: listen EADDRINUSE: address already in use :::3435
-    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
-    at listenInCluster (node:net:1997:12)
-    at Server.liClient connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+[CHAT] Anon: Beat me
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+[CHAT] Anon: Gm
+5U6JF BUY NO: 10.00 shares @ 0.6302 XNT
+[POS] 5U6JF6 DOWN: +10.00 shares @ 0.6302 XNT (Total: 10.00 shares, Avg: 0.6318 XNT)
+Cumulative volume updated: NO +6.3183 XNT
+Trading history saved for 5U6JF6
+D5nZJ BUY NO: 1.00 shares @ 0.6556 XNT
+[POS] D5nZJG DOWN: +1.00 shares @ 0.6556 XNT (Total: 1.00 shares, Avg: 0.6572 XNT)
+Cumulative volume updated: NO +0.6572 XNT
+Trading history saved for D5nZJG
+5U6JF BUY NO: 9.94 shares @ 0.6797 XNT
+[POS] 5U6JF6 DOWN: +9.94 shares @ 0.6797 XNT (Total: 19.94 shares, Avg: 0.6565 XNT)
+Cumulative volume updated: NO +6.7718 XNT
+Trading history saved for 5U6JF6
+D5nZJ SELL NO: 1.00 shares @ 0.6972 XNT
+[POS] D5nZJG DOWN: -1.00 shares @ 0.6972 XNT (P&L: +0.0400 XNT, Remaining: 0.00 shares)
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+D5nZJ BUY YES: 10.00 shares @ 0.3248 XNT
+[POS] D5nZJG UP: +10.00 shares @ 0.3248 XNT (Total: 10.00 shares, Avg: 0.3256 XNT)
+Cumulative volume updated: YES +3.256 XNT
+Trading history saved for D5nZJG
+D5nZJ SELL YES: 10.00 shares @ 0.3240 XNT
+[POS] D5nZJG UP: -10.00 shares @ 0.3240 XNT (P&L: -0.0163 XNT, Remaining: 0.00 shares)
+Trading history saved for D5nZJG
+Client connected to trade feed
+D5nZJ BUY YES: 50.00 shares @ 0.4193 XNT
+[POS] D5nZJG UP: +50.00 shares @ 0.4193 XNT (Total: 50.00 shares, Avg: 0.4203 XNT)
+Cumulative volume updated: YES +21.0161 XNT
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+D5nZJ SELL YES: 50.00 shares @ 0.4182 XNT
+[POS] D5nZJG UP: -50.00 shares @ 0.4182 XNT (P&L: -0.1050 XNT, Remaining: 0.00 shares)
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+Client connected to trade feed
+D5nZJ BUY YES: 1.00 shares @ 0.3052 XNT
+[POS] D5nZJG UP: +1.00 shares @ 0.3052 XNT (Total: 1.00 shares, Avg: 0.3060 XNT)
+Cumulative volume updated: YES +0.306 XNT
+Trading history saved for D5nZJG
+D5nZJ SELL YES: 1.00 shares @ 0.3045 XNT
+[POS] D5nZJG UP: -1.00 shares @ 0.3045 XNT (P&L: -0.0015 XNT, Remaining: 0.00 shares)
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+D5nZJ BUY YES: 1.00 shares @ 0.3052 XNT
+[POS] D5nZJG UP: +1.00 shares @ 0.3052 XNT (Total: 1.00 shares, Avg: 0.3060 XNT)
+Cumulative volume updated: YES +0.306 XNT
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+Client connected to trade feed
+D5nZJ BUY YES: 1.00 shares @ 0.3095 XNT
+[POS] D5nZJG UP: +1.00 shares @ 0.3095 XNT (Total: 2.00 shares, Avg: 0.3082 XNT)
+Cumulative volume updated: YES +0.3103 XNT
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+D5nZJ BUY NO: 50.00 shares @ 0.7806 XNT
+[POS] D5nZJG DOWN: +50.00 shares @ 0.7806 XNT (Total: 50.00 shares, Avg: 0.7826 XNT)
+Cumulative volume updated: NO +39.1282 XNT
+Trading history saved for D5nZJG
+Client connected to trade feed
+D5nZJ SELL YES: 1.00 shares @ 0.1412 XNT
+[POS] D5nZJG UP: -1.00 shares @ 0.1412 XNT (P&L: -0.1670 XNT, Remaining: 1.00 shares)
+Trading history saved for D5nZJG
+D5nZJ SELL YES: 1.00 shares @ 0.1388 XNT
+[POS] D5nZJG UP: -1.00 shares @ 0.1388 XNT (P&L: -0.1694 XNT, Remaining: 0.00 shares)
+Trading history saved for D5nZJG
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+[CHAT] 5U6JF: Beat me
+[CHAT] 5U6JF: Cmon
+D5nZJ BUY NO: 10.00 shares @ 0.8734 XNT
+[POS] D5nZJG DOWN: +10.00 shares @ 0.8734 XNT (Total: 60.00 shares, Avg: 0.7981 XNT)
+Cumulative volume updated: NO +8.7557 XNT
+Trading history saved for D5nZJG
+D5nZJ BUY NO: 10.00 shares @ 0.8939 XNT
+[POS] D5nZJG DOWN: +10.00 shares @ 0.8939 XNT (Total: 70.00 shares, Avg: 0.8121 XNT)
+Cumulative volume updated: NO +8.9614 XNT
+Trading history saved for D5nZJG
+D5nZJ BUY NO: 10.00 shares @ 0.9114 XNT
+[POS] D5nZJG DOWN: +10.00 shares @ 0.9114 XNT (Total: 80.00 shares, Avg: 0.8248 XNT)
+Cumulative volume updated: NO +9.137 XNT
+Trading history saved for D5nZJG
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] 5U6JF: Won again 😁
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+D5nZJ BUY YES: 50.00 shares @ 0.6201 XNT
+[POS] D5nZJG UP: +50.00 shares @ 0.6201 XNT (Total: 50.00 shares, Avg: 0.6217 XNT)
+Cumulative volume updated: YES +31.0834 XNT
+Trading history saved for D5nZJG
+Cuodr BUY NO: 50.00 shares @ 0.3799 XNT
+[POS] Cuodr2 DOWN: +50.00 shares @ 0.3799 XNT (Total: 50.00 shares, Avg: 0.3808 XNT)
+Cumulative volume updated: NO +19.0419 XNT
+Trading history saved for Cuodr2
+Client connected to trade feed
+5U6JF BUY NO: 50.00 shares @ 0.6201 XNT
+[POS] 5U6JF6 DOWN: +50.00 shares @ 0.6201 XNT (Total: 69.94 shares, Avg: 0.6316 XNT)
+Cumulative volume updated: NO +31.0834 XNT
+Trading history saved for 5U6JF6
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+D5nZJ BUY YES: 50.00 shares @ 0.3799 XNT
+[POS] D5nZJG UP: +50.00 shares @ 0.3799 XNT (Total: 100.00 shares, Avg: 0.5013 XNT)
+Cumulative volume updated: YES +19.0419 XNT
+Trading history saved for D5nZJG
+D5nZJ SELL YES: 5.00 shares @ 0.4863 XNT
+[POS] D5nZJG UP: -5.00 shares @ 0.4863 XNT (P&L: -0.0749 XNT, Remaining: 95.00 shares)
+Trading history saved for D5nZJG
+Client connected to trade feed
+D5nZJ SELL YES: 1.00 shares @ 0.4713 XNT
+[POS] D5nZJG UP: -1.00 shares @ 0.4713 XNT (P&L: -0.0300 XNT, Remaining: 94.00 shares)
+Trading history saved for D5nZJG
+Client connected to trade feed
+Client disconnected from trade feed
+D5nZJ SELL YES: 1.00 shares @ 0.4664 XNT
+[POS] D5nZJG UP: -1.00 shares @ 0.4664 XNT (P&L: -0.0349 XNT, Remaining: 93.00 shares)
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+5U6JF BUY YES: 50.00 shares @ 0.6201 XNT
+[POS] 5U6JF6 UP: +50.00 shares @ 0.6201 XNT (Total: 50.00 shares, Avg: 0.6217 XNT)
+Cumulative volume updated: YES +31.0834 XNT
+Trading history saved for 5U6JF6
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Cuodr BUY YES: 50.00 shares @ 0.8137 XNT
+[POS] Cuodr2 UP: +50.00 shares @ 0.8137 XNT (Total: 50.00 shares, Avg: 0.8157 XNT)
+Cumulative volume updated: YES +40.7853 XNT
+Trading history saved for Cuodr2
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+5U6JF BUY NO: 100.00 shares @ 0.2831 XNT
+[POS] 5U6JF6 DOWN: +100.00 shares @ 0.2831 XNT (Total: 169.94 shares, Avg: 0.4269 XNT)
+Cumulative volume updated: NO +28.3819 XNT
+Trading history saved for 5U6JF6
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+5U6JF SELL YES: 50.00 shares @ 0.3789 XNT
+[POS] 5U6JF6 UP: -50.00 shares @ 0.3789 XNT (P&L: -12.1366 XNT, Remaining: 0.00 shares)
+Trading history saved for 5U6JF6
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+5U6JF BUY YES: 50.00 shares @ 0.6201 XNT
+[POS] 5U6JF6 UP: +50.00 shares @ 0.6201 XNT (Total: 50.00 shares, Avg: 0.6217 XNT)
+Cumulative volume updated: YES +31.0834 XNT
+Trading history saved for 5U6JF6
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] D5nZJ: nice
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+FWqHz BUY YES: 10.00 shares @ 0.7501 XNT
+[POS] FWqHz6 UP: +10.00 shares @ 0.7501 XNT (Total: 10.00 shares, Avg: 0.7520 XNT)
+Cumulative volume updated: YES +7.5198 XNT
+Trading history saved for FWqHz6
+Cuodr BUY YES: 50.00 shares @ 0.8418 XNT
+[POS] Cuodr2 UP: +50.00 shares @ 0.8418 XNT (Total: 100.00 shares, Avg: 0.8298 XNT)
+Cumulative volume updated: YES +42.1955 XNT
+Trading history saved for Cuodr2
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
 Client disconnected from trade feed
 Client connected to trade feed
 Client disconnected from trade feed
 Client connected to trade feed
 Client disconnected from trade feed
 Client connected to trade feed
-pile (node:internal/modules/cjs/loader:1760:14)
-    at Object..js (node:internal/modules/cjs/loader:1893:10)
-    at Module.load (node:internal/modules/cjs/loader:1480:32)
-    at Module._load (node:internal/modules/cjs/loader:1299:12)
-    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
-Emitted 'error' event on WebSocketServer instance at:
-    at Server.emit (node:events:508:28)
-    at emitErrorNT (node:net:1976:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
-  code: 'EADDRINUSE',
-  errno: -98,
-  syscall: 'listen',
-  address: '::',
-  port: 3435
-}
-
-Node.js v24.9.0
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] 5U6JF: Who is buying down just now 😁.
+Client disconnected from trade feed
+Cuodr BUY YES: 50.00 shares @ 0.6201 XNT
+[POS] Cuodr2 UP: +50.00 shares @ 0.6201 XNT (Total: 150.00 shares, Avg: 0.7604 XNT)
+Cumulative volume updated: YES +31.0834 XNT
+Trading history saved for Cuodr2
+Client connected to trade feed
+Cuodr BUY YES: 50.00 shares @ 0.8137 XNT
+[POS] Cuodr2 UP: +50.00 shares @ 0.8137 XNT (Total: 200.00 shares, Avg: 0.7742 XNT)
+Cumulative volume updated: YES +40.7853 XNT
+Trading history saved for Cuodr2
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+5U6JF BUY NO: 100.00 shares @ 0.2831 XNT
+[POS] 5U6JF6 DOWN: +100.00 shares @ 0.2831 XNT (Total: 269.94 shares, Avg: 0.3739 XNT)
+Cumulative volume updated: NO +28.3819 XNT
+Trading history saved for 5U6JF6
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+D5nZJ BUY YES: 10.00 shares @ 0.5250 XNT
+[POS] D5nZJG UP: +10.00 shares @ 0.5250 XNT (Total: 103.00 shares, Avg: 0.5037 XNT)
+Cumulative volume updated: YES +5.2627 XNT
+Trading history saved for D5nZJG
+D5nZJ SELL YES: 10.00 shares @ 0.5236 XNT
+[POS] D5nZJG UP: -10.00 shares @ 0.5236 XNT (P&L: +0.1997 XNT, Remaining: 93.00 shares)
+Trading history saved for D5nZJG
+Client connected to trade feed
+Client disconnected from trade feed
+5U6JF SELL NO: 100.00 shares @ 0.2824 XNT
+[POS] 5U6JF6 DOWN: -100.00 shares @ 0.2824 XNT (P&L: -9.1523 XNT, Remaining: 169.94 shares)
+Trading history saved for 5U6JF6
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] D5nZJ: me
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+[CHAT] D5nZJ: Live, Settlement and Trading now better
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] 5U6JF: Yeah it is better
+[CHAT] D5nZJ: coloreful
+[CHAT] 5U6JF: And troll box shows address also very good
+[CHAT] D5nZJ: chatbox also shows who is talking
+[CHAT] 5U6JF: Hahah..
+[CHAT] 5U6JF: Good
+[CHAT] 5U6JF: I think this dapp will be killer dapp on x1
+[CHAT] D5nZJ: I think so too
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+[CHAT] 5U6JF: The only full onchain predictions market
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+5U6JF BUY NO: 100.00 shares @ 0.7169 XNT
+[POS] 5U6JF6 DOWN: +100.00 shares @ 0.7169 XNT (Total: 269.94 shares, Avg: 0.5016 XNT)
+Cumulative volume updated: NO +71.8687 XNT
+Trading history saved for 5U6JF6
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Cuodr BUY NO: 10.00 shares @ 0.8908 XNT
+[POS] Cuodr2 DOWN: +10.00 shares @ 0.8908 XNT (Total: 60.00 shares, Avg: 0.4662 XNT)
+Cumulative volume updated: NO +8.9301 XNT
+Trading history saved for Cuodr2
+Client disconnected from trade feed
+Client disconnected from trade feed
+[CHAT] Anon: Couldn’t have strayed farther from first principles
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] 9RFa7: Anon is trolling :)
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+[CHAT] Anon: bullish
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+[CHAT] D5nZJ: heh
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Cuodr BUY YES: 10.00 shares @ 0.5250 XNT
+[POS] Cuodr2 UP: +10.00 shares @ 0.5250 XNT (Total: 210.00 shares, Avg: 0.7624 XNT)
+Cumulative volume updated: YES +5.2627 XNT
+Trading history saved for Cuodr2
+Cuodr BUY YES: 10.00 shares @ 0.5744 XNT
+[POS] Cuodr2 UP: +10.00 shares @ 0.5744 XNT (Total: 220.00 shares, Avg: 0.7540 XNT)
+Cumulative volume updated: YES +5.7582 XNT
+Trading history saved for Cuodr2
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+9k262 BUY YES: 1.00 shares @ 0.6011 XNT
+[POS] 9k262n UP: +1.00 shares @ 0.6011 XNT (Total: 1.00 shares, Avg: 0.6026 XNT)
+Cumulative volume updated: YES +0.6026 XNT
+Trading history saved for 9k262n
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+9k262 BUY YES: 36.00 shares @ 0.6840 XNT
+[POS] 9k262n UP: +36.00 shares @ 0.6840 XNT (Total: 37.00 shares, Avg: 0.6834 XNT)
+Cumulative volume updated: YES +24.6846 XNT
+Trading history saved for 9k262n
+Client connected to trade feed
+[CHAT] Anon: 🥵
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+[CHAT] Anon: DXN #1
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+5U6JF BUY NO: 100.00 shares @ 0.4677 XNT
+[POS] 5U6JF6 DOWN: +100.00 shares @ 0.4677 XNT (Total: 369.94 shares, Avg: 0.4928 XNT)
+Cumulative volume updated: NO +46.8865 XNT
+Trading history saved for 5U6JF6
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+[CHAT] 5U6JF: Dang
+[CHAT] 5U6JF: Won again
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] 5U6JF: Was lost 71 damn
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+9k262 BUY YES: 1.00 shares @ 0.5025 XNT
+[POS] 9k262n UP: +1.00 shares @ 0.5025 XNT (Total: 38.00 shares, Avg: 0.6787 XNT)
+Cumulative volume updated: YES +0.5038 XNT
+Trading history saved for 9k262n
+Client disconnected from trade feed
+9k262 BUY YES: 1.00 shares @ 0.5075 XNT
+[POS] 9k262n UP: +1.00 shares @ 0.5075 XNT (Total: 39.00 shares, Avg: 0.6744 XNT)
+Cumulative volume updated: YES +0.5088 XNT
+Trading history saved for 9k262n
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+5U6JF BUY YES: 100.00 shares @ 0.7244 XNT
+[POS] 5U6JF6 UP: +100.00 shares @ 0.7244 XNT (Total: 150.00 shares, Avg: 0.6914 XNT)
+Cumulative volume updated: YES +72.6264 XNT
+Trading history saved for 5U6JF6
+Client connected to trade feed
+9k262 SELL YES: 1.00 shares @ 0.8817 XNT
+[POS] 9k262n UP: -1.00 shares @ 0.8817 XNT (P&L: +0.2073 XNT, Remaining: 38.00 shares)
+Trading history saved for 9k262n
+9k262 SELL YES: 1.00 shares @ 0.8796 XNT
+[POS] 9k262n UP: -1.00 shares @ 0.8796 XNT (P&L: +0.2052 XNT, Remaining: 37.00 shares)
+Trading history saved for 9k262n
+Client connected to trade feed
+Client disconnected from trade feed
+[CHAT] Anon: wow
+Client disconnected from trade feed
+Client connected to trade feed
+8Gyrf BUY YES: 1.00 shares @ 0.8818 XNT
+[POS] 8GyrfV UP: +1.00 shares @ 0.8818 XNT (Total: 1.00 shares, Avg: 0.8841 XNT)
+Cumulative volume updated: YES +0.8841 XNT
+Trading history saved for 8GyrfV
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+D5nZJ BUY NO: 50.00 shares @ 0.1834 XNT
+[POS] D5nZJG DOWN: +50.00 shares @ 0.1834 XNT (Total: 130.00 shares, Avg: 0.5783 XNT)
+Cumulative volume updated: NO +9.1908 XNT
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+Client disconnected from trade feed
+D5nZJ BUY NO: 50.00 shares @ 0.3753 XNT
+[POS] D5nZJG DOWN: +50.00 shares @ 0.3753 XNT (Total: 180.00 shares, Avg: 0.5221 XNT)
+Cumulative volume updated: NO +18.8108 XNT
+Trading history saved for D5nZJG
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+D5nZJ BUY NO: 50.00 shares @ 0.6155 XNT
+[POS] D5nZJG DOWN: +50.00 shares @ 0.6155 XNT (Total: 230.00 shares, Avg: 0.5428 XNT)
+Cumulative volume updated: NO +30.8513 XNT
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+Client connected to trade feed
+5U6JF BUY YES: 100.00 shares @ 0.5046 XNT
+[POS] 5U6JF6 UP: +100.00 shares @ 0.5046 XNT (Total: 250.00 shares, Avg: 0.6172 XNT)
+Cumulative volume updated: YES +50.5886 XNT
+Trading history saved for 5U6JF6
+Client disconnected from trade feed
+[CHAT] D5nZJ: playing against you
+Client disconnected from trade feed
+[CHAT] D5nZJ: Trade SUCCESS: BUY 50 NO shares (~30.85 XNT)
+Client disconnected from trade feed
+Client disconnected from trade feed
+D5nZJ BUY NO: 50.00 shares @ 0.3753 XNT
+[POS] D5nZJG DOWN: +50.00 shares @ 0.3753 XNT (Total: 280.00 shares, Avg: 0.5130 XNT)
+Cumulative volume updated: NO +18.8108 XNT
+Trading history saved for D5nZJG
+[CHAT] D5nZJ: juicy vault
+[CHAT] 5U6JF: Lol
+Client connected to trade feed
+[CHAT] 5U6JF: Look like im fucked
+Client disconnected from trade feed
+[CHAT] D5nZJ: thanks for making Down shares cheap :)
+Client connected to trade feed
+[CHAT] 5U6JF: Please up
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] 5U6JF: This gonna be good pvp platform
+[CHAT] D5nZJ: we need stop loss and limit orders :)
+[CHAT] D5nZJ: imagine 100 people playing
+[CHAT] 5U6JF: Yeah
+Client connected to trade feed
+Client disconnected from trade feed
+[CHAT] D5nZJ: woah, 200 XNT
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+[CHAT] 5U6JF: Jackpot
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+[CHAT] Anon: What are we drinking tonight, boys?
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+[CHAT] D5nZJ: curious, Anon probably doesn't have a wallet connected
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] Anon: Guess I'm going to be in debt soon.
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+5U6JF BUY YES: 100.00 shares @ 0.7169 XNT
+[POS] 5U6JF6 UP: +100.00 shares @ 0.7169 XNT (Total: 350.00 shares, Avg: 0.6462 XNT)
+Cumulative volume updated: YES +71.8687 XNT
+Trading history saved for 5U6JF6
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+[CHAT] 5U6JF: Lol
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+5U6JF BUY YES: 100.00 shares @ 0.7169 XNT
+[POS] 5U6JF6 UP: +100.00 shares @ 0.7169 XNT (Total: 450.00 shares, Avg: 0.6623 XNT)
+Cumulative volume updated: YES +71.8687 XNT
+Trading history saved for 5U6JF6
+Client disconnected from trade feed
+[CHAT] D5nZJ: vault looks large
+[CHAT] D5nZJ: lets play
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+D5nZJ BUY NO: 50.00 shares @ 0.1863 XNT
+[POS] D5nZJG DOWN: +50.00 shares @ 0.1863 XNT (Total: 330.00 shares, Avg: 0.4636 XNT)
+Cumulative volume updated: NO +9.34 XNT
+Trading history saved for D5nZJG
+D5nZJ BUY NO: 50.00 shares @ 0.3799 XNT
+[POS] D5nZJG DOWN: +50.00 shares @ 0.3799 XNT (Total: 380.00 shares, Avg: 0.4527 XNT)
+Cumulative volume updated: NO +19.0419 XNT
+Trading history saved for D5nZJG
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+[CHAT] D5nZJ: intersting, if you sell shares now, my shares will be more expensive
+Client connected to trade feed
+Client disconnected from trade feed
+[CHAT] 5U6JF: Please dont press down button lol
+5U6JF BUY YES: 100.00 shares @ 0.7169 XNT
+[POS] 5U6JF6 UP: +100.00 shares @ 0.7169 XNT (Total: 550.00 shares, Avg: 0.6726 XNT)
+Cumulative volume updated: YES +71.8687 XNT
+Trading history saved for 5U6JF6
+Client connected to trade feed
+D5nZJ BUY NO: 50.00 shares @ 0.1863 XNT
+[POS] D5nZJG DOWN: +50.00 shares @ 0.1863 XNT (Total: 430.00 shares, Avg: 0.4218 XNT)
+Cumulative volume updated: NO +9.34 XNT
+Trading history saved for D5nZJG
+[CHAT] D5nZJ: very cheap down shares
+D5nZJ BUY NO: 50.00 shares @ 0.3799 XNT
+[POS] D5nZJG DOWN: +50.00 shares @ 0.3799 XNT (Total: 480.00 shares, Avg: 0.4175 XNT)
+Cumulative volume updated: NO +19.0419 XNT
+Trading history saved for D5nZJG
+[CHAT] 5U6JF: Lol
+Client disconnected from trade feed
+[CHAT] D5nZJ: 30 seconds
+Client disconnected from trade feed
+[CHAT] 5U6JF: Foookin btc sideway
+Client disconnected from trade feed
+Client connected to trade feed
+[CHAT] D5nZJ: juicy down win
+[CHAT] 5U6JF: Yeah
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed
+Client connected to trade feed
+Client disconnected from trade feed
+Client disconnected from trade feed
+Client connected to trade feed

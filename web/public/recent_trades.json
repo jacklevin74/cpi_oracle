@@ -1,989 +1,1002 @@
 [
   {
     "side": "YES",
-    "action": "BUY",
-    "amount": "5.90",
-    "shares": "10.00",
-    "avgPrice": "0.5882",
-    "signature": "Sffz9vZDd53j8Cz2CKakXW6pz8Cv9jM9CvBKYpvj3XsEECHerpVtdAynsCaQWpMfMKWJQ5XhBiSEZX2fLHSyBeh",
-    "timestamp": 1761457739528
+    "action": "SELL",
+    "amount": "4.7352",
+    "shares": "9.00",
+    "avgPrice": "0.5261",
+    "signature": "2715q3rLAWVyENECim2XufhN5rF4WK5Qpj3KjkY7erSZM6diNdBsVEVddb3ncWe869LNzhJrHbwhMKTCxUE94NMr",
+    "timestamp": 1761598341989,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "61.60",
-    "shares": "100.00",
-    "avgPrice": "0.6145",
-    "signature": "3bgbo5PP4vRWmLyywrYqfiFWPSiPnzstqZpmMwVQNezzVExEquqU61h8De6x4JDSa8cMgeb3VGa29mXtPuAk2ndU",
-    "timestamp": 1761457752417
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "66.23",
-    "shares": "100.00",
-    "avgPrice": "0.6606",
-    "signature": "Tbbe9QJRXzmjiNHfDmfVdZTjdfxqjwJNaV127RbfSZhUaFBZU3gKvfBNRekxtWmCkeUya7JLgeP5VenrnEWVqQ6",
-    "timestamp": 1761457769339
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "52.63",
-    "shares": "100.00",
-    "avgPrice": "0.5250",
-    "signature": "28usbPab9tmdopDhjodaSBLK44HCNx176DxPmU8twMk9Ri78oHqiuUtSWCsANqsmBmwxi9HyTFSJSuJmNGCsuVWg",
-    "timestamp": 1761457925645
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "47.62",
-    "shares": "100.00",
-    "avgPrice": "0.4750",
-    "signature": "3NvUKqfwFobQR3wnmqKSJHihQv1A6KLXpRunJzyUNmhRtXfGhUyPURhVxTdQcZ1k4E2Rw88VkdAh7rrtnrU1SJzp",
-    "timestamp": 1761457965042
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.04",
-    "shares": "10.00",
-    "avgPrice": "0.5025",
-    "signature": "46HtCqdtcyd1gLgkzxtrAx6sTgWkaAYTkYp6F4bRpsb4SpwNdNAJWFY8xLUpxKsyR1weJD47DZoogAZAGcEM3JWf",
-    "timestamp": 1761458051791
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "714.86",
-    "shares": "1000.00",
-    "avgPrice": "0.7131",
-    "signature": "42irr5vbE62D9pi6isq3R4eLdh45mxbL8qVZ6VspcEKYLkb61CKEuJDNUZinVdKwQ5ycePToTroSz9jSWwtcscPz",
-    "timestamp": 1761458388412,
-    "user": "3nZPb3cYgNPiUzocWgp4WmLGuf9jX7iFpkXwyNCZY4RZ"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.04",
-    "shares": "10.00",
-    "avgPrice": "0.5025",
-    "signature": "3gYmjEbhLxyboFQtkPwTfHeDm1ib7WR4N21nqcEHCJhYDXf5bfrxG74s7fR6b68BQNebwmDLtXybzq2i237kp6W1",
-    "timestamp": 1761458426112,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.09",
-    "shares": "10.00",
+    "amount": "0.5075",
+    "shares": "1.00",
     "avgPrice": "0.5075",
-    "signature": "5BZ5jDxBJxU1ymYnnrD5aiA5wALgtPtZMBp8RPJFhjyjYndg9qNTQwwdhDuqALNSnQPeCgJdvHYHzmkFfNZ7S8Vi",
-    "timestamp": 1761458442900,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
+    "signature": "3PaPgAN6TGuVHwYVXzsKkGcN178tCyfjqVrMMqwiGBn53UiPs5Eftt2seskHmfJWcJPfZy8oaVjogpoP34Jk72Dh",
+    "timestamp": 1761598412557,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "1.0075",
+    "shares": "2.00",
+    "avgPrice": "0.5037",
+    "signature": "5naAn9EdRREMaVa3dj5jYan7KawxPFmgszfiLGBEkG4EmhKXzZ77JS4e6YuoCVXmC2AAq917yR9G2kooG8TM9FA5",
+    "timestamp": 1761598454072,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "5.14",
-    "shares": "10.00",
+    "amount": "0.5000",
+    "shares": "1.00",
+    "avgPrice": "0.5025",
+    "signature": "2j1zCozcfzRNqhEo9BW3EHDyDDte8K8qxn8DStBzXxDnMYv9Sca212uvDz3V2ZVRYjwWR6xTNxT7Rqq7udZcV2LD",
+    "timestamp": 1761598531756,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "0.5075",
+    "shares": "1.00",
+    "avgPrice": "0.5075",
+    "signature": "4qxc4sCeBw8q2yqsbsccSk5uSKft4ju8HH4bafUJVnGzJ4V5FC3NXKdASfVuuoNduG8Lt2nsEBmCp3oLA55t8Ywj",
+    "timestamp": 1761598551984,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "0.5125",
+    "shares": "1.00",
     "avgPrice": "0.5125",
-    "signature": "5k4nNFkmA2wSTwAKooh1cLGcTobH1fmLgn69xegYsUNeQttEjjyW1xwoasQFGoZoQQSbiPZA5drDVSabQmeDzvnN",
-    "timestamp": 1761458454494,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.19",
-    "shares": "10.00",
-    "avgPrice": "0.5175",
-    "signature": "25B3f9CX3btc3sfjcfsfWvHQhMNafCoFLZx9rqjDnkebuUmjWmLP6uGjcvBAgLZkBkKff3onzW39epp19oxNSSwx",
-    "timestamp": 1761458501915,
-    "user": "E8m1KZ4v6L3kZgcsuYzabXYm7W4oUshpszkcjwdszqZd"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.52",
-    "shares": "1.00",
-    "avgPrice": "0.5225",
-    "signature": "3RLsnF86pAQtNFHv24t8vKiVF6YtG8p9UTNznWZwR97Dnw6iKKPPgfjWcXhFJJC3KBmMRkvRwJF34rrcFnRz8Ytp",
-    "timestamp": 1761458543519,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.51",
-    "shares": "10.00",
-    "avgPrice": "0.5498",
-    "signature": "SfHShfYwh6Th39QxMNS9hUb7swtSC7u8M2QwBpMGHGQAcbfWa3Pm72qyBChgaio8zCnSRpgSvLspz67pBm3AMmr",
-    "timestamp": 1761458562910,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "0.43",
-    "shares": "1.00",
-    "avgPrice": "0.4280",
-    "signature": "49ij1LxmHMsqkpqyyBGamNKgUHd6AZLxJeJb389EmVmecYPh48rgeewwMar26Nztj1n73BDoQgEXTQZptFnqx7sa",
-    "timestamp": 1761458635829,
-    "user": "DnDvf9Jfi2DWiC8JxQ9kjiKjJXHGLA6nXNkWYRZABuH5"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.57",
-    "shares": "1.00",
-    "avgPrice": "0.5720",
-    "signature": "5rQgLCgNrHugHqWBwRV1gZV1EqxekE2LxWsH7X4NjDERuxfL9N23N2TbY2DrpmUrEkSj1hEa9mMguqqdbqV6qWCa",
-    "timestamp": 1761458919426,
-    "user": "DnDvf9Jfi2DWiC8JxQ9kjiKjJXHGLA6nXNkWYRZABuH5"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.58",
-    "shares": "1.00",
-    "avgPrice": "0.5769",
-    "signature": "2CgGG7KZAvnQUBFKD2DMzArS1e7GsTK1id1ZbZ2hM4DWWBFWioa1tyu8YJRkDaoYhrRCCqCHN13p6QBnJeZDDEg4",
-    "timestamp": 1761458926855,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "4.46",
-    "shares": "10.00",
-    "avgPrice": "0.4453",
-    "signature": "iQeoSvZnzj2P5PAQqWsc73eQ3KUJRaj8HBZF4FKpgTaqQ9i6ATQKtMnkhYaSFeE8iBRERS6BZ441af5mH69G6Ft",
-    "timestamp": 1761458989387,
-    "user": "3nZPb3cYgNPiUzocWgp4WmLGuf9jX7iFpkXwyNCZY4RZ"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "71.87",
-    "shares": "100.00",
-    "avgPrice": "0.7169",
-    "signature": "3C7oLdtjLZSn1FJ7Cb3waTkv9RbtPSfmmRyFrasaCHCRe6a8uzXodeoNiCcPMjo1Rs3L5QAgSUbi26BsrbmFQkXr",
-    "timestamp": 1761459085389,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "NO",
-    "action": "SELL",
-    "amount": "71.51",
-    "shares": "100.00",
-    "avgPrice": "0.0000",
-    "signature": "5ZB1Q6gnzMkZkcST4uSCNGGrnCPQugQwqPLQQgmPFXjRUo4bctPxUVcLrF6TuaUAKxyRf5KUHqrodnCo7DGgn4jz",
-    "timestamp": 1761459120185,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "71.87",
-    "shares": "100.00",
-    "avgPrice": "0.7169",
-    "signature": "5KZPQeQfXbXmnr3mHLYCbZHGqD4aBjCbu4Fdc6DD8qrFyRroAb7RD5HCeZRZnPc56e3FeY5rovaTNhHQdaLcDhhb",
-    "timestamp": 1761459136835,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "NO",
-    "action": "SELL",
-    "amount": "71.51",
-    "shares": "100.00",
-    "avgPrice": "0.0000",
-    "signature": "5yxSKoHhnQox11CTy5UGAN1yUwY55Pw6N1apNDS7aVxPz2dxiYnYmrf5xYyPwXFqw1LFDTCANDa5EexRqkR1HqP9",
-    "timestamp": 1761459147363,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "71.87",
-    "shares": "100.00",
-    "avgPrice": "0.7169",
-    "signature": "4puRp3W6p6JhVyhzGtuv8bQtMLV9ktzBx1fNFExin1dVrKt5e5g68XDsnS6sGz2RQUkHndbgwNuS2pHUYDDMwkQG",
-    "timestamp": 1761459214306,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "1.31",
-    "shares": "10.00",
-    "avgPrice": "0.1302",
-    "signature": "SLNHTxQsmhUMB9h6gb42tBj4p7EpSFjKCQdjQKYJqnSs17CWDsKBoiDGjbPVtePauxP4jxWRFS7ESjKBNXweGpP",
-    "timestamp": 1761459349271,
-    "user": "3nZPb3cYgNPiUzocWgp4WmLGuf9jX7iFpkXwyNCZY4RZ"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "8.72",
-    "shares": "10.00",
-    "avgPrice": "0.8698",
-    "signature": "4CnSCHvvMHi1CYVbjU69gDHPWuwoyYg6nK796y3k6hRKpCJTKRZD8yAU7brKHDSvM83zPn4q2Xpu9b7rhGj3mApc",
-    "timestamp": 1761459373083,
-    "user": "E8m1KZ4v6L3kZgcsuYzabXYm7W4oUshpszkcjwdszqZd"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "1.31",
-    "shares": "10.00",
-    "avgPrice": "0.1302",
-    "signature": "5XzKvDLAw5DUgHPJwgj75EctP8SnNKh441nDexfXBySLmCkyDMutnWPgTvHcLkQy7MpNgaC8qKjskhNU8fU7Vehk",
-    "timestamp": 1761459463179
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "1.55",
-    "shares": "10.00",
-    "avgPrice": "0.1546",
-    "signature": "4xK98W3K7Q9fcuHQZGYzS1NGQjmsgdTF1PLNGkiBsGYPBEoioL1QFtinqpkm83tcqrE8RsD943Lme9WscaGhVgaP",
-    "timestamp": 1761459487848,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "1.83",
-    "shares": "10.00",
-    "avgPrice": "0.1826",
-    "signature": "2MrvnBNpUhR7xLERDF18rZYgZ1bR8TgMMxLufTsovn9VrEgZPpBL3mvkPU6M6gDRxGJMs1TNkxUEqiBo7xHQ6QyY",
-    "timestamp": 1761459520123,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "1.83",
-    "shares": "8.61",
-    "avgPrice": "0.2120",
-    "signature": "3LaLqn1ZzhtLfW7vtS2byNMZRasaYDfsFPPA1jZomiUshhzisdkynUtzr2PorttdjCK16oM9KPJdU3xvguBsCiHH",
-    "timestamp": 1761459520905,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "1.83",
-    "shares": "7.60",
-    "avgPrice": "0.2403",
-    "signature": "3dihDAmmpUEMGTu3E6kLNuL4TyjhLHyCTxd2GBSRH6sAmkTCTfyVdpdxbL1RbRZtPg4cKhKwzY4n76rxrpNzCg9P",
-    "timestamp": 1761459521625,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "1.83",
-    "shares": "6.82",
-    "avgPrice": "0.2675",
-    "signature": "5wbrmGpSbTizb7u89xLx4hdgUeuodRxkfeui6JKd3CcBtShhfZGfdWVp9c4g5qHAQTCogLAwL9soB6icd2dAdsPU",
-    "timestamp": 1761459522025,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "3.03",
-    "shares": "10.00",
-    "avgPrice": "0.3018",
-    "signature": "4L1AUw8BQYpMthmcvbgf35sxdademtT7DQGrKFLs9FnydNW8ZwUvWFZShQPcyqKBXT5nPzzTUyqmCPjA9SF2NUSv",
-    "timestamp": 1761459529980,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "3.03",
-    "shares": "8.80",
-    "avgPrice": "0.3428",
-    "signature": "4kEWisJWPB39tc9cSxk1ecNhCd8wY8E1eKCDJWzDsMCFFxfqocqQdQZoqDJB3BjUzYEuYSibnroadprzYeuCTqrk",
-    "timestamp": 1761459530785,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
+    "signature": "2XL4d2gX4gCKGSPPWD5jN8SCEfCnihdYfKBXwUua5ecgod5H52fczd4Q5z2Cg9zjmud3gMqUnutEv1EGwLDrWr6m",
+    "timestamp": 1761598559666,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "YES",
     "action": "SELL",
-    "amount": "3.39",
-    "shares": "10.00",
-    "avgPrice": "0.0000",
-    "signature": "4uAmnwhyrUom8fJXrxdLXXMjr1G2zjhberVLajnPP1wsRhx3uZUp7gbxk64Nzo8ueiFJ96H7tz8Mv8dqbbAtWwCQ",
-    "timestamp": 1761459531138,
-    "user": "3nZPb3cYgNPiUzocWgp4WmLGuf9jX7iFpkXwyNCZY4RZ"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "3.03",
-    "shares": "8.94",
-    "avgPrice": "0.3377",
-    "signature": "2i6V7qf4HXW1gFrtnnJPh65RQy8jt7nqMRCrVeEgQEJLombKJVUrAPmuak4sFCSJuGPcjy7v8WAFHxz736RSFPB",
-    "timestamp": 1761459531490,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "3.82",
-    "shares": "10.00",
-    "avgPrice": "0.3813",
-    "signature": "5Ffi7rgYmED13GUYXPR4oajbPkzAwwD12dKYp785WKBnqBYPvmcLWw28DEiwiap5ZVHqswSYup6i9t3YmNsNx97V",
-    "timestamp": 1761459537519,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "3.82",
-    "shares": "8.93",
-    "avgPrice": "0.4268",
-    "signature": "22xYsD5dWyajQQ2j9PZ7t1skswU3rrwZUX2auSvsuUBBDgFGXQvNBUNKW4dzAtShAUvKYzoAziRDpUX29CWmwBjL",
-    "timestamp": 1761459538306,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "5.77",
-    "shares": "10.00",
-    "avgPrice": "0.5758",
-    "signature": "5q4oQNNGL6CcRAgDvxHQkuwmg5kSDk7TFWNrRcveMPep684WzXZvthLBQgz1UG9iEjkCt4hxXs6vFrAmx4xVQoxi",
-    "timestamp": 1761459541573,
-    "user": "E8m1KZ4v6L3kZgcsuYzabXYm7W4oUshpszkcjwdszqZd"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "6.25",
-    "shares": "10.00",
-    "avgPrice": "0.6237",
-    "signature": "2utC3W9cysEKRQLpRmKXRdfecrqSVM4QMnNAaZTZX5meS5wbTi5uE25Ad9XFxWJE23UzjWu125x13ba5x3jQRFH3",
-    "timestamp": 1761459564984,
-    "user": "3nZPb3cYgNPiUzocWgp4WmLGuf9jX7iFpkXwyNCZY4RZ"
-  },
-  {
-    "side": "NO",
-    "action": "SELL",
-    "amount": "0.64",
+    "amount": "0.5112",
     "shares": "1.00",
-    "avgPrice": "0.0000",
-    "signature": "38uVh6k48icmUG9qFrHwZHwvjKsfeVNbMv5Dc6S8vmXquG5anf4chZukff8bm82GUnoUhjjQZtfecyEfwQhRJ6nu",
-    "timestamp": 1761459576969,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "NO",
-    "action": "SELL",
-    "amount": "0.64",
-    "shares": "1.00",
-    "avgPrice": "0.0000",
-    "signature": "QK2BcTQC2SZH1Qrr65MUvamxDCQ58TijwkhDbcw3T9KVsSxcoKqXR8fYcnXdQXA4SwUZtCVMx15k3wXquh6Bk5s",
-    "timestamp": 1761459581670,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "NO",
-    "action": "SELL",
-    "amount": "0.63",
-    "shares": "1.00",
-    "avgPrice": "0.0000",
-    "signature": "5sDJbBmqL6jNAQqg5c1vcMeTvwAMJsCXUiQ3FZwYiGmeWeWSYtvLkzHWt8t9nUKMtYhHc1rMF4bC5Qj3LjVtH1yg",
-    "timestamp": 1761459584411
-  },
-  {
-    "side": "NO",
-    "action": "SELL",
-    "amount": "0.63",
-    "shares": "1.00",
-    "avgPrice": "0.0000",
-    "signature": "3eLZ1SNrNSJ4bMzrDSQfxFmeQRvMdbqKaj3r1FLNkwoLJFVGRooeKY7uHXn6vPZr7RYZbaNPngWgLShEBvyNJvBS",
-    "timestamp": 1761459586665,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
+    "avgPrice": "0.5112",
+    "signature": "2x94fPTUutyPPxBDPmvrprAuvUsHWvQseGn9GejYRyBDMzEKPPeLWooD3Tj1JzbBte534aFbpE5v4QzKqWATR9Ck",
+    "timestamp": 1761598564198,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "NO",
     "action": "BUY",
-    "amount": "6.58",
-    "shares": "10.07",
-    "avgPrice": "0.6516",
-    "signature": "5cr4qpQL3pwws7CuM9y66MR4uJ5Um7uakz75KfDT6RfTYggB6AZw5vc9Z1EUDGm4icQBT6PAiTYxtAVQWxQ1o21T",
-    "timestamp": 1761459587014,
-    "user": "3nZPb3cYgNPiUzocWgp4WmLGuf9jX7iFpkXwyNCZY4RZ"
-  },
-  {
-    "side": "NO",
-    "action": "SELL",
-    "amount": "0.71",
+    "amount": "0.4925",
     "shares": "1.00",
-    "avgPrice": "0.0000",
-    "signature": "4DjfAwWRvkqNg54r9mP81cfMAWt4jNQSxmgBtaSV8astbex9Uvq7AbmZxNcJFtVofhm2idv5YT9UBcSEB6HBVZUc",
-    "timestamp": 1761459592521,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
+    "avgPrice": "0.4925",
+    "signature": "3rM87MysjUTAbJ7Fvdn5MPpELvgi9WnSpRoYNsEeNR6cxdHns6xjrG8KbzQMuo4pVaHRhPeRLXhDVqJfDScW3TPb",
+    "timestamp": 1761598578851,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "NO",
     "action": "BUY",
-    "amount": "6.97",
-    "shares": "10.00",
-    "avgPrice": "0.6956",
-    "signature": "4NJxeUUMdWuE95rF2hbTti8NyXnmf8eMxe2RJv53cwkNWa31qhEoyNQTXDY85HwrUzLoWFXKjQAEJosXUPDrcp2j",
-    "timestamp": 1761459592521,
-    "user": "3nZPb3cYgNPiUzocWgp4WmLGuf9jX7iFpkXwyNCZY4RZ"
-  },
-  {
-    "side": "NO",
-    "action": "SELL",
-    "amount": "0.71",
-    "shares": "1.00",
-    "avgPrice": "0.0000",
-    "signature": "4MBP9SUQPKo9oQDSVQ1E6z6HpjoNsm8Wqfj2KHQAtLJf9pCy9375M4hysBEs7qzf3pwpaWUYSQVjcK52K6XU78nt",
-    "timestamp": 1761459595201
-  },
-  {
-    "side": "NO",
-    "action": "SELL",
-    "amount": "0.70",
-    "shares": "1.00",
-    "avgPrice": "0.0000",
-    "signature": "3dZ7AwJzApGU5aQfVySgr6UfUgZoHYbNt3EEY3LfXkAHm4kDwHZZASYmijsuYdAuHrAwLv1TRZtkgvV4zygaC3AF",
-    "timestamp": 1761459598811,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "3.18",
-    "shares": "10.00",
-    "avgPrice": "0.3172",
-    "signature": "2HtBPHGEb4VzGoYQ8ozk9WfxB2xSeVNw6mSqNELxGzPJJBchxGGY7gWmBEtFSBDcDjzzVfPCzwD1QBL4i7qHuprz",
-    "timestamp": 1761459608196,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "31.08",
+    "amount": "30.7753",
     "shares": "50.00",
-    "avgPrice": "0.6201",
-    "signature": "5X3ocBCrwbqYimpxgQtuVktyCQAmi52MuSjbJrEPAPLNuZ4LnyJixteRp1igGScoaQ2Fb1FsvvJ4m8YyV3pN1rcD",
-    "timestamp": 1761459929447,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "7.52",
-    "shares": "10.00",
-    "avgPrice": "0.7501",
-    "signature": "3TtiF9ZnqN6XY1qTUfgUyX5YZQeJUjpMuCpCGx2osJ7RkVWUgMGrbAYkuYSaYR4iNV2YwrvNMRjR2DLD3GZ98ZKT",
-    "timestamp": 1761460029396,
-    "user": "E8m1KZ4v6L3kZgcsuYzabXYm7W4oUshpszkcjwdszqZd"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.26",
-    "shares": "10.00",
-    "avgPrice": "0.5250",
-    "signature": "d6A8Ux99RBW7GthDnHCvFdKV1SriZoT2zrfCo4bJpxGC11uyobzFe2DByTKma4kUTfgXj53RxVYFNHsWH3oAV19",
-    "timestamp": 1761460310565,
-    "user": "8BbzLzE1Apea5JWrJ8drFBgTKarLH7deWFyW3JWKLgWM"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "4.76",
-    "shares": "10.00",
-    "avgPrice": "0.4750",
-    "signature": "4Jokd3w3UJt8L4LfdtXmcyG29Y44rfDDfgg1R5d7MrPvTB9BLj7qVPGg18xjQysCcLciRH31E63mxkyjyCBZM2kE",
-    "timestamp": 1761460595247
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.26",
-    "shares": "10.00",
-    "avgPrice": "0.5250",
-    "signature": "58jdY7z4ct32ngAn4aty99z7yVNdpeBBj21571s5Du12dHs9KT8HWhjGwVXMsXVbi84xUmCu7yjMUrWQkMqVNvmM",
-    "timestamp": 1761460724353,
-    "user": "E8m1KZ4v6L3kZgcsuYzabXYm7W4oUshpszkcjwdszqZd"
-  },
-  {
-    "side": "NO",
-    "action": "BUY",
-    "amount": "4.76",
-    "shares": "10.00",
-    "avgPrice": "0.4750",
-    "signature": "G7xTKRxGVAzDvMjyaZTXzXxLa6AoJE68nNX7x1GM3AS95fE7RM16t6hrww9J24cDRvtbum5izVJxDzQ1CdUniUq",
-    "timestamp": 1761460788329,
-    "user": "3nZPb3cYgNPiUzocWgp4WmLGuf9jX7iFpkXwyNCZY4RZ"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.26",
-    "shares": "10.00",
-    "avgPrice": "0.5250",
-    "signature": "3snR478bxpg1EoToG6vZ2anqb1Q9Ebx4b6ZoEWbh2DVeMW7RPbSRiqcy3D3vdx44pAHosHtV86AyMBJWJSmSEjdX",
-    "timestamp": 1761460866720,
-    "user": "E8m1KZ4v6L3kZgcsuYzabXYm7W4oUshpszkcjwdszqZd"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "71.87",
-    "shares": "100.00",
-    "avgPrice": "0.7169",
-    "signature": "5P7dFrdP5juZzQxWt7Nw5oigZAjCg6Ww3cw8gbBXdfFa45LcQdXoS96xheZQKe4PLnREj7BFAsDshHYsEymdfyE2",
-    "timestamp": 1761462295851,
-    "user": "EYntqfKecZtftLuHRQBGacAWTSexfavHgKE6Y4vSXGQm"
+    "avgPrice": "0.6155",
+    "signature": "5WY9tzXfTyzoApu3EnCzGuLgoUqjtiXxASqxaZxwUKQw8iKqfsizgG36Eas5QEEboSCJrVvTXprf9UsEsUqHTJbZ",
+    "timestamp": 1761598583179,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "YES",
     "action": "SELL",
-    "amount": "71.51",
-    "shares": "100.00",
-    "avgPrice": "0.0000",
-    "signature": "2WsyfuWFgdzSvnZpzLcDAdQqVw39xGc22U6NYUVHsPpJDSbdSbUtFvY5JRWMzFNaNovV9RCLYxMHg7mYDCzdFZ4H",
-    "timestamp": 1761462367603,
-    "user": "EYntqfKecZtftLuHRQBGacAWTSexfavHgKE6Y4vSXGQm"
+    "amount": "0.2702",
+    "shares": "1.00",
+    "avgPrice": "0.2702",
+    "signature": "icmHRVJbTFDoYPaSfWZjGvrBFwiB8WuCUaw25Muxnpn2HHYbExZuHAQRnZbTVdo1aDnCaSPGMKPBXuhd1ZrZaiG",
+    "timestamp": 1761598734662,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "0.2650",
+    "shares": "1.00",
+    "avgPrice": "0.2663",
+    "signature": "5mGseCey9nMrFzW64vzYXcbzu7KRu1NJP7M8jHi8hAa8ZebuqkzbFEYP2Ew9zQaF8t4ZEBmPXZR1gTqz2aZEiinM",
+    "timestamp": 1761598736858,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "NO",
     "action": "BUY",
-    "amount": "5.26",
-    "shares": "10.00",
-    "avgPrice": "0.5250",
-    "signature": "2cJDdm1Vw7wJKDj614YMx3VSBgZexfjaRuYj3yeKMwVPC2RC5n11AmDL9BLHWbCsdEHVRchvCh5B2XsydTPTjpcK",
-    "timestamp": 1761463265675,
-    "user": "AEGfhuRuDVA4ppfKrX2R6abMdUa7ynB7dTc2BJAdFJe2"
+    "amount": "40.8321",
+    "shares": "50.00",
+    "avgPrice": "0.8166",
+    "signature": "55yh8Tq1S2vSA8YLMTVKbnbb2pSdZGmgXEcpZXsuYtLwBUPwZKMmKzG8iLFqPsNz2yCWmUTgRNVzaa26U1xkzunH",
+    "timestamp": 1761598778979,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
-    "side": "YES",
+    "side": "NO",
     "action": "BUY",
-    "amount": "0.50",
+    "amount": "0.5025",
     "shares": "1.00",
     "avgPrice": "0.5025",
-    "signature": "2zHJat4KTpLqx6BJjVAwVMVMLZ54QwRFJAyECu7nkD4nv73zqG1CFbWK2uzSkPJ72KZ1d6eAVQu1HPMvxszuuHfg",
-    "timestamp": 1761465259003,
-    "user": "HRxcEgSfVczJ2EUK8EEobFk5rGponoRyfKgqd932hVAd"
+    "signature": "53GWGUH3BAQDhfQzhmb7AAfE1YV4TwdyurcWwFen3kKWYzxVTRmsSZ3VyiwtSED2cLckGFjc3RbSE1yeGt9on3MA",
+    "timestamp": 1761599422606,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
   },
   {
-    "side": "YES",
+    "side": "NO",
     "action": "BUY",
-    "amount": "0.51",
+    "amount": "0.5075",
     "shares": "1.00",
     "avgPrice": "0.5075",
-    "signature": "2eEfK9eyTLg2Z9kK5jGtFV3pwc1LMBygFRTwxiwgC2JUeRdAiSxRXynaye4KQ4SVD3Vz1pBSxUDdUgTwLZmN4Vda",
-    "timestamp": 1761465509589,
-    "user": "HRxcEgSfVczJ2EUK8EEobFk5rGponoRyfKgqd932hVAd"
+    "signature": "53cSeaN9gAcxvJZZtovDuZh5GPiT8ZatbWG1upZ9xds6MjN8Pjhk4g94ZPZV8ZLQJaMrkLzUUws4Fc62gVZp6R2x",
+    "timestamp": 1761599438972,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "0.5125",
+    "shares": "1.00",
+    "avgPrice": "0.5125",
+    "signature": "3HCK4FjdNAHRuA8yWjHmK6SfjUzDSgBPEcihHWC5xMqJUwNyGQuFnZGDkPEhi55sofjRdynHLaqFLxhDjLtjNdsV",
+    "timestamp": 1761599442568,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "5.3988",
+    "shares": "10.00",
+    "avgPrice": "0.5399",
+    "signature": "4E41Q95jj6zv6TAacUujJ8ktKcdoR9gaKCuw1MkJ3M3CK1BgVeFasXFYAZ9a6FfB1LcSVpQCEhmMHzSTrrgHHpSd",
+    "timestamp": 1761599504339,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "0.50",
+    "amount": "5.2496",
+    "shares": "10.00",
+    "avgPrice": "0.5250",
+    "signature": "2xmr2TfmEGX1oK8DBXtmroruGYwd57drzn7DHGG28iQFaaT9sZKBThga6Qq69iF4t7wiTgyJonG4hyinXsyy4Zce",
+    "timestamp": 1761600064258,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "2.3129",
+    "shares": "5.00",
+    "avgPrice": "0.4626",
+    "signature": "2937QKxzpTLCYBoxgg6fcpffJe3xmrcnJEi7EKX9N5P7AyJeCV5RxkDXbKjXpL7sn3JuZwWNw2tCo1oHnEQXHhSw",
+    "timestamp": 1761600101272,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "4.7022",
+    "shares": "9.00",
+    "avgPrice": "0.5225",
+    "signature": "4kNETERYqHxuEZ4SfDP91aukLNKUG9MWrcHwiVT426DpgHSkuPPSCybYRKR8fExkwUxT2fHZgQUN3dRT4c6CTPyW",
+    "timestamp": 1761601044232,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "REDEEM",
+    "amount": "7.2647",
+    "shares": "0.00",
+    "avgPrice": "0.0000",
+    "signature": "auto-redeem",
+    "timestamp": 1761601203842,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "13.4600",
+    "shares": "24.00",
+    "avgPrice": "0.5594",
+    "signature": "3prZKj3i8aG3duMaVeW1kkTwuRiZAKXiN4F1s5jhegJ7msxK1HqgD6hjnMsdbyqV3HM5Z2z9nzSo8nzvtYemHVGK",
+    "timestamp": 1761601698823,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "0.5038",
     "shares": "1.00",
     "avgPrice": "0.5025",
-    "signature": "24d9CmHCcZwMs7pgwjobX1Q5V7TtFCyvW2Z9HjHki3UPzm6KVctjumkk41DwXTHRrjq3FobArAoRA6EKG1n641xo",
-    "timestamp": 1761465924910,
-    "user": "HRxcEgSfVczJ2EUK8EEobFk5rGponoRyfKgqd932hVAd"
+    "signature": "4sSBhv7YmTvF96QBput3yPqc9out3ex75VXbYncKzrHkRqqgVKZmR7EZATujtxjuCcgkeWjzT5gAHTPuBfaK6zcK",
+    "timestamp": 1761601891066,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "5.31",
+    "amount": "5.3127",
     "shares": "10.00",
     "avgPrice": "0.5299",
-    "signature": "2wPTqvnvzgFiUzQcmx2mB7QbdfocTCxBSETpvtYMEAffu8fGjSnvB6iKKNymHWEyrTWtYLoKzcbHtgsYBJoFPdCj",
-    "timestamp": 1761465964467,
-    "user": "E8m1KZ4v6L3kZgcsuYzabXYm7W4oUshpszkcjwdszqZd"
+    "signature": "TS1Tt7UnYN21r2sQNaCqhViRjaRtmBPNu83Lw2fu4qCFjnuisnQpQQkARABvXtiqorbC7VDXvapxpnP78U1DpNk",
+    "timestamp": 1761601915753,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "2.57",
-    "shares": "5.00",
-    "avgPrice": "0.5125",
-    "signature": "3ouzmzv2VYw28BwJPDSJe3cJhm686un3mYuZ4e4MKSZSDCuAaFxcpbac2yRqj6vUjJ6EsKW8YqBGgLk7GzvKAsMP",
-    "timestamp": 1761470200073,
-    "user": "ALRhFiY2EudxW5gitBh4XPJaYpshmXZFjAHJU7JedsxR"
+    "amount": "5.8071",
+    "shares": "10.00",
+    "avgPrice": "0.5793",
+    "signature": "3jv6PQ3ZwsjftQLLnrQwwZgewha9YspG531pW6fvXbjTADZNpgJ9ApATyvYjH2ztZCHQdtC7MLRnoq79xjKUqz3d",
+    "timestamp": 1761601935205,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "5.26",
+    "amount": "5.2627",
     "shares": "10.00",
     "avgPrice": "0.5250",
-    "signature": "3UPmNshWVNXnv2S7YPoBdKwP2Soeghyn6WqXDNoMpPQokizX4ZH1KpVnnUV3iBC7uuNzVLxJ8M24SnL2KR5zuskP",
-    "timestamp": 1761470874902,
-    "user": "ALRhFiY2EudxW5gitBh4XPJaYpshmXZFjAHJU7JedsxR"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "11.02",
-    "shares": "20.00",
-    "avgPrice": "0.5497",
-    "signature": "5HL838EF99AiQeCPNsA7TTkJ5hZG8bgXt3a7TXhFn3vM2QECRFKRYW34pabxnQjowW7r4RXdaM6Gq4GYYX7RmxYf",
-    "timestamp": 1761471331850,
-    "user": "ALRhFiY2EudxW5gitBh4XPJaYpshmXZFjAHJU7JedsxR"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "17.26",
-    "shares": "30.00",
-    "avgPrice": "0.5739",
-    "signature": "4aqKxVGn6h9YrYDwzh69WREkk94W6wijJpuu6fsLpCNTMsAsX4YbMjHSpbKHc15fAXsKehpfesorcDe3G4qqFkeq",
-    "timestamp": 1761471786540,
-    "user": "ALRhFiY2EudxW5gitBh4XPJaYpshmXZFjAHJU7JedsxR"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "71.87",
-    "shares": "100.00",
-    "avgPrice": "0.7169",
-    "signature": "2E6fqcEmHks8pq8T5SxyKVQQs5mJpJGQkEyetRQA6TJ9bAkuZR8DpXUx7aiooUhSWTQuZbKgmgRR8yiRommttfvA",
-    "timestamp": 1761474689643,
-    "user": "ALRhFiY2EudxW5gitBh4XPJaYpshmXZFjAHJU7JedsxR"
+    "signature": "2pR2BoEJeSgJhUJ8KzTr3uF9HZcMaPPfDbRxbRqfvbwvXqFp5VMXVd49ZbFXKyc4VRJXrwhLbuG5XCXQNXxMgoHy",
+    "timestamp": 1761602752150,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "YES",
     "action": "SELL",
-    "amount": "71.51",
-    "shares": "100.00",
-    "avgPrice": "0.0000",
-    "signature": "2cUVHyQgGMPhsPy9ZfJR72gAHEyKw7Vi2AyRfwg6H2Cdnxw9phwun34EC4cy2LpKM5U6Fxs4EHo3iog1AACZd37X",
-    "timestamp": 1761474708193,
-    "user": "ALRhFiY2EudxW5gitBh4XPJaYpshmXZFjAHJU7JedsxR"
+    "amount": "0.5460",
+    "shares": "1.00",
+    "avgPrice": "0.5460",
+    "signature": "2C6dX2t5NPtpHdP2Yu5Z9v3ArN8L6vNAWrSbweHrSp3TvwhBy2Nx25X4wr7o2dadfq74yeaWzbCiMosxWQ1eLnrS",
+    "timestamp": 1761602764284,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "5.26",
+    "amount": "5.7092",
+    "shares": "10.00",
+    "avgPrice": "0.5695",
+    "signature": "9potqBhhcXxAeUVLvqiFtP8vhBjCFdvKu8szhxdxMW1r7jCcvVXENmr8VLdENC9bQ5G1UjJzJxbSEm6i6jkPN9a",
+    "timestamp": 1761602784659,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "6.1920",
+    "shares": "10.00",
+    "avgPrice": "0.6177",
+    "signature": "5t9Xi7oSuTBx8DZkpKP5ymwvkaQrWCFWrZN8FPJojNcxCtQsRL7RmMNDvpxxBcaLNbTNvEMwN3UXAwKbFYX2Uu55",
+    "timestamp": 1761602802147,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "6.6528",
+    "shares": "10.00",
+    "avgPrice": "0.6636",
+    "signature": "5KZqSK29MkjWk8HktGtWCxaSixME5owHbNkQDDF6fMmP5uGM1bpNmdtKX335MQ6ZUkSVu8zJ6KXwpDEGJueve5jv",
+    "timestamp": 1761603286747,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "5.2627",
     "shares": "10.00",
     "avgPrice": "0.5250",
-    "signature": "63hc2Y2DkmMm94GnLAcv6P3qDyiqvS7tQhdMQ8ki21oNLofF2sq4YqG9UUAWRUoMRknvGHAh6JhZsWEMDwCfmyRK",
-    "timestamp": 1761474786247,
-    "user": "ALRhFiY2EudxW5gitBh4XPJaYpshmXZFjAHJU7JedsxR"
+    "signature": "46sF2UfbnnuyddyPpsDTjkxy36x8kDgKgb8YSiMyhc4rhPb19GoTVufuN53Dwfr846vANdUa48kkkpdAsVXdc4Ew",
+    "timestamp": 1761603624725,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "5.76",
+    "amount": "4.7623",
+    "shares": "10.00",
+    "avgPrice": "0.4750",
+    "signature": "4GkJPqdb4ymmeTVaMkFHxeUASULrLMXEPEzpx8anuZPrxvmDKFZZEa1GViyTKPtCVNX6v6hHNRbpKMQmcp2N8meh",
+    "timestamp": 1761603626128,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "5.7582",
+    "shares": "10.90",
+    "avgPrice": "0.5272",
+    "signature": "5uvYu1AoHDYtJcg47hxucA82AB7Lo6S6Jn1oUve87Zcbnubq1tzNAjD5TLJt2QRcrSCAQ6bwJ7NZa2U9GTQtWnor",
+    "timestamp": 1761603626394,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "5.8020",
+    "shares": "10.00",
+    "avgPrice": "0.5787",
+    "signature": "pH6QfDJjE5y22iyEtKCV4c3PLBH1jUnc5vhG2ExcvxZqg76NX6Wti7JniJZVo8Zzenbu7NPW9XTerFdk5PP5nGN",
+    "timestamp": 1761603629726,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "4.2231",
+    "shares": "10.00",
+    "avgPrice": "0.4213",
+    "signature": "2oGFHnJY31FMwFJFpgQBM8zojV6da87S3zoFMHUFxX1dSJiKdcVrqzCvGuN9A9LPsoNBgxkyV2N1zJ2xkVSa2Cmf",
+    "timestamp": 1761603632703,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "6.2813",
+    "shares": "10.79",
+    "avgPrice": "0.5807",
+    "signature": "4UkPZf32ZW5FQ3C2AE3ymQchTKAQ8of1KwfaFZo9wb8ZMx1JXeEaZEijZStPNVwxAZ8bqz2v714BUwXbfGWAwpee",
+    "timestamp": 1761603633403,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "6.3183",
+    "shares": "10.00",
+    "avgPrice": "0.6302",
+    "signature": "5DvzuKwtgU8ppVFf14vcVZ6opZcFW55gKHeFuPG9NWF5xGGLA4uRRAjSQqxRgQEH1uHvJGaKrGmGEDQpFwpgMcH7",
+    "timestamp": 1761603698962,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "0.6572",
+    "shares": "1.00",
+    "avgPrice": "0.6556",
+    "signature": "4S8VuVc8a1xnrsLfFhd1BKSZsjhE7hX6yJ19Uv6Q855npDP7bsnDsXpHDMK8zifuGL5jWTns7RcFDfFuot2gpcNq",
+    "timestamp": 1761603701492,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "6.7718",
+    "shares": "9.94",
+    "avgPrice": "0.6797",
+    "signature": "pVJPTtad1E8uFXR5egCPB4U2dAfQpjdhkEskabp5zL8mUn4S2U4Xa2jXS9vVYBk7ZM2DLGsLkRNtn6B5hzdciuk",
+    "timestamp": 1761603702556,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "SELL",
+    "amount": "0.6972",
+    "shares": "1.00",
+    "avgPrice": "0.6972",
+    "signature": "qstY4egDHTYDZBnr2Dy4PQ9ebPtSKv8A81s7mnJ1gSbWSoRMpSCDnXCTcMBPfp6GVGDuifJ2pwwa59yanMDPV3m",
+    "timestamp": 1761603723932,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "3.2560",
+    "shares": "10.00",
+    "avgPrice": "0.3248",
+    "signature": "4tSqkj1vB6HWHiFm6JCqih9bn1mX52cvPrtSkDMXqcn6NVMxSZYDPR1vx5exfNRaC8VWscpMd8zDGx2pZvrUsUuT",
+    "timestamp": 1761603770446,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "3.2397",
+    "shares": "10.00",
+    "avgPrice": "0.3240",
+    "signature": "3C1Y6gqitscCXmaN7kVCNSGqxXB3rSNqsenJacemzAqRZJoKWSa6CsPQiejCqCafzkmyY9PnFZ4xxmvz8fQzzszx",
+    "timestamp": 1761603790168,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "21.0161",
+    "shares": "50.00",
+    "avgPrice": "0.4193",
+    "signature": "38L2PBmrKYBJ9KY7ahH8zSNGmnnJAeUgaBkGhBLovDb1VMER6R4oWgrDM1MvEMaatXVr9tT6wVdoPTaKm8D8hYbD",
+    "timestamp": 1761603819967,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "20.9111",
+    "shares": "50.00",
+    "avgPrice": "0.4182",
+    "signature": "4KairZT7Pj1HAppdUihtWLra3GrKvXQtuwUHt6bjnX4bCoDFg253JN4tnDpNoJk4YbDbCHcJbvcZXSrrroKxALFU",
+    "timestamp": 1761603839373,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "0.3060",
+    "shares": "1.00",
+    "avgPrice": "0.3052",
+    "signature": "2pSFSBGX9nCPdv2MHB1vmkw3XgqsYwcxQnF6GmnKryb7BjTBWc8Wk2SdtXgKe7YppEsftMurFAWEt84XR3Lvn7R9",
+    "timestamp": 1761603892671,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "0.3045",
+    "shares": "1.00",
+    "avgPrice": "0.3045",
+    "signature": "4TGDeBLvzzHXbUdZo3mDJGubantyYMFmUQNjrM2buPtvg4P2D4Gb2iesWaDwZFagHNbC9gMxU1pE2qUfyUxQS6bp",
+    "timestamp": 1761603901512,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "0.3060",
+    "shares": "1.00",
+    "avgPrice": "0.3052",
+    "signature": "jpiSSu3y2s98dki6aCpeHruiRhGJGjyHBzCuyntuFzT1RTZ2nCXajKNG33E1aa1NJDnjXn4JxYKbeNjNn7QkcLh",
+    "timestamp": 1761604022705,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "0.3103",
+    "shares": "1.00",
+    "avgPrice": "0.3095",
+    "signature": "4aeKvNLx6fukK97UgSKyCCirYV6phYbbG2f7CsUjQNgnk7Bdy2VCosCHCk5n9gUjVaDAG3enTGZe6Q5zv5k4WXfT",
+    "timestamp": 1761604033000,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "39.1282",
+    "shares": "50.00",
+    "avgPrice": "0.7806",
+    "signature": "zm3XLGmz1Y4qnF6Q3YXJ6sfKWYdz2cUk1cxFKwrdiUcysa7jooqT2NEdecuHVr3kSsL3ukdKintXjUG2RQ6F3Zc",
+    "timestamp": 1761604092719,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "0.1412",
+    "shares": "1.00",
+    "avgPrice": "0.1412",
+    "signature": "2G5QuR7qxfqWxFzxg8sxARyAdT8mHuyDR3gnM63CecaEDS4hBz7ZgYsiivD1634fNbkTiug9bVDtYxAA65PcjgGX",
+    "timestamp": 1761604104218,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "0.1388",
+    "shares": "1.00",
+    "avgPrice": "0.1388",
+    "signature": "4LG7C6sGqDxMWukDsF4rJioPpJWJ5ohATh4MuhZH6dxkujEL638cSwBbwdsZ9Gp1MmCqXS8waLe2Ae2ty9Qpjzvi",
+    "timestamp": 1761604107221,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "8.7557",
+    "shares": "10.00",
+    "avgPrice": "0.8734",
+    "signature": "39i24YjpDvLAcCNjDAQ4edFrEv6KoUdhETEPiAsKerp9uBpoZk32ZEZY3jcs1QUfyHwo8WAoNbxHupC9dpgMCwwN",
+    "timestamp": 1761604183721,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "8.9614",
+    "shares": "10.00",
+    "avgPrice": "0.8939",
+    "signature": "4SNedZu1DSaYudGeTnGdyYJnF5yAa1fDmbo7EApunS2gn485ZPz4CBidz5p3Gr6oFRJHiRavxXrVkhdET8rTzmum",
+    "timestamp": 1761604185859,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "9.1370",
+    "shares": "10.00",
+    "avgPrice": "0.9114",
+    "signature": "5pvFoTJhm89ND5rxMuBDEe8Lv1oftdc8Ad4a3extEXCf4ftQNXCSiMLL2h2yLh3ZZaTbm7CWn3Bnk4MTovQ8DTwp",
+    "timestamp": 1761604187721,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "31.0834",
+    "shares": "50.00",
+    "avgPrice": "0.6201",
+    "signature": "4FY6gwa1u1aXU52GhHYS7mb82WxFURG85zqiyrgcixyPBzGZSaphyEbNhBAS6ZeiQJoUQvHw6T4jzCBwkWcSnKBC",
+    "timestamp": 1761604648605,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "19.0419",
+    "shares": "50.00",
+    "avgPrice": "0.3799",
+    "signature": "JXA1m6Ae7KBaGHdCg2ju5EymLDeWpfMkN95i7e2jaRqcfyYPgekzQv9dWaQ2e36AGQmbRrssai9Tx5C4fMrQReV",
+    "timestamp": 1761604661644,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "31.0834",
+    "shares": "50.00",
+    "avgPrice": "0.6201",
+    "signature": "5MjyVHZmu5uorRB8PSqAAdykhKn1fBTjjoLLDVsdFYR3CNyQjLRydbkMtcfB5G4ytdb4m4RMR2Rcs5eyGDPqr5RU",
+    "timestamp": 1761604732437,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "19.0419",
+    "shares": "50.00",
+    "avgPrice": "0.3799",
+    "signature": "ya6hdsvPMfk6pLKeimAVG4nio7N9Pe1qQLm6tFU2geHaEgqQKpoZPraAcFRaHTZmTuiZG18VNm4RzsimmKMoobg",
+    "timestamp": 1761604861503,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "2.4314",
+    "shares": "5.00",
+    "avgPrice": "0.4863",
+    "signature": "3xYSbGMQZAFDcrBKgmrLmqKtaoi1woYM4vaaxRk23SFR2rdzgbLS8rGG9wvFNRQk1UmYmSYYHAjMmaCf7dAHtvcG",
+    "timestamp": 1761604896384,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "0.4713",
+    "shares": "1.00",
+    "avgPrice": "0.4713",
+    "signature": "UButrVRN1SrnCeFaaXzER11aEYUubgmASqPngyH8Lu2NyynfvX1X3Fu86rCcMVRXkuT7Hufm1A3xhiGtnVjos5E",
+    "timestamp": 1761604935894,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "0.4664",
+    "shares": "1.00",
+    "avgPrice": "0.4664",
+    "signature": "46XRNZBFyRapfGeUuVeyn11yatPdi4R64YczVy5TiBYbn1pCELf7Wrt6c2kKTPCxgNAjbZi5tWQi5uT7HdUC4Bf4",
+    "timestamp": 1761604944639,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "31.0834",
+    "shares": "50.00",
+    "avgPrice": "0.6201",
+    "signature": "4uEVUrPxxEarXogwzCVnif1X3tHkAiZc7BQsUcaSFzFkKAHeDJCZF2q8AQ2JRQi4UA1cc77DxP88QHmhfKsKhk4j",
+    "timestamp": 1761605439955,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "40.7853",
+    "shares": "50.00",
+    "avgPrice": "0.8137",
+    "signature": "5cy6f4muus8mdqhs72285cgQ6kJLQM1BbpynfoCKUD8umq5zVKnDRGExvta2R83tLw1gthmr181HTWHV1yWfH5Bt",
+    "timestamp": 1761605566765,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "28.3819",
+    "shares": "100.00",
+    "avgPrice": "0.2831",
+    "signature": "272bHT2JjSYT2FNUMVj7TyxVGT2bYQ9faoJgmcGRe8CKhc6CZGCKeADoE4oSY5eNVx9tZEwR2XTunRstavSwSXEv",
+    "timestamp": 1761605814812,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "18.9468",
+    "shares": "50.00",
+    "avgPrice": "0.3789",
+    "signature": "5tUVNc8BMTkUi9NZyu6SQrrNuFaHC49HAwTueF1oVnZGGvCuqhiPCTqYntxoQHC1eoqfZUDFX8suwrKmWbvuGA5h",
+    "timestamp": 1761605895344,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "31.0834",
+    "shares": "50.00",
+    "avgPrice": "0.6201",
+    "signature": "5p3xkmojfVSVWhyrejQ2M3LPXEx53JN13B8bNZjkJb8GojV6znAspfTJeihCQAYESeW7kVbfZAgpV4ZE7gD9WtaN",
+    "timestamp": 1761606676467,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "7.5198",
+    "shares": "10.00",
+    "avgPrice": "0.7501",
+    "signature": "9BGm6kE7EPNRggRQ2ecBi8tAocJ68hwe9G3BYraXv7CM57gz7t4TcPvChd8xsBTr9jxmRUab7Qf4FGmXjeVDCra",
+    "timestamp": 1761607041649,
+    "user": "FWqHz6FJAsFzp8xKDsa4izea2HqZ4GaTQ9oWGajVda7F"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "42.1955",
+    "shares": "50.00",
+    "avgPrice": "0.8418",
+    "signature": "55p3qTrjfyMydtwy32R7jvLeC1tKAXirjLcNqGLVtwSt17TVEWErDJ3DJf3A2qzh4tPKaR1iJ7pcyGFkicz9hq3t",
+    "timestamp": 1761607180429,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "31.0834",
+    "shares": "50.00",
+    "avgPrice": "0.6201",
+    "signature": "4qnZftyAPsEdCDhotUpFEN2ncuMRws8BffmZjmqmfBWaSgmQgh3nNRXCc2thFmMVFKGQsWVipYYzLy1pxZjYdsMf",
+    "timestamp": 1761607462722,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "40.7853",
+    "shares": "50.00",
+    "avgPrice": "0.8137",
+    "signature": "4W2wjDQPNtEAzjHhziFEGEyTCtidvftvabjPFMQR4A4ct43gVXdh1uad5M3w9uJttudtozWuxQpaNK6UctrSkS78",
+    "timestamp": 1761607465996,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "28.3819",
+    "shares": "100.00",
+    "avgPrice": "0.2831",
+    "signature": "5vBix9MZkDTccmzkWJKb6piiRCWjGdHp8akMrUzkcLEtoJP2A6c1fGH8GvJfqPZEykNhEquQcXdDUy7KhQNudKb6",
+    "timestamp": 1761607641973,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "5.2627",
+    "shares": "10.00",
+    "avgPrice": "0.5250",
+    "signature": "2hQ3XLbQQnMAM7EZMqfon4JKwMuJwWbCWba1fxWWm8fhf4XK4pxcVC4gN83KNMDhPCunzuBEXhQEzZsykzooGoJ6",
+    "timestamp": 1761607826091,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "SELL",
+    "amount": "5.2365",
+    "shares": "10.00",
+    "avgPrice": "0.5236",
+    "signature": "4CbuPiPB78hy53nCNzKAoTMT17iyZZXMg2qwm9oVhX3udaxtvmNfjJ71cGzJi8Xkxdr2xcwURVQDXTuQQBtNLFXT",
+    "timestamp": 1761607832489,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "SELL",
+    "amount": "28.2402",
+    "shares": "100.00",
+    "avgPrice": "0.2824",
+    "signature": "2ykDw2WsrCfdcFhHRCXusrKGe5WaDiiTJ9AEm5F8JwXAyZJGCMv7oiFHMdx1YtNPFoUkyEXMcwdqAoEFJWkFmrfn",
+    "timestamp": 1761607922599,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "71.8687",
+    "shares": "100.00",
+    "avgPrice": "0.7169",
+    "signature": "4FiDUpDHKDrc7WcZ4i6e4AVardFf6ogpNsVa85BWQHSAFzTsR5decupEksftmSqzL8Bk3AEfE2Ztw98xfSBmKads",
+    "timestamp": 1761609791277,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "8.9301",
+    "shares": "10.00",
+    "avgPrice": "0.8908",
+    "signature": "DFYfXDpigwcuaMZSf9Lf1fw1sLGpPKwBB6iRgsEgXKKaT23m6r6T7NVAzELtW6Ku54G3hcfpY3cbYgBsY9Ae75n",
+    "timestamp": 1761610001370,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "5.2627",
+    "shares": "10.00",
+    "avgPrice": "0.5250",
+    "signature": "LMcnbzHRgYwgTVK8XRhfb2G6aXFNfQdxhL2QS6RwtW5crcwegCj7HHF1ehtFuSD6U27ckxvwqmUPLidEAQejW5E",
+    "timestamp": 1761610828434,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "5.7582",
     "shares": "10.00",
     "avgPrice": "0.5744",
-    "signature": "4X81q2HNnfufL1NsAUhbX5YJWSB9UK1rdAz7nSUyV7jf1VzxhXRc2Xxn817MEMaGX2rUNKRfh8jaf8tqM7Tfwkif",
-    "timestamp": 1761474811747,
-    "user": "ALRhFiY2EudxW5gitBh4XPJaYpshmXZFjAHJU7JedsxR"
-  },
-  {
-    "side": "YES",
-    "action": "SELL",
-    "amount": "10.97",
-    "shares": "20.00",
-    "avgPrice": "0.0000",
-    "signature": "5ExLFSTuLBBPyii7AhwXvitvXP5T4q5NswNU9DYiskgRK6T47ijRfdfwBF38uBMWVgjivg1p9zVSFfDvBRKumYnT",
-    "timestamp": 1761474856545,
-    "user": "ALRhFiY2EudxW5gitBh4XPJaYpshmXZFjAHJU7JedsxR"
+    "signature": "476VShW556TT4d4esxkdRcyYqqtxzSoGqbGCr2eE4KQbJfUhw1mCytoFc1r3RLbigk7K1KnTUeAXK7sp6zxh1rLz",
+    "timestamp": 1761610830592,
+    "user": "Cuodr2EDgBQfaxWRk3qML7bEjwFdHU7wjj8NrnrTjyZB"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "5.26",
-    "shares": "10.00",
-    "avgPrice": "0.5250",
-    "signature": "2kH7tBJUwzCPSjqGr1yvoFikRgVzZAR44hDGUC63VQxJ5oB8gpX8jJwMBUWQ9XsBgfSvSyUhT8uPHW4o5KbwkVFL",
-    "timestamp": 1761478256050,
-    "user": "5jKYdNs5TEYdc2AmADMFhiTzsKZ9Yqt3EbrxEFvKUhMm"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.26",
-    "shares": "9.17",
-    "avgPrice": "0.5724",
-    "signature": "4sUrcXi4uJC465hSXyhQmbZc1k5ZxTcFydTDiKUXY25wrZjyhkz6P9YsQwnKUo7sE9dHSdxn9xbgZU9etgeAfADd",
-    "timestamp": 1761478256399,
-    "user": "5jKYdNs5TEYdc2AmADMFhiTzsKZ9Yqt3EbrxEFvKUhMm"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.50",
+    "amount": "0.6026",
     "shares": "1.00",
-    "avgPrice": "0.5025",
-    "signature": "5HNqbMz5GH1eyCeiFDBsJV5kvfpTMsZMdAK5b2gL7iGGca16BturtbzdYxrK3cEdevhdeXZQnhyfk7y7nrDE6GAC",
-    "timestamp": 1761496128681,
-    "user": "HRxcEgSfVczJ2EUK8EEobFk5rGponoRyfKgqd932hVAd"
+    "avgPrice": "0.6011",
+    "signature": "48HpogV1ycM4cq1vWR8hV8M31pXSmvQ69SQHtNvX5yzCx1Emzh2znb7zh2ry9yuow5XNE5NGGTYEA7kLxqCwvGT4",
+    "timestamp": 1761610896267,
+    "user": "9k262nX5y5E89Gm1fGVyKmgCBdEo2J12TUmPnqDKspgh"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "0.51",
-    "shares": "1.00",
-    "avgPrice": "0.5075",
-    "signature": "4hVUqALEbaBGBQJ6LCmuKXd245YZGiL4PkQr3RLno7hnBcZwvyrrk1gmJDMZ8DYqs41XRTWgTfSU1VyTp1o5S6JL",
-    "timestamp": 1761496473923,
-    "user": "HRxcEgSfVczJ2EUK8EEobFk5rGponoRyfKgqd932hVAd"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.50",
-    "shares": "1.00",
-    "avgPrice": "0.5025",
-    "signature": "2mfqm1pi9Dw91zpxMRcuuWfE4ABEfm9ERsP4KS3YieicmZavR6rdf3zH761r7aHoK7NxgTmPeuoTtxzhsLB4XqG6",
-    "timestamp": 1761496528775,
-    "user": "HRxcEgSfVczJ2EUK8EEobFk5rGponoRyfKgqd932hVAd"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "3.10",
-    "shares": "6.00",
-    "avgPrice": "0.5150",
-    "signature": "2ww1fKH2kHGrusPb9BCvnMxmT3vMU6aKcJPzMbePU7Z9Q34fmKZaQ9KYXnT8tHeXqs8cj1y16YKQ5Xxhwezo4Dzr",
-    "timestamp": 1761502241421
+    "amount": "24.6846",
+    "shares": "36.00",
+    "avgPrice": "0.6840",
+    "signature": "4fZYoEVveUkRhBvJtxQBLAoi4eBCuNiunAVY67w79TPow72mhiiKFmq7qWmpKNSiURehjpXny9viSZS4gv7UPS9R",
+    "timestamp": 1761610969907,
+    "user": "9k262nX5y5E89Gm1fGVyKmgCBdEo2J12TUmPnqDKspgh"
   },
   {
     "side": "NO",
     "action": "BUY",
-    "amount": "1.53",
-    "shares": "3.00",
+    "amount": "46.8865",
+    "shares": "100.00",
+    "avgPrice": "0.4677",
+    "signature": "cKMNorQycRyhT7WPj2PqzwnLQLuZ3vwyp2FafA89mZQoZekAxrzfmcJRRrRY1qbwdsdDhpg8PJj9PP3d9Hdrchc",
+    "timestamp": 1761611158067,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "0.5038",
+    "shares": "1.00",
+    "avgPrice": "0.5025",
+    "signature": "3TjHm1Zv8jBgSJXRAhPF5ZY5YcE3SfC2XCdKbfBxUnVjXv4rSH87WjbN4qkJ7Dh4g2kk6tVkzE4gvoa7m7LBhX3S",
+    "timestamp": 1761612092684,
+    "user": "9k262nX5y5E89Gm1fGVyKmgCBdEo2J12TUmPnqDKspgh"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "0.5088",
+    "shares": "1.00",
     "avgPrice": "0.5075",
-    "signature": "3vYuBDdUGwQtW9gsgfYsvAU3mndLVvMDfQPqnnPXV7RvSTQgkY1V8YLjiHM8hGE7KhMyePfbrH8qRoGMS2H1F62m",
-    "timestamp": 1761506772691,
-    "user": "6yxkCiq4EjU7PkmHiQudGtDsJKnfu5VtjyUE5XBRMdhv"
+    "signature": "3HR5tGspGu8b9WgoKr7UoiWaT6uiwrToF2TdsLu7wRyN94Vmcm5dUZ5MrDDNMrWFid3BEgpRaAZ3MyRVvNDBSUGK",
+    "timestamp": 1761612128693,
+    "user": "9k262nX5y5E89Gm1fGVyKmgCBdEo2J12TUmPnqDKspgh"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "0.49",
-    "shares": "1.00",
-    "avgPrice": "0.4875",
-    "signature": "4PogTHbySV1WqL5HmpWoDQnTCdout4gWPoZw8T6pXUB5SYf8GKw6EAHwzqYC7DAyvLBt5gRZZdmBNSCMnEnBJWu5",
-    "timestamp": 1761506900226,
-    "user": "2nKWvfbxDaT6RdgcarpgSwDBErW3CVvzmqXTsYj1ztns"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.49",
-    "shares": "1.00",
-    "avgPrice": "0.4925",
-    "signature": "5JsqTihzoZpBkQkMtDZqn4qVUpuQ4BiFPv1FtJntqSzJ1jiQSscexkZrRY2B98Nz9oQC6AdTk1cu9ReMYX4sBLHs",
-    "timestamp": 1761506904936,
-    "user": "2nKWvfbxDaT6RdgcarpgSwDBErW3CVvzmqXTsYj1ztns"
+    "amount": "72.6264",
+    "shares": "100.00",
+    "avgPrice": "0.7244",
+    "signature": "2fSAQD3UtKL9wNtvTQwojqSTPuMm9f9C7nbFqgWe2t4t6berN927NodD7rXUZDydMFm98R5sjkq8vwbckEovit8J",
+    "timestamp": 1761612282266,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
   },
   {
     "side": "YES",
     "action": "SELL",
-    "amount": "0.49",
+    "amount": "0.8817",
     "shares": "1.00",
-    "avgPrice": "0.0000",
-    "signature": "4d93a63qbkzt7EZVzDJ3BCLhX4MPbbVdbcaf94fFFF2N9gJP7nVtR9pbXXjrhKDNHQ9rvenLqV9C2fqU9BLcSzep",
-    "timestamp": 1761506911852,
-    "user": "2nKWvfbxDaT6RdgcarpgSwDBErW3CVvzmqXTsYj1ztns"
+    "avgPrice": "0.8817",
+    "signature": "3oBUap7K7ewqNLwEJmJ5CrBdmiqzzjffPFUuQ3tgzTkj6SVFj4GgyDMn77Jq2471F7foAbPnKmwqvENaNaenyrfU",
+    "timestamp": 1761612309776,
+    "user": "9k262nX5y5E89Gm1fGVyKmgCBdEo2J12TUmPnqDKspgh"
   },
   {
     "side": "YES",
     "action": "SELL",
-    "amount": "0.49",
+    "amount": "0.8796",
     "shares": "1.00",
-    "avgPrice": "0.0000",
-    "signature": "qVnEF1LJUsp9cpJ4uP5ufb5dVYioAH75yEEHEHgsfdEj9jY6x8vA1Fh7i8DrtodkxvzZGMBcYxX8GKv7eTKRWRj",
-    "timestamp": 1761506912981,
-    "user": "2nKWvfbxDaT6RdgcarpgSwDBErW3CVvzmqXTsYj1ztns"
+    "avgPrice": "0.8796",
+    "signature": "12oy4Pk6QixgPzPJjRBgK15pzPVsWy4QBqoEBENNiLxLs3jrKFHDG2b66fbSD5fc84FpdugmEEQJyZaWpfQhrLi",
+    "timestamp": 1761612314505,
+    "user": "9k262nX5y5E89Gm1fGVyKmgCBdEo2J12TUmPnqDKspgh"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "0.49",
+    "amount": "0.8841",
     "shares": "1.00",
-    "avgPrice": "0.4875",
-    "signature": "4DkFmqaEhBLRzhPWFnacjbsfjYiUpLXinqNEYF2BJFqYLpZmiDMMvRoU5m9gn5oM95ZgAHPGAAo9v39Nzt3mreJB",
-    "timestamp": 1761506940333,
-    "user": "2nKWvfbxDaT6RdgcarpgSwDBErW3CVvzmqXTsYj1ztns"
+    "avgPrice": "0.8818",
+    "signature": "48cadPqkNRGUQDqEa3NwG2oWhrt2huTn1LM5Gn7f8zpLT5j5cmcHhQ44bdSTEKiAyj8PAFFGF3KkcvNb3QcMXBcb",
+    "timestamp": 1761612344673,
+    "user": "8GyrfV5MmYBjNTjcS27oHmZQyCW8xcHAj8TGuq8qGvX6"
   },
   {
-    "side": "YES",
+    "side": "NO",
     "action": "BUY",
-    "amount": "0.49",
-    "shares": "1.00",
-    "avgPrice": "0.4925",
-    "signature": "3jw28Ddue7sLxMqHjUaXHGyRvwPGkSMJ54RYUpKRAykLAwNAV3KZ5pE1N3QJzrQGNUDj8aDZZbdvAyqGSxSACh2B",
-    "timestamp": 1761506941281,
-    "user": "2nKWvfbxDaT6RdgcarpgSwDBErW3CVvzmqXTsYj1ztns"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.50",
-    "shares": "1.00",
-    "avgPrice": "0.5025",
-    "signature": "3ab9taJpoNuMTH88QUgX4R1cRyJTsUc1FWzBqrNMDfw49m9TtTVbjaUM3DVfGtgtzaHLChMAANLTij4N1KGWCDz4",
-    "timestamp": 1761508264884,
-    "user": "6TR36fyPfQr2NLusAteBhEsmbwbF87eyb3Wv6p7yAvaF"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.31",
-    "shares": "10.00",
-    "avgPrice": "0.5299",
-    "signature": "52ktuBHArj6SVvAgCAzaRa9y1w14ytYUf2Q2pVfDrjHEKZSwHLyoD2rY7DRCBnuxQ1tggeno7oskZdjDnrseWqLe",
-    "timestamp": 1761508647250,
-    "user": "FAbxCF2xG886nssC9pHHn5aPTr7sK64YLaAQfk4EvfwA"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.26",
-    "shares": "10.00",
-    "avgPrice": "0.5250",
-    "signature": "2joJv4oR1bBxRBb8Z1JBEWeJL1xdBYmgUknNmJXAaURmyJPepTd7rejDBYJNu7K2HkHdVpDPCgDwAyWWFuuSd2FE",
-    "timestamp": 1761508864806,
-    "user": "FAbxCF2xG886nssC9pHHn5aPTr7sK64YLaAQfk4EvfwA"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.55",
-    "shares": "1.00",
-    "avgPrice": "0.5523",
-    "signature": "41L6uADiqCJFn5vV4z2eJ4nNzM2J1dNSVFQHGx7LbcwV4xqbL7YaAtRkyTXFYGfrzAVsBDjdkGsvoZAkybic4Ykn",
-    "timestamp": 1761508872732
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.56",
-    "shares": "1.00",
-    "avgPrice": "0.5572",
-    "signature": "2crKoqecfmx2skWcATzmkPvZkPH7BiZ2A6WQyPJEdUcLreELJEBHTkdXJv2UkwY3FuGpEUK7rzMqSMmL3Qp68J5m",
-    "timestamp": 1761508924410,
-    "user": "E7cXdVNMiuQGnHVSSkDxE3Daf9HWHPt3CEsSCezdUvYc"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.86",
-    "shares": "10.00",
-    "avgPrice": "0.5841",
-    "signature": "3v7PtsLLXtwESS4NSxQMsToTpLepsRMx9486s9h31BgqDBrwnSnMKx623R2qsykh4kUG8bbDwdoV2wn6HxBrFSrc",
-    "timestamp": 1761508925490,
-    "user": "FAbxCF2xG886nssC9pHHn5aPTr7sK64YLaAQfk4EvfwA"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "6.33",
-    "shares": "10.00",
-    "avgPrice": "0.6317",
-    "signature": "3wDMZ2N5jzpQo1ybjpjsNELHKukD6gA2jGWej1XRTyrBCZsZGyypisV45S1WXQM7DBXmmhRUw6K11iwsXXpAdYop",
-    "timestamp": 1761508964534
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "31.08",
+    "amount": "9.1908",
     "shares": "50.00",
-    "avgPrice": "0.6201",
-    "signature": "22hnqAiuBamxJg82eCeiqHxJfsi85iedHH5m8x6iXV6Wzf63qMHJhc3b3iD7P5ZwX8AHKap4PqAY1DfuW8C9vZor",
-    "timestamp": 1761509556901,
-    "user": "FAbxCF2xG886nssC9pHHn5aPTr7sK64YLaAQfk4EvfwA"
+    "avgPrice": "0.1834",
+    "signature": "zqb3Ts428zxyqrtsvaXz2fz8qiqvuCPYddPfoy3HmyKahZZK8tXL7WrobX79zBtRLMSJubP5riah3vN3qkdJjUw",
+    "timestamp": 1761612380013,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "18.8108",
+    "shares": "50.00",
+    "avgPrice": "0.3753",
+    "signature": "4vAvhHjBHWVHgeSc9MMhQqyZDbciCKhuZAtSq4C6dWJhoz8hTpGrz3YXoeza4ZHsY5iKsvB1UEp85b4Bq63YgKut",
+    "timestamp": 1761612391463,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "30.8513",
+    "shares": "50.00",
+    "avgPrice": "0.6155",
+    "signature": "g3EWJpuGffBH6CJxTrAmLHVbEAg3bMvbm1y9JAE4Vfur1TFTcngzeKQLJPEhZ9XHcq54nVR2zoNyCCtm2uZvjTq",
+    "timestamp": 1761612418372,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "YES",
     "action": "BUY",
-    "amount": "7.52",
-    "shares": "10.00",
-    "avgPrice": "0.7501",
-    "signature": "3Z9LPk4qAFjnXZz56cyfKdXxyKj1fMCSsebeVfYJaJZiY1t9PFEoJVYs3KHj1MXA9kMQSYwd9LTnskKqsz9brmkC",
-    "timestamp": 1761509655090,
-    "user": "FAbxCF2xG886nssC9pHHn5aPTr7sK64YLaAQfk4EvfwA"
+    "amount": "50.5886",
+    "shares": "100.00",
+    "avgPrice": "0.5046",
+    "signature": "4Yn5hG8C9LbuX4fDVUSh78LgPwXsaaVXrWSqvgKNsPsAA83gbrbMxjc5b4r8ypTFQFXZTJdYpoQjfebtqy62V1Lq",
+    "timestamp": 1761612436595,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "18.8108",
+    "shares": "50.00",
+    "avgPrice": "0.3753",
+    "signature": "5D79Kq1B3msA7q8sp8pdVdAwrG572eCit6WtFGKpRyJjcYQxM9FVgvwXzUd45rGcijd3F3fHAqmRvS3zwLBSQwZE",
+    "timestamp": 1761612485660,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   },
   {
     "side": "YES",
-    "action": "SELL",
-    "amount": "38.41",
-    "shares": "60.00",
+    "action": "BUY",
+    "amount": "71.8687",
+    "shares": "100.00",
+    "avgPrice": "0.7169",
+    "signature": "DaD5n2BG7rJqPUfUC8q2DbbCLeha5x4ZJ9KK5BU1rUogCt9CfcTx195pSxJBZxSZFstQzdkW5SDKRv6jJAurEwn",
+    "timestamp": 1761613396473,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "71.8687",
+    "shares": "100.00",
+    "avgPrice": "0.7169",
+    "signature": "3DRYHFsxFbYHQVFCM11sihPagmGqgMvBDtruNzTmXtHnC6KBfRwifcWmpb3KhmmT4ZeuvzPrFfZ6LPFYakfBRDzD",
+    "timestamp": 1761614621109,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "9.3400",
+    "shares": "50.00",
+    "avgPrice": "0.1863",
+    "signature": "2GsUcHDGQJeWyxN41EeANEdJTgpC6wkL9SRCeKgU5zFgvCXfuzoLQ1WFLY1LWnXN4kMkkLoiRm17z2d9sp18n4sK",
+    "timestamp": 1761614740306,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "19.0419",
+    "shares": "50.00",
+    "avgPrice": "0.3799",
+    "signature": "4xVUcLdL9AtZtWe9BNALhHUJpZaJKrnwnRqzTaQviMmxmsCe7DmuektPdqfvM3qSxpmJM6PQWAt18KHkZMZ65kPH",
+    "timestamp": 1761614744312,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "BUY",
+    "amount": "71.8687",
+    "shares": "100.00",
+    "avgPrice": "0.7169",
+    "signature": "3oiZ3nhTK9hrLSxC8hV2dw2a94f1a2iRPQ5dLSXWfURFgjzcUs5amRVyvVJM1eLFuDMkLmQGAFzax3fAa6yXACoA",
+    "timestamp": 1761614881069,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "9.3400",
+    "shares": "50.00",
+    "avgPrice": "0.1863",
+    "signature": "2MXprdvCFrTxYpQPEiZQ1DzZSpxfjDr5gBwXpr9iBqQdutJ8dW9pjpCsPgCB8ngVP3PzLjA4PVRbGUFujG2Q3ivX",
+    "timestamp": 1761614891330,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "NO",
+    "action": "BUY",
+    "amount": "19.0419",
+    "shares": "50.00",
+    "avgPrice": "0.3799",
+    "signature": "8FDcJGj6huXryGJnyAAiKo8XZL6w9A4T83NK13ooTWmZ5VUh5awPsZkZuZmi4bEWqgiPnnuyHV2oUqMY2bsDaiK",
+    "timestamp": 1761614927484,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+  },
+  {
+    "side": "YES",
+    "action": "REDEEM",
+    "amount": "0.0000",
+    "shares": "0.00",
     "avgPrice": "0.0000",
-    "signature": "2xU3PNfMtaVxfBgueaQAdbbmewnkqn78WDJTW8M9RgS5Njex2WcTeUgtSeoKiQKMQw6JpT9nGDbN1o79Z1y4anV5",
-    "timestamp": 1761509690276,
-    "user": "FAbxCF2xG886nssC9pHHn5aPTr7sK64YLaAQfk4EvfwA"
+    "signature": "auto-redeem",
+    "timestamp": 1761615003517,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
   },
   {
     "side": "YES",
-    "action": "BUY",
-    "amount": "0.50",
-    "shares": "1.00",
-    "avgPrice": "0.5025",
-    "signature": "hyi7GAoVzv2Kw6c2yCcc4Tigg8yJDkLX1rPiAKhPwiLRtx7a3C525qAVvsxP8Cuz7pK1y9XTr1cU1oww96nciNR",
-    "timestamp": 1761509755437,
-    "user": "6TR36fyPfQr2NLusAteBhEsmbwbF87eyb3Wv6p7yAvaF"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "38.87",
-    "shares": "60.00",
-    "avgPrice": "0.6462",
-    "signature": "3Ai5PnsVKsbyktQkV2D6zSwfrxkcrtqTHJXuZ3JD9GZ6qozJ93vH4NuDzM7xAitjgRq48ZtjXcyw71R4gGoCV94j",
-    "timestamp": 1761509757297,
-    "user": "FAbxCF2xG886nssC9pHHn5aPTr7sK64YLaAQfk4EvfwA"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.50",
-    "shares": "1.00",
-    "avgPrice": "0.5025",
-    "signature": "3HbQvrRNaptp5jmP9UJy9Qod9276oWQFqz2uDbV2zNhsDVnWMKKUxFV2F7GnAA8Mj9WdzVGhfdsC9BfwgNP1v4ND",
-    "timestamp": 1761510130083,
-    "user": "E7cXdVNMiuQGnHVSSkDxE3Daf9HWHPt3CEsSCezdUvYc"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "0.69",
-    "shares": "1.00",
-    "avgPrice": "0.6921",
-    "signature": "2MLNUbqNV8zxHKFSa74XMr7c6zQ6f4GKa2ahs82DWBfr6RmssocUSfTQvUb9o867FePHApX9wtFAbZkz3k6WRy8Z",
-    "timestamp": 1761513167732,
-    "user": "6TR36fyPfQr2NLusAteBhEsmbwbF87eyb3Wv6p7yAvaF"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "7.17",
-    "shares": "10.00",
-    "avgPrice": "0.7149",
-    "signature": "VhxiiD8z4E2o2Sz5hQDiBGpSeADJFf59kKyKTxsbdwM8fGyc5xUKyrhAwdZpjguyh4HAbqZBpW43zEtXtFS4Rr7",
-    "timestamp": 1761513269989,
-    "user": "6TR36fyPfQr2NLusAteBhEsmbwbF87eyb3Wv6p7yAvaF"
-  },
-  {
-    "side": "YES",
-    "action": "BUY",
-    "amount": "5.26",
-    "shares": "10.00",
-    "avgPrice": "0.5250",
-    "signature": "XXVNsxmsSBqiVZyPuWATjJTaPMggkMp28Wdd3Je9eEagnj1oUbyzoFKJ35PAzrrAdvbqhfBKEKoY4D4SU467Zd8",
-    "timestamp": 1761513639780,
-    "user": "3TG2xMmY3QVQ9E1PXVMBSViKsbTLVHudQPf37GsV4rQN"
+    "action": "REDEEM",
+    "amount": "200.0000",
+    "shares": "0.00",
+    "avgPrice": "0.0000",
+    "signature": "auto-redeem",
+    "timestamp": 1761615004304,
+    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
   }
 ]

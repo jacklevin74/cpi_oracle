@@ -1919,6 +1919,26 @@ button.disabled {
 
 /* Only go vertical on very narrow screens */
 @media (max-width: 700px) {
+    /* Explicitly lock color scheme */
+    :root {
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #141414;
+        --bg-tertiary: #1a1a1a;
+        --bg-hover: #202020;
+        --border-color: #252525;
+        --border-light: #2a2a2a;
+        --text-primary: #e8e8e8;
+        --text-secondary: #888888;
+        --text-dim: #555555;
+        --green: #3fb68b;
+        --green-bg: rgba(63, 182, 139, 0.1);
+        --green-hover: #4bc89f;
+        --red: #ff5353;
+        --red-bg: rgba(255, 83, 83, 0.1);
+        --red-hover: #ff6b6b;
+        --blue: #5b9eff;
+    }
+
     .terminal-grid {
         grid-template-columns: 1fr;
         display: flex;
@@ -1941,6 +1961,26 @@ button.disabled {
 
 /* Mobile and small tablets */
 @media (max-width: 768px) {
+    /* Explicitly lock color scheme - never change colors on mobile */
+    :root {
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #141414;
+        --bg-tertiary: #1a1a1a;
+        --bg-hover: #202020;
+        --border-color: #252525;
+        --border-light: #2a2a2a;
+        --text-primary: #e8e8e8;
+        --text-secondary: #888888;
+        --text-dim: #555555;
+        --green: #3fb68b;
+        --green-bg: rgba(63, 182, 139, 0.1);
+        --green-hover: #4bc89f;
+        --red: #ff5353;
+        --red-bg: rgba(255, 83, 83, 0.1);
+        --red-hover: #ff6b6b;
+        --blue: #5b9eff;
+    }
+
     /* On mobile, flatten structure using display: contents */
     .terminal-grid {
         display: flex;
@@ -2453,6 +2493,26 @@ button.disabled {
 
 /* Extra small mobile phones */
 @media (max-width: 480px) {
+    /* Explicitly lock color scheme */
+    :root {
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #141414;
+        --bg-tertiary: #1a1a1a;
+        --bg-hover: #202020;
+        --border-color: #252525;
+        --border-light: #2a2a2a;
+        --text-primary: #e8e8e8;
+        --text-secondary: #888888;
+        --text-dim: #555555;
+        --green: #3fb68b;
+        --green-bg: rgba(63, 182, 139, 0.1);
+        --green-hover: #4bc89f;
+        --red: #ff5353;
+        --red-bg: rgba(255, 83, 83, 0.1);
+        --red-hover: #ff6b6b;
+        --blue: #5b9eff;
+    }
+
     /* Compress everything further */
     .market-stats {
         grid-template-columns: 1fr;

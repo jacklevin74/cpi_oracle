@@ -3,21 +3,24 @@
 ║     AUTOMATED SETTLEMENT BOT - 10 MIN CYCLES  ║
 ╚═══════════════════════════════════════════════╝
 
-[2025-10-26T23:02:17.317Z] Operator: jqj117nAKqLepiFkxjAQob4p2ibfBnvJ943J3cryX55
-[2025-10-26T23:02:17.318Z] RPC: http://127.0.0.1:8899
-[2025-10-26T23:02:17.318Z] Oracle: 4KYeNyv1B9YjjQkfJk2C6Uqo71vKzFZriRe5NXg6GyCq
-[2025-10-26T23:02:17.319Z] AMM PDA: D9QLyPx7uBXr9BARa5r8w1offurA6cTfysc7LiAUtPRo
-[2025-10-26T23:02:17.319Z] Vault PDA: 6stF65Zgi2rXCKNSBDvxtg4MrsvaRByi2chAoetG7yFT
-[2025-10-26T23:02:17.319Z] 
+[INFO] Oracle: 4KYeNyv1B9YjjQkfJk2C6Uqo71vKzFZriRe5NXg6GyCq
+[INFO] Using wallet: ./operator.json
+[2025-10-27T22:36:49.198Z] Operator: jqj117nAKqLepiFkxjAQob4p2ibfBnvJ943J3cryX55
+[2025-10-27T22:36:49.199Z] RPC: http://127.0.0.1:8899
+[2025-10-27T22:36:49.199Z] Oracle: 4KYeNyv1B9YjjQkfJk2C6Uqo71vKzFZriRe5NXg6GyCq
+[2025-10-27T22:36:49.200Z] AMM PDA: D9QLyPx7uBXr9BARa5r8w1offurA6cTfysc7LiAUtPRo
+[2025-10-27T22:36:49.201Z] Vault PDA: 6stF65Zgi2rXCKNSBDvxtg4MrsvaRByi2chAoetG7yFT
+[2025-10-27T22:36:49.201Z] 
 🚀 Initializing market for immediate pre-market trading...
 
-[2025-10-26T23:02:17.345Z] Closing existing market...
-[2025-10-26T23:02:17.345Z] Closing existing market...
-[SUCCESS] Market closed: 3pmyXsJaxLR4vdwG1hR7CVET2ob1GQFtLUqXbrZjaxLkXQA5s6wDT7WyJSRuzGfeipDsKr6i8HVw1qok3fbSsD1u
-[2025-10-26T23:02:19.699Z] Initializing new market...
-[SUCCESS] Market initialized: 4N2tNYRuMJma6pgKRCzomwAFFGMZwqqqNYbSGuJvWj2QQXqpKV46Vj9rNbJJkDDCEx4vfLXMVPQEGw37pUst92z5
+[2025-10-27T22:36:49.223Z] Closing existing market...
+[2025-10-27T22:36:49.223Z] Closing existing market...
+[SUCCESS] Market closed: eQ662cbj3yhX4M3pBY2KxTmBHmi8uJvemga6hyJQuYDhNsuf9zKgZ5bZBtyhgLH9jEo3ANWjNaDgixrUBp2fMNU
+[2025-10-27T22:36:51.477Z] Initializing new market...
+[SUCCESS] Market initialized: 3SgPFEsjAVwL5oKVQqw4AQhiAaXrqJwnfjrqqB3ztLKFYGzh8oTrNYGrtX7mtR1PESe9NZ55XYYjiwBKELYiPgbx
+[INFO] 📊 Volume reset for new market cycle
 [SUCCESS] ✓ PRE-MARKET BETTING NOW OPEN!
-[2025-10-26T23:02:21.743Z] 
-⏰ Current cycle snapshot at: 23:10:00
-[2025-10-26T23:02:21.743Z] Pre-market phase: 7m 38s until snapshot
+[2025-10-27T22:36:53.526Z] 
+⏰ Current cycle snapshot at: 22:40:00
+[2025-10-27T22:36:53.526Z] Pre-market phase: 3m 6s until snapshot
 
