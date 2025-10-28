@@ -144,7 +144,7 @@ body {
 .grid-chart,
 .grid-book,
 .grid-trade {
-    background: var(--bg-primary);
+    background: #0a0a0a !important;
 }
 
 /* ===== CHART SECTION ===== */
@@ -266,6 +266,7 @@ body {
     padding: 16px;
     height: 295px;
     position: relative;
+    background: #0a0a0a !important;
 }
 
 #btcChart {
@@ -1987,6 +1988,7 @@ button.disabled {
     .chart-container {
         order: 6;
         margin: 0 12px 16px 12px;
+        background: #0a0a0a !important;
     }
 
     .market-stats {
@@ -2184,6 +2186,7 @@ button.disabled {
     .chart-container {
         height: 255px;
         padding: 12px;
+        background: #0a0a0a !important;
     }
 
     /* Market stats - 3 columns on mobile, margin already set in order section above */
@@ -2466,6 +2469,7 @@ button.disabled {
     .chart-container {
         height: 215px;
         padding: 8px;
+        background: #0a0a0a !important;
     }
 
     .trade-item {
