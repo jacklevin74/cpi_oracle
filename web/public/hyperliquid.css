@@ -1919,24 +1919,24 @@ button.disabled {
 
 /* Only go vertical on very narrow screens */
 @media (max-width: 700px) {
-    /* Explicitly lock color scheme */
+    /* Force lock color scheme with !important */
     :root {
-        --bg-primary: #0a0a0a;
-        --bg-secondary: #141414;
-        --bg-tertiary: #1a1a1a;
-        --bg-hover: #202020;
-        --border-color: #252525;
-        --border-light: #2a2a2a;
-        --text-primary: #e8e8e8;
-        --text-secondary: #888888;
-        --text-dim: #555555;
-        --green: #3fb68b;
-        --green-bg: rgba(63, 182, 139, 0.1);
-        --green-hover: #4bc89f;
-        --red: #ff5353;
-        --red-bg: rgba(255, 83, 83, 0.1);
-        --red-hover: #ff6b6b;
-        --blue: #5b9eff;
+        --bg-primary: #0a0a0a !important;
+        --bg-secondary: #141414 !important;
+        --bg-tertiary: #1a1a1a !important;
+        --bg-hover: #202020 !important;
+        --border-color: #252525 !important;
+        --border-light: #2a2a2a !important;
+        --text-primary: #e8e8e8 !important;
+        --text-secondary: #888888 !important;
+        --text-dim: #555555 !important;
+        --green: #3fb68b !important;
+        --green-bg: rgba(63, 182, 139, 0.1) !important;
+        --green-hover: #4bc89f !important;
+        --red: #ff5353 !important;
+        --red-bg: rgba(255, 83, 83, 0.1) !important;
+        --red-hover: #ff6b6b !important;
+        --blue: #5b9eff !important;
     }
 
     .terminal-grid {
@@ -1961,24 +1961,24 @@ button.disabled {
 
 /* Mobile and small tablets */
 @media (max-width: 768px) {
-    /* Explicitly lock color scheme - never change colors on mobile */
+    /* Force lock color scheme with !important - never change colors on mobile */
     :root {
-        --bg-primary: #0a0a0a;
-        --bg-secondary: #141414;
-        --bg-tertiary: #1a1a1a;
-        --bg-hover: #202020;
-        --border-color: #252525;
-        --border-light: #2a2a2a;
-        --text-primary: #e8e8e8;
-        --text-secondary: #888888;
-        --text-dim: #555555;
-        --green: #3fb68b;
-        --green-bg: rgba(63, 182, 139, 0.1);
-        --green-hover: #4bc89f;
-        --red: #ff5353;
-        --red-bg: rgba(255, 83, 83, 0.1);
-        --red-hover: #ff6b6b;
-        --blue: #5b9eff;
+        --bg-primary: #0a0a0a !important;
+        --bg-secondary: #141414 !important;
+        --bg-tertiary: #1a1a1a !important;
+        --bg-hover: #202020 !important;
+        --border-color: #252525 !important;
+        --border-light: #2a2a2a !important;
+        --text-primary: #e8e8e8 !important;
+        --text-secondary: #888888 !important;
+        --text-dim: #555555 !important;
+        --green: #3fb68b !important;
+        --green-bg: rgba(63, 182, 139, 0.1) !important;
+        --green-hover: #4bc89f !important;
+        --red: #ff5353 !important;
+        --red-bg: rgba(255, 83, 83, 0.1) !important;
+        --red-hover: #ff6b6b !important;
+        --blue: #5b9eff !important;
     }
 
     /* On mobile, flatten structure using display: contents */
@@ -2493,24 +2493,24 @@ button.disabled {
 
 /* Extra small mobile phones */
 @media (max-width: 480px) {
-    /* Explicitly lock color scheme */
+    /* Force lock color scheme with !important */
     :root {
-        --bg-primary: #0a0a0a;
-        --bg-secondary: #141414;
-        --bg-tertiary: #1a1a1a;
-        --bg-hover: #202020;
-        --border-color: #252525;
-        --border-light: #2a2a2a;
-        --text-primary: #e8e8e8;
-        --text-secondary: #888888;
-        --text-dim: #555555;
-        --green: #3fb68b;
-        --green-bg: rgba(63, 182, 139, 0.1);
-        --green-hover: #4bc89f;
-        --red: #ff5353;
-        --red-bg: rgba(255, 83, 83, 0.1);
-        --red-hover: #ff6b6b;
-        --blue: #5b9eff;
+        --bg-primary: #0a0a0a !important;
+        --bg-secondary: #141414 !important;
+        --bg-tertiary: #1a1a1a !important;
+        --bg-hover: #202020 !important;
+        --border-color: #252525 !important;
+        --border-light: #2a2a2a !important;
+        --text-primary: #e8e8e8 !important;
+        --text-secondary: #888888 !important;
+        --text-dim: #555555 !important;
+        --green: #3fb68b !important;
+        --green-bg: rgba(63, 182, 139, 0.1) !important;
+        --green-hover: #4bc89f !important;
+        --red: #ff5353 !important;
+        --red-bg: rgba(255, 83, 83, 0.1) !important;
+        --red-hover: #ff6b6b !important;
+        --blue: #5b9eff !important;
     }
 
     /* Compress everything further */
