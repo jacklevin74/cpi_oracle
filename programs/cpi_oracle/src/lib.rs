@@ -90,10 +90,11 @@ pub struct Position {
     pub owner: Pubkey,
     pub yes_shares_e6: i64,
     pub no_shares_e6: i64,
+    pub master_wallet: Pubkey,  // NEW: Backpack wallet that authorized this session wallet
 }
 impl Position {
     pub const SEED: &'static [u8] = b"pos";
-    pub const SPACE: usize = 32 + 8 + 8;
+    pub const SPACE: usize = 32 + 8 + 8 + 32;  // owner + yes + no + master_wallet
 }
 
 // ---- Limits (all scaled 1e6) ----
@@ -178,6 +179,8 @@ pub struct InitPosition<'info> {
 
     #[account(mut)]
     pub user: Signer<'info>,
+    /// CHECK: This is the master wallet (Backpack) that authorized the session wallet
+    pub master_wallet: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -412,7 +415,8 @@ pub mod cpi_oracle {
         pos.owner = ctx.accounts.user.key();
         pos.yes_shares_e6 = 0;
         pos.no_shares_e6 = 0;
-        msg!("✅ Position initialized for {}", pos.owner);
+        pos.master_wallet = ctx.accounts.master_wallet.key();
+        msg!("✅ Position initialized for {} (master: {})", pos.owner, pos.master_wallet);
         Ok(())
     }
 

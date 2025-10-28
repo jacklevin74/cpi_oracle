@@ -3011,7 +3011,7 @@ async function initAmm(bScaled = 500_000_000, feeBps = 25) {
 }
 
 async function initPosition() {
-    if (!wallet) {
+    if (!wallet || !backpackWallet) {
         addLog('ERROR: No wallet connected', 'error');
         return false;
     }
@@ -3037,6 +3037,7 @@ async function initPosition() {
             { pubkey: ammPda, isSigner: false, isWritable: false },
             { pubkey: posPda, isSigner: false, isWritable: true },
             { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+            { pubkey: backpackWallet.publicKey, isSigner: false, isWritable: false }, // master_wallet
             { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
         ];
 
