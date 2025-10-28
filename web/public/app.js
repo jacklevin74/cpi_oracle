@@ -2893,6 +2893,16 @@ async function withdrawToBackpack() {
             // Parse Position account (skip 8-byte discriminator)
             // Position layout: owner(32) + yes_shares(8) + no_shares(8) + master_wallet(32)
             const positionData = positionAccount.data;
+
+            // Check if position has master_wallet field (new format is 88 bytes: 8 + 32 + 8 + 8 + 32)
+            const expectedSize = 8 + 32 + 8 + 8 + 32; // 88 bytes
+            if (positionData.length < expectedSize) {
+                addLog(`ERROR: Position account is old format (${positionData.length} bytes, expected ${expectedSize})`, 'error');
+                addLog('Please disconnect and reconnect wallet to create new position', 'error');
+                showError('Old position format detected. Please reconnect wallet.');
+                return;
+            }
+
             const masterWalletBytes = positionData.slice(8 + 32 + 8 + 8, 8 + 32 + 8 + 8 + 32);
             const storedMasterWallet = new solanaWeb3.PublicKey(masterWalletBytes);
 
