@@ -31,7 +31,7 @@
 }
 
 body {
-    background: var(--bg-primary);
+    background: #0a0a0a !important;
     color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 13px;
@@ -138,7 +138,7 @@ body {
     grid-template-columns: 1fr 320px;
     min-height: calc(100vh - 48px);
     gap: 1px;
-    background: var(--border-color);
+    background: #0a0a0a !important;
 }
 
 .grid-chart,

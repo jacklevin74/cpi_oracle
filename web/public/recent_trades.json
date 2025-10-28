@@ -981,22 +981,22 @@
   },
   {
     "side": "YES",
-    "action": "REDEEM",
-    "amount": "0.0000",
-    "shares": "0.00",
-    "avgPrice": "0.0000",
-    "signature": "auto-redeem",
-    "timestamp": 1761615003517,
+    "action": "BUY",
+    "amount": "14.0817",
+    "shares": "25.00",
+    "avgPrice": "0.5619",
+    "signature": "W5YDzYyidtSe2FdFmAd7exg9MGCHJgeWVgbhHavMpNHMxLLCc86NYZbKHUR49Z2XVHsbzQiCkVUy6c5QWpT6E43",
+    "timestamp": 1761617236523,
     "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
   },
   {
     "side": "YES",
     "action": "REDEEM",
-    "amount": "200.0000",
+    "amount": "0.0000",
     "shares": "0.00",
     "avgPrice": "0.0000",
     "signature": "auto-redeem",
-    "timestamp": 1761615004304,
-    "user": "D5nZJGyuqdop8WVVP2vHaBGiG8bpMUWf2cqMFkmWrjP9"
+    "timestamp": 1761617403651,
+    "user": "5U6JF6pTMuyYkfzJssNtgBwHxvfxAuBP2VZZ7EqhQ3R"
   }
 ]
