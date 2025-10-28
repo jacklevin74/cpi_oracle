@@ -2873,6 +2873,41 @@ async function withdrawToBackpack() {
             return;
         }
 
+        // SECURITY: Verify Backpack wallet ownership before withdrawal
+        const destinationAddress = backpackWallet.publicKey.toString();
+        addLog('Requesting Backpack signature for withdrawal verification...', 'info');
+        showStatus('Please sign the verification message in Backpack wallet...');
+
+        try {
+            // Create verification message
+            const timestamp = Date.now();
+            const verificationMessage = `X1 Markets Withdrawal Verification\n\nWithdraw: ${amount.toFixed(4)} XNT\nTo: ${destinationAddress}\nFrom Session: ${wallet.publicKey.toString()}\nTimestamp: ${timestamp}\n\nSign to confirm you own this wallet.`;
+            const encodedMessage = new TextEncoder().encode(verificationMessage);
+
+            // Request signature from Backpack wallet
+            const signature = await backpackWallet.signMessage(encodedMessage);
+
+            // Verify signature using Solana's nacl
+            const publicKeyBytes = backpackWallet.publicKey.toBytes();
+            const isValid = solanaWeb3.nacl.sign.detached.verify(
+                encodedMessage,
+                signature,
+                publicKeyBytes
+            );
+
+            if (!isValid) {
+                addLog('ERROR: Backpack signature verification FAILED', 'error');
+                showError('Security error: Invalid signature');
+                return;
+            }
+
+            addLog('✓ Backpack wallet verified successfully', 'success');
+        } catch (err) {
+            addLog('ERROR: User rejected signature or verification failed', 'error');
+            showError('Withdrawal cancelled: ' + err.message);
+            return;
+        }
+
         addLog(`Withdrawing ${amount.toFixed(4)} XNT to Backpack...`, 'info');
         showStatus('Withdrawing ' + amount.toFixed(4) + ' XNT to Backpack...');
 
