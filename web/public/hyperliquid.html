@@ -15,11 +15,7 @@
         <!-- Top Bar -->
         <header class="top-bar">
             <div class="top-left">
-                <div class="brand">X1</div>
-                <div class="market-info">
-                    <span class="pair">BTC/USD</span>
-                    <span class="oracle-price" id="tickerPrice">--</span>
-                </div>
+                <div class="brand">X1 <span class="brand-subtitle">Vero Prediction Markets</span></div>
             </div>
             <div class="top-right">
                 <div id="walletNavDisconnected" class="hidden">
@@ -101,14 +97,17 @@
                     <div class="volume-stat volume-up">
                         <div class="volume-label">UP VOLUME</div>
                         <div class="volume-value" id="volumeUp">0 XNT</div>
+                        <div class="volume-shares" id="volumeUpShares">0 shares</div>
                     </div>
                     <div class="volume-stat volume-down">
                         <div class="volume-label">DOWN VOLUME</div>
                         <div class="volume-value" id="volumeDown">0 XNT</div>
+                        <div class="volume-shares" id="volumeDownShares">0 shares</div>
                     </div>
                     <div class="volume-stat volume-total">
                         <div class="volume-label">TOTAL VOLUME</div>
                         <div class="volume-value" id="volumeTotal">0 XNT</div>
+                        <div class="volume-shares" id="volumeTotalShares">0 shares</div>
                     </div>
                 </div>
 
@@ -241,17 +240,11 @@
                         </button>
                     </div>
 
-                    <!-- Input Mode Toggle -->
-                    <div class="input-mode-toggle">
-                        <button class="mode-btn active" id="modeShares" onclick="setInputMode('shares')">SHARES</button>
-                        <button class="mode-btn" id="modeXnt" onclick="setInputMode('xnt')">XNT</button>
-                    </div>
-
                     <!-- Shares Input -->
                     <div class="input-section" id="sharesInputSection">
                         <label class="input-label">NUMBER OF SHARES</label>
                         <input type="number" id="tradeAmountShares" class="trade-input" placeholder="10" step="1" value="10" oninput="updateFromInput()">
-                        <input type="range" id="sharesSlider" class="amount-slider" min="1" max="500" value="10" step="1" oninput="updateFromSlider('shares')">
+                        <input type="range" id="sharesSlider" class="amount-slider" min="1" max="500" value="10" step="1" oninput="updateFromSlider()">
                         <div class="slider-labels">
                             <span>1</span>
                             <span>500</span>
@@ -261,23 +254,7 @@
                             <button onclick="setShares(10)">10</button>
                             <button onclick="setShares(50)">50</button>
                             <button onclick="setShares(100)">100</button>
-                        </div>
-                    </div>
-
-                    <!-- XNT Input -->
-                    <div class="input-section hidden" id="xntInputSection">
-                        <label class="input-label">AMOUNT TO SPEND (XNT)</label>
-                        <input type="number" id="tradeAmountXnt" class="trade-input" placeholder="5.00" step="0.01" value="5.00" oninput="updateFromInput()">
-                        <input type="range" id="xntSlider" class="amount-slider" min="0.1" max="100" value="5" step="0.1" oninput="updateFromSlider('xnt')">
-                        <div class="slider-labels">
-                            <span>0.1</span>
-                            <span>100</span>
-                        </div>
-                        <div class="quick-amounts">
-                            <button onclick="setXnt(1)">1</button>
-                            <button onclick="setXnt(5)">5</button>
-                            <button onclick="setXnt(10)">10</button>
-                            <button onclick="setXnt(25)">25</button>
+                            <button class="btn-max" onclick="setMaxShares()">MAX</button>
                         </div>
                     </div>
 
@@ -398,59 +375,19 @@
     <script src="solana-web3.min.js"></script>
     <script src="app.js"></script>
     <script>
-        // Input mode management (from proto1)
-        let currentInputMode = 'shares'; // 'shares' or 'xnt'
-
-        function setInputMode(mode) {
-            currentInputMode = mode;
-
-            // Toggle mode buttons
-            document.getElementById('modeShares').classList.toggle('active', mode === 'shares');
-            document.getElementById('modeXnt').classList.toggle('active', mode === 'xnt');
-
-            // Toggle input sections
-            document.getElementById('sharesInputSection').classList.toggle('hidden', mode !== 'shares');
-            document.getElementById('xntInputSection').classList.toggle('hidden', mode !== 'xnt');
-
-            // Update cost label
-            document.getElementById('tradeCostLabel').textContent = mode === 'shares' ? 'EST. COST' : 'EST. SHARES';
-
-            // Update from current values
-            updateFromInput();
-        }
-
-        function updateFromSlider(mode) {
-            if (mode === 'shares') {
-                const value = document.getElementById('sharesSlider').value;
-                document.getElementById('tradeAmountShares').value = value;
-            } else {
-                const value = document.getElementById('xntSlider').value;
-                document.getElementById('tradeAmountXnt').value = parseFloat(value).toFixed(2);
-            }
-            updateFromInput();
+        // Shares input management
+        function updateFromSlider() {
+            const value = document.getElementById('sharesSlider').value;
+            document.getElementById('tradeAmountShares').value = value;
         }
 
         function updateFromInput() {
             // Sync slider with input
-            if (currentInputMode === 'shares') {
-                const sharesInput = document.getElementById('tradeAmountShares');
-                const sharesSlider = document.getElementById('sharesSlider');
-                if (sharesInput.value) {
-                    sharesSlider.value = Math.min(Math.max(sharesInput.value, 1), 500);
-                }
-            } else {
-                const xntInput = document.getElementById('tradeAmountXnt');
-                const xntSlider = document.getElementById('xntSlider');
-                if (xntInput.value) {
-                    xntSlider.value = Math.min(Math.max(xntInput.value, 0.1), 100);
-                }
+            const sharesInput = document.getElementById('tradeAmountShares');
+            const sharesSlider = document.getElementById('sharesSlider');
+            if (sharesInput.value) {
+                sharesSlider.value = Math.min(Math.max(sharesInput.value, 1), 500);
             }
-        }
-
-        function setXnt(amount) {
-            document.getElementById('tradeAmountXnt').value = amount.toFixed(2);
-            document.getElementById('xntSlider').value = amount;
-            updateFromInput();
         }
 
         // Override existing setShares to also update slider
@@ -463,6 +400,45 @@
             document.getElementById('sharesSlider').value = shares;
             updateFromInput();
         };
+
+        // Calculate and set maximum shares based on wallet balance
+        function setMaxShares() {
+            if (!wallet || !wallet.publicKey) {
+                showToast('Please connect wallet first', 'error');
+                return;
+            }
+
+            const balance = window.walletBalance || 0;
+            if (balance <= 0) {
+                showToast('Insufficient balance', 'error');
+                return;
+            }
+
+            // Get current selected side and price
+            const selectedSide = window.selectedSide || 'YES';
+            const priceEl = document.getElementById(selectedSide === 'YES' ? 'yesPercentage' : 'noPercentage');
+            const price = priceEl ? parseFloat(priceEl.textContent) : 0.5;
+
+            if (price <= 0) {
+                showToast('Unable to calculate max shares', 'error');
+                return;
+            }
+
+            // Calculate max shares (with 1% buffer for fees and price changes)
+            const safeBalance = balance * 0.99;
+            const maxShares = Math.floor(safeBalance / price);
+
+            if (maxShares < 1) {
+                showToast('Insufficient balance for minimum purchase', 'error');
+                return;
+            }
+
+            // Cap at slider maximum
+            const cappedShares = Math.min(maxShares, 500);
+
+            setShares(cappedShares);
+            showToast(`Max shares set: ${cappedShares} (≈${(cappedShares * price).toFixed(2)} XNT)`, 'success');
+        }
 
         // Trade History Management
         const MAX_TRADES = 20;
@@ -509,6 +485,11 @@
                 document.getElementById('volumeUp').textContent = data.upVolume.toFixed(2) + ' XNT';
                 document.getElementById('volumeDown').textContent = data.downVolume.toFixed(2) + ' XNT';
                 document.getElementById('volumeTotal').textContent = data.totalVolume.toFixed(2) + ' XNT';
+
+                // Update share amounts
+                document.getElementById('volumeUpShares').textContent = (data.upShares || 0).toFixed(2) + ' shares';
+                document.getElementById('volumeDownShares').textContent = (data.downShares || 0).toFixed(2) + ' shares';
+                document.getElementById('volumeTotalShares').textContent = (data.totalShares || 0).toFixed(2) + ' shares';
             } catch (err) {
                 console.error('Error fetching cumulative volume:', err);
             }

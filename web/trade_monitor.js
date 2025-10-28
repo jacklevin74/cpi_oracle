@@ -17,6 +17,10 @@ const TRADES_FILE = './public/recent_trades.json';
 // Server URL for cumulative volume updates
 const SERVER_URL = 'http://localhost:3434';
 
+// User position tracking for P&L calculation
+// Structure: { userPubkey: { UP: { shares, totalCost }, DOWN: { shares, totalCost } } }
+const userPositions = new Map();
+
 // Chat storage
 const MAX_CHAT_MESSAGES = 100;
 const chatMessages = [];
@@ -101,7 +105,7 @@ function handleChatMessage(msg, ws) {
     if (msg.text.length > 300) return; // Max 300 chars
     if (!msg.user || typeof msg.user !== 'string') return;
 
-    const user = msg.user.slice(0, 10); // Max 10 chars for username
+    const user = msg.user.slice(0, 5); // Max 5 chars for username (wallet prefix)
 
     // Check rate limit
     if (isRateLimited(user)) {
@@ -159,10 +163,10 @@ function saveTrades() {
 }
 
 // Update cumulative volume on server
-async function updateCumulativeVolume(side, amount) {
+async function updateCumulativeVolume(side, amount, shares) {
     try {
         const http = require('http');
-        const data = JSON.stringify({ side, amount });
+        const data = JSON.stringify({ side, amount, shares });
 
         const options = {
             hostname: 'localhost',
@@ -196,6 +200,101 @@ async function updateCumulativeVolume(side, amount) {
     } catch (err) {
         console.error('Failed to update cumulative volume:', err.message);
     }
+}
+
+// Add trade to user's trading history
+async function addToTradingHistory(userPubkey, action, side, shares, costUsd, avgPrice, pnl = null) {
+    try {
+        const http = require('http');
+        const userPrefix = userPubkey.slice(0, 6);
+        const data = JSON.stringify({
+            userPrefix,
+            action,
+            side,
+            shares,
+            costUsd,
+            avgPrice,
+            pnl
+        });
+
+        const options = {
+            hostname: 'localhost',
+            port: 3434,
+            path: '/api/trading-history',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': data.length
+            }
+        };
+
+        const req = http.request(options, (res) => {
+            let body = '';
+            res.on('data', (chunk) => body += chunk);
+            res.on('end', () => {
+                if (res.statusCode === 200) {
+                    console.log(`Trading history saved for ${userPrefix}`);
+                } else {
+                    console.error('Failed to save trading history:', body);
+                }
+            });
+        });
+
+        req.on('error', (err) => {
+            console.error('Error saving trading history:', err.message);
+        });
+
+        req.write(data);
+        req.end();
+    } catch (err) {
+        console.error('Failed to add trading history:', err.message);
+    }
+}
+
+// Update user position and calculate P&L
+function updateUserPosition(trade) {
+    const user = trade.user;
+    const side = trade.side === 'YES' ? 'UP' : 'DOWN';
+    const action = trade.action;
+    const shares = parseFloat(trade.shares);
+    const costUsd = parseFloat(trade.amount);
+    const avgPrice = parseFloat(trade.avgPrice);
+
+    // Initialize user position if doesn't exist
+    if (!userPositions.has(user)) {
+        userPositions.set(user, { UP: { shares: 0, totalCost: 0 }, DOWN: { shares: 0, totalCost: 0 } });
+    }
+
+    const userPos = userPositions.get(user);
+    const position = userPos[side];
+
+    let pnl = null;
+
+    if (action === 'BUY') {
+        // Accumulate position
+        position.shares += shares;
+        position.totalCost += costUsd;
+
+        console.log(`[POS] ${user.slice(0,6)} ${side}: +${shares.toFixed(2)} shares @ ${avgPrice.toFixed(4)} XNT (Total: ${position.shares.toFixed(2)} shares, Avg: ${(position.totalCost / position.shares).toFixed(4)} XNT)`);
+    } else if (action === 'SELL') {
+        // Calculate P&L based on average cost basis
+        const avgCostBasis = position.shares > 0 ? position.totalCost / position.shares : 0;
+        const costBasis = shares * avgCostBasis;
+        pnl = costUsd - costBasis; // Proceeds - Cost Basis
+
+        // Reduce position
+        position.shares -= shares;
+        if (position.shares < 0) position.shares = 0; // Safety check
+
+        position.totalCost -= costBasis;
+        if (position.totalCost < 0) position.totalCost = 0; // Safety check
+
+        const pnlSign = pnl >= 0 ? '+' : '';
+        console.log(`[POS] ${user.slice(0,6)} ${side}: -${shares.toFixed(2)} shares @ ${avgPrice.toFixed(4)} XNT (P&L: ${pnlSign}${pnl.toFixed(4)} XNT, Remaining: ${position.shares.toFixed(2)} shares)`);
+    }
+
+    // Save to trading history
+    addToTradingHistory(user, action, side, shares, costUsd, avgPrice, pnl);
 }
 
 function saveChatMessages() {
@@ -309,9 +408,15 @@ async function startMonitoring() {
                 // Update cumulative volume (only for BUY actions)
                 if (trade.action === 'BUY') {
                     const amount = parseFloat(trade.amount);
-                    if (!isNaN(amount) && amount > 0) {
-                        updateCumulativeVolume(trade.side, amount);
+                    const shares = parseFloat(trade.shares);
+                    if (!isNaN(amount) && amount > 0 && !isNaN(shares) && shares > 0) {
+                        updateCumulativeVolume(trade.side, amount, shares);
                     }
+                }
+
+                // Update user position and track P&L
+                if (trade.user && trade.user !== 'Unknown') {
+                    updateUserPosition(trade);
                 }
 
                 // Broadcast to clients

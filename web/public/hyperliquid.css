@@ -72,6 +72,13 @@ body {
     letter-spacing: -0.5px;
 }
 
+.brand-subtitle {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    letter-spacing: 0;
+}
+
 .market-info {
     display: flex;
     align-items: center;
@@ -850,6 +857,22 @@ button.disabled {
 
 .volume-stat.volume-down .volume-value {
     color: var(--red);
+}
+
+.volume-shares {
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.volume-stat.volume-up .volume-shares {
+    color: rgba(0, 255, 136, 0.6);
+}
+
+.volume-stat.volume-down .volume-shares {
+    color: rgba(255, 70, 100, 0.6);
 }
 
 /* ===== TIME RANGE DROPDOWN ===== */

@@ -31,17 +31,35 @@ db.exec(`
         timestamp INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_settlement_timestamp ON settlement_history(timestamp);
+
+    CREATE TABLE IF NOT EXISTS trading_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_prefix TEXT NOT NULL,
+        action TEXT NOT NULL,
+        side TEXT NOT NULL,
+        shares REAL NOT NULL,
+        cost_usd REAL NOT NULL,
+        avg_price REAL NOT NULL,
+        pnl REAL,
+        timestamp INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_trading_user_timestamp ON trading_history(user_prefix, timestamp DESC);
 `);
 
 const MAX_PRICE_HISTORY_HOURS = 24; // Keep up to 24 hours of price data
 const MAX_SETTLEMENT_HISTORY_HOURS = 168; // Keep 7 days of settlement history
+const MAX_TRADING_HISTORY_HOURS = 168; // Keep 7 days of trading history
 
-// Cumulative volume storage (never decreases)
+// Current market volume (resets each market cycle)
 let cumulativeVolume = {
-    upVolume: 0,     // Total XNT spent on UP/YES trades
-    downVolume: 0,   // Total XNT spent on DOWN/NO trades
+    upVolume: 0,     // Total XNT spent on UP/YES trades this cycle
+    downVolume: 0,   // Total XNT spent on DOWN/NO trades this cycle
     totalVolume: 0,  // Sum of both
-    lastUpdate: 0    // Timestamp of last update
+    upShares: 0,     // Total shares bought on UP/YES side
+    downShares: 0,   // Total shares bought on DOWN/NO side
+    totalShares: 0,  // Sum of both
+    lastUpdate: 0,   // Timestamp of last update
+    cycleStartTime: Date.now() // When this market cycle started
 };
 
 // Get price history count
@@ -108,8 +126,18 @@ function loadCumulativeVolume() {
             const data = fs.readFileSync(VOLUME_FILE, 'utf8');
             const parsed = JSON.parse(data);
             if (parsed && typeof parsed.upVolume === 'number') {
-                cumulativeVolume = parsed;
-                console.log(`Loaded cumulative volume: UP=${cumulativeVolume.upVolume.toFixed(2)}, DOWN=${cumulativeVolume.downVolume.toFixed(2)}, TOTAL=${cumulativeVolume.totalVolume.toFixed(2)}`);
+                // Ensure all fields exist (backward compatibility)
+                cumulativeVolume = {
+                    upVolume: parsed.upVolume || 0,
+                    downVolume: parsed.downVolume || 0,
+                    totalVolume: parsed.totalVolume || 0,
+                    upShares: parsed.upShares || 0,
+                    downShares: parsed.downShares || 0,
+                    totalShares: parsed.totalShares || 0,
+                    lastUpdate: parsed.lastUpdate || 0,
+                    cycleStartTime: parsed.cycleStartTime || Date.now()
+                };
+                console.log(`Loaded cumulative volume: UP=${cumulativeVolume.upVolume.toFixed(2)} XNT / ${cumulativeVolume.upShares.toFixed(2)} shares, DOWN=${cumulativeVolume.downVolume.toFixed(2)} XNT / ${cumulativeVolume.downShares.toFixed(2)} shares, TOTAL=${cumulativeVolume.totalVolume.toFixed(2)} XNT / ${cumulativeVolume.totalShares.toFixed(2)} shares`);
             }
         }
     } catch (err) {
@@ -118,7 +146,11 @@ function loadCumulativeVolume() {
             upVolume: 0,
             downVolume: 0,
             totalVolume: 0,
-            lastUpdate: 0
+            upShares: 0,
+            downShares: 0,
+            totalShares: 0,
+            lastUpdate: 0,
+            cycleStartTime: Date.now()
         };
     }
 }
@@ -176,22 +208,62 @@ function cleanupOldSettlements() {
     }
 }
 
+// Trading history functions
+function addTradingHistory(userPrefix, action, side, shares, costUsd, avgPrice, pnl = null) {
+    try {
+        const stmt = db.prepare('INSERT INTO trading_history (user_prefix, action, side, shares, cost_usd, avg_price, pnl, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        stmt.run(userPrefix, action, side, shares, costUsd, avgPrice, pnl, Date.now());
+        return true;
+    } catch (err) {
+        console.error('Failed to add trading history:', err.message);
+        return false;
+    }
+}
+
+function getTradingHistory(userPrefix, limit = 100) {
+    try {
+        const stmt = db.prepare('SELECT * FROM trading_history WHERE user_prefix = ? ORDER BY timestamp DESC LIMIT ?');
+        return stmt.all(userPrefix, limit);
+    } catch (err) {
+        console.error('Failed to get trading history:', err.message);
+        return [];
+    }
+}
+
+function cleanupOldTradingHistory() {
+    try {
+        const cutoffTime = Date.now() - (MAX_TRADING_HISTORY_HOURS * 60 * 60 * 1000);
+        const stmt = db.prepare('DELETE FROM trading_history WHERE timestamp < ?');
+        const result = stmt.run(cutoffTime);
+        if (result.changes > 0) {
+            console.log(`Cleaned up ${result.changes} old trading records`);
+        }
+        return result.changes;
+    } catch (err) {
+        console.error('Failed to cleanup old trading history:', err.message);
+        return 0;
+    }
+}
+
 // Initialize volume and show DB stats
 loadCumulativeVolume();
 
 // Log database statistics
 const priceCount = getPriceHistoryCount();
 const settlementCount = db.prepare('SELECT COUNT(*) as count FROM settlement_history').get().count;
-console.log(`SQLite database loaded with ${priceCount} price records and ${settlementCount} settlement records`);
+const tradingCount = db.prepare('SELECT COUNT(*) as count FROM trading_history').get().count;
+console.log(`SQLite database loaded with ${priceCount} price records, ${settlementCount} settlement records, and ${tradingCount} trading records`);
 
 // Run cleanup on startup
 cleanupOldPrices();
 cleanupOldSettlements();
+cleanupOldTradingHistory();
 
 // Schedule periodic cleanup (every hour)
 setInterval(() => {
     cleanupOldPrices();
     cleanupOldSettlements();
+    cleanupOldTradingHistory();
 }, 60 * 60 * 1000);
 
 // Security headers
@@ -240,21 +312,25 @@ const server = http.createServer((req, res) => {
                 const data = JSON.parse(body);
                 const side = data.side; // 'YES' or 'NO'
                 const amount = parseFloat(data.amount); // XNT amount
+                const shares = parseFloat(data.shares); // Number of shares
 
-                if ((side === 'YES' || side === 'NO') && amount > 0) {
-                    // Add to cumulative volume (never subtract)
+                if ((side === 'YES' || side === 'NO') && amount > 0 && shares > 0) {
+                    // Add to current market volume
                     if (side === 'YES') {
                         cumulativeVolume.upVolume += amount;
+                        cumulativeVolume.upShares += shares;
                     } else {
                         cumulativeVolume.downVolume += amount;
+                        cumulativeVolume.downShares += shares;
                     }
                     cumulativeVolume.totalVolume = cumulativeVolume.upVolume + cumulativeVolume.downVolume;
+                    cumulativeVolume.totalShares = cumulativeVolume.upShares + cumulativeVolume.downShares;
                     cumulativeVolume.lastUpdate = Date.now();
 
                     // Save to disk
                     saveCumulativeVolume();
 
-                    console.log(`Volume updated: ${side} +${amount.toFixed(2)} XNT (Total: ${cumulativeVolume.totalVolume.toFixed(2)})`);
+                    console.log(`Volume updated: ${side} +${amount.toFixed(2)} XNT / +${shares.toFixed(2)} shares (Total: ${cumulativeVolume.totalVolume.toFixed(2)} XNT / ${cumulativeVolume.totalShares.toFixed(2)} shares)`);
 
                     res.writeHead(200, {
                         'Content-Type': 'application/json',
@@ -266,7 +342,7 @@ const server = http.createServer((req, res) => {
                         'Content-Type': 'application/json',
                         ...SECURITY_HEADERS
                     });
-                    res.end(JSON.stringify({ error: 'Invalid side or amount' }));
+                    res.end(JSON.stringify({ error: 'Invalid side, amount, or shares' }));
                 }
             } catch (err) {
                 res.writeHead(400, {
@@ -276,6 +352,29 @@ const server = http.createServer((req, res) => {
                 res.end(JSON.stringify({ error: 'Invalid JSON' }));
             }
         });
+        return;
+    }
+
+    // API: Reset volume for new market cycle
+    if (req.url === '/api/volume/reset' && req.method === 'POST') {
+        cumulativeVolume = {
+            upVolume: 0,
+            downVolume: 0,
+            totalVolume: 0,
+            upShares: 0,
+            downShares: 0,
+            totalShares: 0,
+            lastUpdate: Date.now(),
+            cycleStartTime: Date.now()
+        };
+        saveCumulativeVolume();
+        console.log('📊 Volume reset for new market cycle');
+
+        res.writeHead(200, {
+            'Content-Type': 'application/json',
+            ...SECURITY_HEADERS
+        });
+        res.end(JSON.stringify({ success: true, volume: cumulativeVolume }));
         return;
     }
 
@@ -396,6 +495,82 @@ const server = http.createServer((req, res) => {
                         ...SECURITY_HEADERS
                     });
                     res.end(JSON.stringify({ error: 'Invalid settlement data' }));
+                }
+            } catch (err) {
+                res.writeHead(400, {
+                    'Content-Type': 'application/json',
+                    ...SECURITY_HEADERS
+                });
+                res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            }
+        });
+        return;
+    }
+
+    // API: Get trading history for a user
+    if (req.url.startsWith('/api/trading-history/') && req.method === 'GET') {
+        const userPrefix = req.url.split('/api/trading-history/')[1];
+        if (userPrefix && userPrefix.length >= 6) {
+            const history = getTradingHistory(userPrefix, 100);
+            res.writeHead(200, {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                ...SECURITY_HEADERS
+            });
+            res.end(JSON.stringify({ history: history }));
+        } else {
+            res.writeHead(400, {
+                'Content-Type': 'application/json',
+                ...SECURITY_HEADERS
+            });
+            res.end(JSON.stringify({ error: 'Invalid user prefix' }));
+        }
+        return;
+    }
+
+    // API: Add trade to trading history
+    if (req.url === '/api/trading-history' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+            if (body.length > 2000) {
+                req.connection.destroy();
+            }
+        });
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                if (data.userPrefix && data.action && data.side &&
+                    typeof data.shares === 'number' && typeof data.costUsd === 'number' &&
+                    typeof data.avgPrice === 'number') {
+                    const success = addTradingHistory(
+                        data.userPrefix,
+                        data.action,
+                        data.side,
+                        data.shares,
+                        data.costUsd,
+                        data.avgPrice,
+                        data.pnl || null
+                    );
+                    if (success) {
+                        res.writeHead(200, {
+                            'Content-Type': 'application/json',
+                            ...SECURITY_HEADERS
+                        });
+                        res.end(JSON.stringify({ success: true }));
+                    } else {
+                        res.writeHead(500, {
+                            'Content-Type': 'application/json',
+                            ...SECURITY_HEADERS
+                        });
+                        res.end(JSON.stringify({ error: 'Failed to save trade' }));
+                    }
+                } else {
+                    res.writeHead(400, {
+                        'Content-Type': 'application/json',
+                        ...SECURITY_HEADERS
+                    });
+                    res.end(JSON.stringify({ error: 'Invalid trade data' }));
                 }
             } catch (err) {
                 res.writeHead(400, {
