@@ -829,7 +829,7 @@ button.disabled {
 }
 
 .volume-value {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     font-family: 'SF Mono', Monaco, Consolas, monospace;
     color: var(--text-primary);
@@ -2157,7 +2157,7 @@ button.disabled {
     }
 
     .volume-value {
-        font-size: 14px;
+        font-size: 12px;
     }
 
     /* Chart - margin already set in order section above */
