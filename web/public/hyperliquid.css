@@ -223,6 +223,7 @@ body {
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
     align-items: center;
+    margin-bottom: -5px;
 }
 
 .price-header-item {
