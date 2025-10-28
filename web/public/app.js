@@ -2873,8 +2873,47 @@ async function withdrawToBackpack() {
             return;
         }
 
-        // SECURITY: Verify Backpack wallet ownership before withdrawal
+        // SECURITY 1: Verify withdrawal destination matches Position master_wallet
         const destinationAddress = backpackWallet.publicKey.toString();
+
+        try {
+            // Fetch Position account to verify master_wallet
+            const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+                [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+                new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+            );
+
+            const positionAccount = await connection.getAccountInfo(posPda);
+            if (!positionAccount) {
+                addLog('ERROR: Position account not found', 'error');
+                showError('Position not initialized');
+                return;
+            }
+
+            // Parse Position account (skip 8-byte discriminator)
+            // Position layout: owner(32) + yes_shares(8) + no_shares(8) + master_wallet(32)
+            const positionData = positionAccount.data;
+            const masterWalletBytes = positionData.slice(8 + 32 + 8 + 8, 8 + 32 + 8 + 8 + 32);
+            const storedMasterWallet = new solanaWeb3.PublicKey(masterWalletBytes);
+
+            addLog(`Verifying withdrawal destination...`, 'info');
+            addLog(`  Destination: ${destinationAddress}`, 'info');
+            addLog(`  Master wallet: ${storedMasterWallet.toString()}`, 'info');
+
+            if (storedMasterWallet.toString() !== destinationAddress) {
+                addLog('ERROR: Withdrawal destination does not match authorized master wallet!', 'error');
+                showError('Security error: Can only withdraw to master wallet');
+                return;
+            }
+
+            addLog('✓ Destination verified: matches master wallet', 'success');
+        } catch (err) {
+            addLog('ERROR: Failed to verify master wallet: ' + err.message, 'error');
+            showError('Verification failed: ' + err.message);
+            return;
+        }
+
+        // SECURITY 2: Verify Backpack wallet ownership before withdrawal
         addLog('Requesting Backpack signature for withdrawal verification...', 'info');
         showStatus('Please sign the verification message in Backpack wallet...');
 
