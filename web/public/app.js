@@ -5117,11 +5117,11 @@ function displaySettlementHistory(history) {
 
     settlementFeed.innerHTML = '';
 
-    // Filter to only show WIN results (hide losing side)
-    const winningHistory = history.filter(item => item.result === 'WIN');
+    // Show all settlements (both winners and losers)
+    const allSettlements = history;
 
-    if (winningHistory.length === 0) {
-        settlementFeed.innerHTML = '<div class="trade-feed-empty"><span class="empty-icon">📜</span><span class="empty-text">No winning settlements</span></div>';
+    if (allSettlements.length === 0) {
+        settlementFeed.innerHTML = '<div class="trade-feed-empty"><span class="empty-icon">📜</span><span class="empty-text">No settlements</span></div>';
         return;
     }
 
@@ -5129,14 +5129,15 @@ function displaySettlementHistory(history) {
     const table = document.createElement('div');
     table.className = 'settlement-table';
 
-    // Add header (removed SIDE and RESULT columns, added DIFF)
+    // Add header with BTC movement and financial columns
     table.innerHTML = `
         <div class="settlement-table-header">
             <div class="col-time">TIME</div>
             <div class="col-user">USER</div>
-            <div class="col-btcmove">BTC PRICES</div>
-            <div class="col-diff">DIFF</div>
+            <div class="col-btcmove">BTC MOVE</div>
+            <div class="col-spent">SPENT</div>
             <div class="col-payout">PAYOUT</div>
+            <div class="col-profit">PROFIT</div>
         </div>
     `;
 
@@ -5144,10 +5145,14 @@ function displaySettlementHistory(history) {
     const tbody = document.createElement('div');
     tbody.className = 'settlement-table-body';
 
-    winningHistory.forEach(item => {
+    allSettlements.forEach(item => {
         const isWin = item.result === 'WIN';
         const sideDisplay = item.side === 'YES' ? 'UP' : 'DOWN';
-        const amount = parseFloat(item.amount).toFixed(4);
+        const payout = parseFloat(item.amount).toFixed(4);
+
+        // Get financial data
+        const netSpent = parseFloat(item.net_spent || 0);
+        const profit = payout - netSpent;
 
         const time = new Date(item.timestamp);
         const dateStr = time.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
@@ -5157,13 +5162,9 @@ function displaySettlementHistory(history) {
             hour12: false
         });
 
-        const sideClass = sideDisplay === 'UP' ? 'side-up' : 'side-down';
-
-        // Calculate BTC movement and diff
+        // Calculate BTC movement
         let btcMove = '?';
         let btcMoveClass = 'btc-unknown';
-        let btcDiff = '?';
-        let btcDiffClass = 'diff-neutral';
 
         if (item.snapshot_price && item.settle_price) {
             const snapshotPrice = parseFloat(item.snapshot_price);
@@ -5178,35 +5179,31 @@ function displaySettlementHistory(history) {
                 return '$' + price.toLocaleString('en-US', { maximumFractionDigits: 0 });
             };
 
-            // Format diff with sign and K suffix
-            const formatDiff = (diff) => {
-                const absDiff = Math.abs(diff);
-                const sign = diff >= 0 ? '+' : '-';
-                if (absDiff >= 1000) {
-                    return sign + '$' + (absDiff / 1000).toFixed(2) + 'K';
-                }
-                return sign + '$' + absDiff.toFixed(0);
-            };
-
             const snapStr = formatPrice(snapshotPrice);
             const settleStr = formatPrice(settlePrice);
+            const diffAbs = Math.abs(priceDiff);
+            const diffStr = diffAbs >= 1000 ? '$' + (diffAbs / 1000).toFixed(2) + 'K' : '$' + diffAbs.toFixed(0);
 
             if (settlePrice > snapshotPrice) {
-                btcMove = `${snapStr} → ${settleStr}`;
+                btcMove = `↑ ${diffStr}`;
                 btcMoveClass = 'btc-up';
-                btcDiff = formatDiff(priceDiff);
-                btcDiffClass = 'diff-positive';
             } else if (settlePrice < snapshotPrice) {
-                btcMove = `${snapStr} → ${settleStr}`;
+                btcMove = `↓ ${diffStr}`;
                 btcMoveClass = 'btc-down';
-                btcDiff = formatDiff(priceDiff);
-                btcDiffClass = 'diff-negative';
             } else {
-                btcMove = `${snapStr} → ${settleStr}`;
+                btcMove = `→ $0`;
                 btcMoveClass = 'btc-flat';
-                btcDiff = '$0';
-                btcDiffClass = 'diff-neutral';
             }
+        }
+
+        // Format profit/loss with color
+        let profitClass = 'profit-neutral';
+        let profitDisplay = profit.toFixed(2);
+        if (profit > 0.001) {
+            profitClass = 'profit-positive';
+            profitDisplay = '+' + profit.toFixed(2);
+        } else if (profit < -0.001) {
+            profitClass = 'profit-negative';
         }
 
         const row = document.createElement('div');
@@ -5215,8 +5212,9 @@ function displaySettlementHistory(history) {
             <div class="col-time">${dateStr} ${timeStr}</div>
             <div class="col-user">${item.user_prefix}</div>
             <div class="col-btcmove ${btcMoveClass}">${btcMove}</div>
-            <div class="col-diff ${btcDiffClass}">${btcDiff}</div>
-            <div class="col-payout">${amount}</div>
+            <div class="col-spent">${netSpent.toFixed(4)}</div>
+            <div class="col-payout">${payout}</div>
+            <div class="col-profit ${profitClass}">${profitDisplay}</div>
         `;
 
         tbody.appendChild(row);

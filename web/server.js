@@ -404,8 +404,35 @@ function saveCumulativeVolume() {
 // Settlement history functions
 function addSettlementHistory(userPrefix, result, amount, side, snapshotPrice = null, settlePrice = null) {
     try {
-        const stmt = db.prepare('INSERT INTO settlement_history (user_prefix, result, amount, side, timestamp, snapshot_price, settle_price) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        stmt.run(userPrefix, result, amount, side, Date.now(), snapshotPrice, settlePrice);
+        const timestamp = Date.now();
+
+        // Get timestamp of last settlement for this user to determine cycle boundary
+        let cycleStartTime = 0;
+        const lastSettlementStmt = db.prepare('SELECT timestamp FROM settlement_history WHERE user_prefix = ? ORDER BY timestamp DESC LIMIT 1');
+        const lastSettlement = lastSettlementStmt.get(userPrefix);
+        if (lastSettlement) {
+            cycleStartTime = lastSettlement.timestamp;
+        }
+
+        // Calculate total buys, sells, and net spent from trading history SINCE LAST SETTLEMENT
+        let totalBuys = 0;
+        let totalSells = 0;
+
+        const tradingStmt = db.prepare('SELECT action, cost_usd FROM trading_history WHERE user_prefix = ? AND timestamp > ? AND timestamp <= ? ORDER BY timestamp ASC');
+        const trades = tradingStmt.all(userPrefix, cycleStartTime, timestamp);
+
+        for (const trade of trades) {
+            if (trade.action === 'BUY') {
+                totalBuys += trade.cost_usd;
+            } else if (trade.action === 'SELL') {
+                totalSells += trade.cost_usd;
+            }
+        }
+
+        const netSpent = totalBuys - totalSells;
+
+        const stmt = db.prepare('INSERT INTO settlement_history (user_prefix, result, amount, side, timestamp, snapshot_price, settle_price, total_buys, total_sells, net_spent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        stmt.run(userPrefix, result, amount, side, timestamp, snapshotPrice, settlePrice, totalBuys, totalSells, netSpent);
         return true;
     } catch (err) {
         console.error('Failed to add settlement:', err.message);
