@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// app/settlement_bot.js — Automated settlement bot for 10-minute market cycles
-// Cycles: 5 mins active trading -> stop & settle -> 5 mins wait -> restart
-// Markets start on minutes ending in 0 (e.g., 19:30, 19:40, 19:50)
+// app/settlement_bot.js — Automated settlement bot for 11-minute market cycles
+// Cycles: 5 mins pre-market -> snapshot -> 5 mins active -> settle -> 1 min results -> restart
+// Markets start on minutes aligned to 11-minute intervals
 
 const fs = require("fs");
 const crypto = require("crypto");
@@ -22,13 +22,15 @@ const ORACLE_STATE = process.env.ORACLE_STATE
 
 // === PROGRAM IDs / SEEDS ===
 const PID = new PublicKey("EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF");
-const AMM_SEED = Buffer.from("amm_btc_v3");
+const AMM_SEED = Buffer.from("amm_btc_v6");  // v6: added market_end_time for time-based trading lockout
 const VAULT_SOL_SEED = Buffer.from("vault_sol");
+const USER_VAULT_SEED = Buffer.from("user_vault");
+const POS_SEED = Buffer.from("pos");
 
 // === TIMING CONSTANTS ===
-const CYCLE_DURATION_MS = 10 * 60 * 1000;     // 10 minutes total
-const PREMARKET_DURATION_MS = 5 * 60 * 1000;  // 5 minutes pre-market (no snapshot yet)
-const ACTIVE_DURATION_MS = 5 * 60 * 1000;     // 5 minutes active (after snapshot)
+const PREMARKET_DURATION_MS = 1 * 60 * 1000;  // 5 minutes pre-market (no snapshot yet)
+const ACTIVE_DURATION_MS = 10 * 60 * 1000;    // 10 minutes active (after snapshot)
+const CYCLE_DURATION_MS = PREMARKET_DURATION_MS + ACTIVE_DURATION_MS; // 15 minutes total
 
 // === LAMPORTS CONVERSION ===
 const LAMPORTS_PER_E6 = 100;                   // Must match Rust program constant
@@ -37,6 +39,9 @@ const LAMPORTS_PER_XNT = E6_PER_XNT * LAMPORTS_PER_E6; // 1 XNT = 1 billion lamp
 
 // === STATUS FILE ===
 const STATUS_FILE = "./market_status.json";
+
+// === LOG FILE ===
+const LOG_FILE = "./settlement_bot.log";
 
 /* ---------------- Color helpers ---------------- */
 const WANT_COLOR = !process.env.NO_COLOR && process.stdout.isTTY;
@@ -50,25 +55,45 @@ const C = WANT_COLOR ? {
   bold: (s) => `\x1b[1m${s}\x1b[0m`,
 } : { r: s => s, g: s => s, y: s => s, b: s => s, c: s => s, m: s => s, bold: s => s };
 
+/* ---------------- Log File Helper ---------------- */
+function writeToLogFile(level, ...args) {
+  try {
+    // Strip ANSI color codes for clean log file
+    const stripAnsi = (str) => str.toString().replace(/\x1b\[[0-9;]*m/g, '');
+    const timestamp = new Date().toISOString();
+    const message = args.map(arg =>
+      typeof arg === 'object' ? JSON.stringify(arg) : stripAnsi(String(arg))
+    ).join(' ');
+    const logLine = `[${timestamp}] [${level}] ${message}\n`;
+    fs.appendFileSync(LOG_FILE, logLine);
+  } catch (err) {
+    // Silently fail if logging fails - don't break the bot
+  }
+}
+
 /* ---------------- Helpers ---------------- */
 function log(...args) {
   console.log(C.c(`[${new Date().toISOString()}]`), ...args);
+  writeToLogFile('INFO', ...args);
 }
 
 function logError(...args) {
   console.error(C.r(`[ERROR]`), ...args);
+  writeToLogFile('ERROR', ...args);
 }
 
 function logSuccess(...args) {
   console.log(C.g(`[SUCCESS]`), ...args);
+  writeToLogFile('SUCCESS', ...args);
 }
 
 function logInfo(...args) {
   console.log(C.b(`[INFO]`), ...args);
+  writeToLogFile('INFO', ...args);
 }
 
 /* ---------------- Broadcast Redemption to Trade Feed ---------------- */
-function broadcastRedemption(userAddress, amountXnt, userSide) {
+function broadcastRedemption(userAddress, amountXnt, userSide, snapshotPrice = null, settlePrice = null) {
   try {
     const TRADES_FILE = "./web/public/recent_trades.json";
 
@@ -102,8 +127,8 @@ function broadcastRedemption(userAddress, amountXnt, userSide) {
     // Write back
     fs.writeFileSync(TRADES_FILE, JSON.stringify(trades, null, 2));
 
-    // Also post to settlement history API
-    postSettlementHistory(userAddress, amountXnt, userSide);
+    // Also post to settlement history API with prices
+    postSettlementHistory(userAddress, amountXnt, userSide, snapshotPrice, settlePrice);
 
   } catch (err) {
     logError("Failed to broadcast redemption:", err.message);
@@ -111,7 +136,7 @@ function broadcastRedemption(userAddress, amountXnt, userSide) {
 }
 
 /* ---------------- Post Settlement to History API ---------------- */
-function postSettlementHistory(userAddress, amountXnt, userSide) {
+function postSettlementHistory(userAddress, amountXnt, userSide, snapshotPrice = null, settlePrice = null) {
   try {
     const userPrefix = userAddress.substring(0, 6);
     const result = amountXnt > 0 ? 'WIN' : 'LOSE';
@@ -120,7 +145,9 @@ function postSettlementHistory(userAddress, amountXnt, userSide) {
       userPrefix: userPrefix,
       result: result,
       amount: amountXnt,
-      side: userSide // The side the user held (YES/NO)
+      side: userSide, // The side the user held (YES/NO)
+      snapshotPrice: snapshotPrice,
+      settlePrice: settlePrice
     });
 
     const options = {
@@ -136,7 +163,7 @@ function postSettlementHistory(userAddress, amountXnt, userSide) {
 
     const req = http.request(options, (res) => {
       if (res.statusCode === 200) {
-        logInfo(`  → Settlement history saved for ${userPrefix}...`);
+        logInfo(`  → Settlement history saved for ${userPrefix}... (Snapshot: $${snapshotPrice?.toFixed(2) || '?'}, Settle: $${settlePrice?.toFixed(2) || '?'})`);
       }
     });
 
@@ -169,7 +196,7 @@ async function resetVolume() {
     return new Promise((resolve) => {
       const req = http.request(options, (res) => {
         if (res.statusCode === 200) {
-          logInfo('📊 Volume reset for new market cycle');
+          logInfo('📊 Session volume reset for new market cycle (in-memory only)');
           resolve(true);
         } else {
           resolve(false);
@@ -269,9 +296,18 @@ async function closeMarket(conn, kp, ammPda) {
 }
 
 async function initMarket(conn, kp, ammPda, vaultPda) {
-  log("Initializing new market...");
-  const b = 500_000_000; // 500.00 in e6
+  log(C.bold("Initializing new market..."));
+  const b = 5_000_000_000; // 5,000.00 XNT liquidity (5B in e6 scale, where 1 XNT = 10M e6)
   const feeBps = 25;
+
+  // Display market parameters
+  const bDisplay = (b / E6_PER_XNT).toFixed(2);
+  const feePercent = (feeBps / 100).toFixed(2);
+  logInfo(`  📊 Market Parameters:`);
+  logInfo(`     Liquidity (b): ${bDisplay} XNT (${b.toLocaleString()} e6)`);
+  logInfo(`     Fee: ${feeBps} bps (${feePercent}%)`);
+  logInfo(`     AMM PDA: ${ammPda.toString()}`);
+  logInfo(`     Vault PDA: ${vaultPda.toString()}`);
 
   const initData = Buffer.alloc(8 + 8 + 2);
   discriminator("init_amm").copy(initData, 0);
@@ -293,7 +329,14 @@ async function initMarket(conn, kp, ammPda, vaultPda) {
 
   const tx = new Transaction().add(initIx);
   const sig = await sendTransactionWithRetry(conn, tx, [kp]);
+
+  // Read vault balance after initialization
+  const vaultBalance = await conn.getBalance(vaultPda);
+  const vaultXnt = (vaultBalance / LAMPORTS_PER_XNT).toFixed(4);
+
   logSuccess(`Market initialized: ${sig}`);
+  logInfo(`  💰 Vault balance: ${vaultXnt} XNT (${vaultBalance.toLocaleString()} lamports)`);
+  logInfo(`  🔗 Explorer: https://explorer.solana.com/tx/${sig}?cluster=custom`);
 }
 
 async function snapshotStart(conn, kp, ammPda) {
@@ -316,6 +359,33 @@ async function snapshotStart(conn, kp, ammPda) {
   const tx = new Transaction().add(budgetIx, snapshotIx);
   const sig = await sendTransactionWithRetry(conn, tx, [kp]);
   logSuccess(`Snapshot taken: ${sig}`);
+  return true;
+}
+
+async function setMarketEndSlot(conn, kp, ammPda, marketEndSlot, marketEndTime) {
+  log(`Setting market end slot to: ${marketEndSlot}, time to: ${marketEndTime}`);
+
+  // Create u64 buffer for market_end_slot
+  const slotBuf = Buffer.alloc(8);
+  slotBuf.writeBigUInt64LE(BigInt(marketEndSlot), 0);
+
+  // Create i64 buffer for market_end_time (unix timestamp in seconds)
+  const timeBuf = Buffer.alloc(8);
+  timeBuf.writeBigInt64LE(BigInt(Math.floor(marketEndTime / 1000)), 0);  // Convert ms to seconds
+
+  const setEndSlotIx = new TransactionInstruction({
+    programId: PID,
+    keys: [
+      { pubkey: ammPda, isSigner: false, isWritable: true },
+      { pubkey: kp.publicKey, isSigner: true, isWritable: false },
+    ],
+    data: Buffer.concat([discriminator("set_market_end_slot"), slotBuf, timeBuf]),
+  });
+
+  const budgetIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 });
+  const tx = new Transaction().add(budgetIx, setEndSlotIx);
+  const sig = await sendTransactionWithRetry(conn, tx, [kp]);
+  logSuccess(`Market end time set to ${new Date(marketEndTime).toISOString()}: ${sig}`);
   return true;
 }
 
@@ -368,10 +438,11 @@ async function findAllPositions(conn, ammPda) {
   const POS_SEED = Buffer.from("pos");
 
   // Get all program accounts for our program that match Position size
+  // NEW Position size: discriminator(8) + owner(32) + yes_shares(8) + no_shares(8) + master_wallet(32) + vault_balance_e6(8) + vault_bump(1) = 97 bytes
   const accounts = await conn.getProgramAccounts(PID, {
     filters: [
       {
-        dataSize: 8 + 32 + 8 + 8, // discriminator + owner pubkey + yes_shares + no_shares
+        dataSize: 8 + 89, // 97 bytes total (8-byte discriminator + 89-byte Position struct)
       },
     ],
   });
@@ -380,7 +451,7 @@ async function findAllPositions(conn, ammPda) {
   for (const { pubkey, account } of accounts) {
     try {
       const data = account.data;
-      if (data.length < 8 + 32 + 8 + 8) continue;
+      if (data.length < 8 + 32 + 8 + 8) continue; // Minimum size for reading shares
 
       // Skip discriminator (8 bytes)
       let offset = 8;
@@ -420,7 +491,7 @@ async function findAllPositions(conn, ammPda) {
   return positions;
 }
 
-async function autoRedeemAllPositions(conn, kp, ammPda, vaultPda) {
+async function autoRedeemAllPositions(conn, kp, ammPda, vaultPda, snapshotPrice = null, settlePrice = null) {
   log(C.bold("\n=== AUTO-REDEEMING ALL POSITIONS ==="));
 
   const positions = await findAllPositions(conn, ammPda);
@@ -435,37 +506,64 @@ async function autoRedeemAllPositions(conn, kp, ammPda, vaultPda) {
   const payoutPerShare = marketData ? marketData.payoutPerShare : 0;
   const winningSide = marketData ? marketData.winningSide : null;
 
+  // Use market data prices if not provided
+  if (!snapshotPrice && marketData) {
+    snapshotPrice = marketData.startPrice;
+  }
+
+  logInfo(`Settlement prices: Snapshot=$${snapshotPrice?.toFixed(2) || '?'}, Settle=$${settlePrice?.toFixed(2) || '?'}`);
+
   let successCount = 0;
   let failCount = 0;
 
   for (const pos of positions) {
     try {
-      const yesSharesDisplay = (pos.yesShares / 1_000_000).toFixed(2);
-      const noSharesDisplay = (pos.noShares / 1_000_000).toFixed(2);
+      const yesSharesDisplay = (pos.yesShares / E6_PER_XNT).toFixed(2);
+      const noSharesDisplay = (pos.noShares / E6_PER_XNT).toFixed(2);
 
       // Calculate payout amount
+      // Shares are in e6 scale, pps is also in e6 scale
+      // Rust does: (shares_e6 * pps_e6 / 1M) to get result in e6
+      // Then converts e6 to lamports and pays out
+      // So for display: shares_e6 * pps_e6 / 1M / E6_PER_XNT = shares_e6 / E6_PER_XNT * pps_e6 / 1M
       let payoutAmount = 0;
       if (winningSide === 'YES' && pos.yesShares > 0) {
-        payoutAmount = (pos.yesShares / 1_000_000) * payoutPerShare;
+        // Convert shares from e6 to actual shares, then multiply by pps
+        payoutAmount = (pos.yesShares / E6_PER_XNT) * payoutPerShare;
       } else if (winningSide === 'NO' && pos.noShares > 0) {
-        payoutAmount = (pos.noShares / 1_000_000) * payoutPerShare;
+        payoutAmount = (pos.noShares / E6_PER_XNT) * payoutPerShare;
       }
 
       log(`Redeeming for ${pos.owner.toString().slice(0, 8)}... (UP: ${yesSharesDisplay}, DOWN: ${noSharesDisplay})`);
+      log(`  Expected payout: ${payoutAmount.toFixed(4)} XNT (winningSide: ${winningSide}, pps: ${payoutPerShare.toFixed(6)})`);
 
-      // Get user's balance before redeem
-      const balanceBefore = await conn.getBalance(pos.owner);
+      // Derive user_vault PDA for this position
+      const [userVaultPda] = PublicKey.findProgramAddressSync(
+        [USER_VAULT_SEED, pos.pubkey.toBuffer()],
+        PID
+      );
 
-      // Use admin_redeem instruction
+      log(`  Position PDA: ${pos.pubkey.toString()}`);
+      log(`  User (session wallet): ${pos.owner.toString()}`);
+      log(`  User Vault PDA: ${userVaultPda.toString()}`);
+
+      // Get balances before redeem
+      const sessionBalanceBefore = await conn.getBalance(pos.owner);
+      const vaultBalanceBefore = await conn.getBalance(userVaultPda);
+
+      log(`  Balances BEFORE: session=${(sessionBalanceBefore/LAMPORTS_PER_XNT).toFixed(4)} XNT, vault=${(vaultBalanceBefore/LAMPORTS_PER_XNT).toFixed(4)} XNT`);
+
+      // Use admin_redeem instruction (NOW WITH user_vault PDA)
       const redeemIx = new TransactionInstruction({
         programId: PID,
         keys: [
           { pubkey: ammPda, isSigner: false, isWritable: true },
           { pubkey: kp.publicKey, isSigner: true, isWritable: true }, // Admin (fee_dest)
-          { pubkey: pos.owner, isSigner: false, isWritable: true }, // User receives payout
+          { pubkey: pos.owner, isSigner: false, isWritable: true }, // User (session wallet)
           { pubkey: pos.pubkey, isSigner: false, isWritable: true }, // Position account
           { pubkey: kp.publicKey, isSigner: false, isWritable: true }, // fee_dest (same as admin)
-          { pubkey: vaultPda, isSigner: false, isWritable: true },
+          { pubkey: vaultPda, isSigner: false, isWritable: true }, // vault_sol
+          { pubkey: userVaultPda, isSigner: false, isWritable: true }, // user_vault (NEW!)
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         ],
         data: discriminator("admin_redeem"),
@@ -475,12 +573,20 @@ async function autoRedeemAllPositions(conn, kp, ammPda, vaultPda) {
       const tx = new Transaction().add(budgetIx, redeemIx);
       const sig = await sendTransactionWithRetry(conn, tx, [kp]);
 
-      // Get user's balance after redeem
-      const balanceAfter = await conn.getBalance(pos.owner);
-      // Convert lamports to XNT using LAMPORTS_PER_XNT constant
-      const actualPayout = (balanceAfter - balanceBefore) / LAMPORTS_PER_XNT;
+      // Get balances after redeem
+      const sessionBalanceAfter = await conn.getBalance(pos.owner);
+      const vaultBalanceAfter = await conn.getBalance(userVaultPda);
 
-      logSuccess(`  ✓ Redeemed: ${sig.slice(0, 16)}... → ${actualPayout.toFixed(2)} XNT paid to user`);
+      const sessionDelta = (sessionBalanceAfter - sessionBalanceBefore) / LAMPORTS_PER_XNT;
+      const vaultDelta = (vaultBalanceAfter - vaultBalanceBefore) / LAMPORTS_PER_XNT;
+
+      log(`  Balances AFTER: session=${(sessionBalanceAfter/LAMPORTS_PER_XNT).toFixed(4)} XNT, vault=${(vaultBalanceAfter/LAMPORTS_PER_XNT).toFixed(4)} XNT`);
+      logSuccess(`  ✓ Redeemed: ${sig.slice(0, 16)}...`);
+      logSuccess(`    → Session wallet change: ${sessionDelta >= 0 ? '+' : ''}${sessionDelta.toFixed(4)} XNT`);
+      logSuccess(`    → User vault change: ${vaultDelta >= 0 ? '+' : ''}${vaultDelta.toFixed(4)} XNT (THIS SHOULD BE THE PAYOUT!)`);
+
+      // Use vault delta as the actual payout (not session wallet delta)
+      const actualPayout = vaultDelta;
 
       // Determine user's actual side based on their position
       let userSide;
@@ -496,8 +602,8 @@ async function autoRedeemAllPositions(conn, kp, ammPda, vaultPda) {
         userSide = 'YES';
       }
 
-      // Broadcast redemption event with user's actual side
-      broadcastRedemption(pos.owner.toString(), actualPayout, userSide);
+      // Broadcast redemption event with user's actual side and prices
+      broadcastRedemption(pos.owner.toString(), actualPayout, userSide, snapshotPrice, settlePrice);
 
       successCount++;
 
@@ -611,37 +717,15 @@ async function readMarketData(conn, ammPda) {
 /* ---------------- Timing Functions ---------------- */
 function getNextStartTime() {
   const now = new Date();
-  const minutes = now.getMinutes();
-  const seconds = now.getSeconds();
 
-  // Calculate total seconds since start of hour
-  const totalSeconds = minutes * 60 + seconds;
+  logInfo(C.bold("📅 Starting market cycle immediately:"));
+  logInfo(`  Current time: ${formatTime(now)}`);
 
-  logInfo(C.bold("📅 Calculating next cycle start time:"));
-  logInfo(`  Current time: ${formatTime(now)} (${minutes}m ${seconds}s)`);
-  logInfo(`  Total seconds since hour start: ${totalSeconds}s`);
-
-  // Find next 10-minute boundary (600 seconds = 10 minutes)
-  const nextBoundarySeconds = Math.ceil(totalSeconds / 600) * 600;
-  logInfo(`  Next 10-minute boundary: ${nextBoundarySeconds}s (${Math.floor(nextBoundarySeconds / 60)}m)`);
-
+  // Start immediately - just round to nearest second
   const nextStart = new Date(now);
-
-  if (nextBoundarySeconds >= 3600) {
-    // Roll over to next hour (3600 seconds = 60 minutes)
-    logInfo(`  Boundary >= 3600s, rolling to next hour`);
-    nextStart.setHours(nextStart.getHours() + 1);
-    nextStart.setMinutes(0);
-  } else {
-    logInfo(`  Setting minutes to: ${Math.floor(nextBoundarySeconds / 60)}`);
-    nextStart.setMinutes(Math.floor(nextBoundarySeconds / 60));
-  }
-
-  nextStart.setSeconds(0);
   nextStart.setMilliseconds(0);
 
-  logInfo(C.g(`  ✓ Next cycle will start at: ${formatTime(nextStart)}`));
-  logInfo(C.g(`  ✓ Time until next cycle: ${formatCountdown(nextStart.getTime() - now.getTime())}`));
+  logInfo(C.g(`  ✓ Market cycle starting NOW at: ${formatTime(nextStart)}`));
 
   return nextStart;
 }
@@ -680,14 +764,18 @@ async function runCycle(conn, kp, ammPda, vaultPda) {
   logInfo(`  Cycle start time: ${formatTime(new Date(cycleStartTime))} (${cycleStartTime}ms)`);
   logInfo(`  + ${PREMARKET_DURATION_MS / 1000}s pre-market = Snapshot at: ${formatTime(new Date(snapshotTime))}`);
   logInfo(`  + ${ACTIVE_DURATION_MS / 1000}s active trading = Market close at: ${formatTime(new Date(marketEndTime))}`);
-  logInfo(C.y(`  + ${CYCLE_DURATION_MS / 1000}s total cycle = Next cycle at: ${formatTime(new Date(nextCycleStartTime))}`));
+  logInfo(C.y(`  = ${CYCLE_DURATION_MS / 1000}s total cycle = Next cycle at: ${formatTime(new Date(nextCycleStartTime))}`));
   log(C.bold(`\n📊 Current Cycle: ${formatTime(new Date(cycleStartTime))} → ${formatTime(new Date(marketEndTime))}`));
   log(C.bold(C.y(`🔄 Next Cycle Scheduled: ${formatTime(new Date(nextCycleStartTime))} (in ${formatCountdown(nextCycleStartTime - Date.now())})`)));
 
   try {
-    // Step 1: Close existing market if exists, then IMMEDIATELY open new one
+    // Step 1: Wipe positions from previous cycle, close market, then IMMEDIATELY open new one
     const ammInfo = await conn.getAccountInfo(ammPda);
     if (ammInfo) {
+      log("Wiping positions from previous cycle...");
+      await wipeAllPositions(conn, kp, ammPda);
+      await new Promise(r => setTimeout(r, 1000));
+
       await closeMarket(conn, kp, ammPda);
       await new Promise(r => setTimeout(r, 2000));
     }
@@ -740,6 +828,30 @@ async function runCycle(conn, kp, ammPda, vaultPda) {
     }
 
     logSuccess(C.bold("✓ Snapshot taken! Market continues ACTIVE for trading!"));
+
+    // Read back the start price from AMM account
+    const ammData = await readMarketData(conn, ammPda);
+    if (ammData && ammData.startPrice > 0) {
+      logInfo(C.bold(C.y(`📸 Start Price: $${ammData.startPrice.toFixed(2)} (BTC price locked for settlement)`)));
+    }
+
+    // Step 4.5: Set market end slot for trading lockout
+    // Calculate slot when market will end based on ACTIVE_DURATION_MS
+    // Solana slots are ~300ms each on average (3.33 slots per second)
+    const currentSlot = await conn.getSlot();
+    const remainingMs = marketEndTime - Date.now();
+    const remainingSlots = Math.floor(remainingMs / 300); // ~300ms per slot
+    const marketEndSlot = currentSlot + remainingSlots;
+
+    log(C.bold("\n=== SETTING MARKET END SLOT ==="));
+    logInfo(`  Current slot: ${currentSlot}`);
+    logInfo(`  Time until market close: ${formatCountdown(remainingMs)}`);
+    logInfo(`  Estimated slots until close: ${remainingSlots}`);
+    logInfo(`  Market end slot: ${marketEndSlot}`);
+    logInfo(`  Trading lockout starts at slot: ${marketEndSlot - 90} (90 slots ≈45s before close)`);
+
+    await setMarketEndSlot(conn, kp, ammPda, marketEndSlot, marketEndTime);
+    logSuccess(C.bold("✓ Market end time configured - trading lockout will activate 30 seconds before close!"));
 
     // Update status: ACTIVE (post-snapshot)
     writeStatus({
@@ -814,13 +926,19 @@ async function runCycle(conn, kp, ammPda, vaultPda) {
       log(`Resolution: ${C.bold(marketData.winningSide)} won (Start: $${marketData.startPrice?.toFixed(2)}, Settle: $${settlePrice?.toFixed(2)})`);
     }
 
-    // Auto-redeem all positions (prevents locked funds)
-    await autoRedeemAllPositions(conn, kp, ammPda, vaultPda);
+    // Auto-redeem all positions (prevents locked funds) - pass prices for settlement history
+    await autoRedeemAllPositions(conn, kp, ammPda, vaultPda, marketData?.startPrice, settlePrice);
     await new Promise(r => setTimeout(r, 1000));
 
-    // Update status to SETTLED
+    // Step 7: Settled phase - show results for 1 minute
+    logSuccess(C.bold("✓ Market settled! Showing results..."));
+    if (marketData) {
+      log(`Resolution: ${C.bold(marketData.winningSide)} won (Start: $${marketData.startPrice?.toFixed(2)}, Settle: $${settlePrice?.toFixed(2)})`);
+    }
+
+    // Update status - market is stopped, next cycle begins immediately
     writeStatus({
-      state: "SETTLED",
+      state: "STOPPED",
       cycleStartTime,
       snapshotTime,
       marketEndTime,
@@ -845,10 +963,58 @@ async function runCycle(conn, kp, ammPda, vaultPda) {
   }
 }
 
+/* ---------------- Wipe All Positions ---------------- */
+async function wipeAllPositions(conn, kp, ammPda) {
+  log(C.bold("\n=== WIPING ALL POSITIONS ==="));
+
+  const positions = await findAllPositions(conn, ammPda);
+
+  if (positions.length === 0) {
+    logInfo("No positions to wipe");
+    return;
+  }
+
+  logInfo(`Found ${positions.length} positions to wipe`);
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const pos of positions) {
+    try {
+      const ownerShort = pos.owner.toString().slice(0, 8);
+      log(`[${successCount + failCount + 1}/${positions.length}] Wiping position for ${ownerShort}...`);
+
+      // Call wipe_position instruction
+      const wipeIx = new TransactionInstruction({
+        programId: PID,
+        keys: [
+          { pubkey: ammPda, isSigner: false, isWritable: true },
+          { pubkey: kp.publicKey, isSigner: true, isWritable: false }, // admin
+          { pubkey: pos.owner, isSigner: false, isWritable: false }, // owner (for PDA derivation)
+          { pubkey: pos.pubkey, isSigner: false, isWritable: true }, // position account
+        ],
+        data: discriminator("wipe_position"),
+      });
+
+      const budgetIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 150_000 });
+      const tx = new Transaction().add(budgetIx, wipeIx);
+      const sig = await sendTransactionWithRetry(conn, tx, [kp]);
+
+      logSuccess(`  ✓ Wiped: ${sig.slice(0, 16)}...`);
+      successCount++;
+    } catch (err) {
+      logError(`  ✗ Failed for ${pos.owner.toString().slice(0, 8)}: ${err.message}`);
+      failCount++;
+    }
+  }
+
+  logSuccess(`\nWipe complete: ${successCount} success, ${failCount} failed`);
+}
+
 /* ---------------- Main ---------------- */
 async function main() {
   console.log(C.bold("\n╔═══════════════════════════════════════════════╗"));
-  console.log(C.bold("║     AUTOMATED SETTLEMENT BOT - 10 MIN CYCLES  ║"));
+  console.log(C.bold("║     AUTOMATED SETTLEMENT BOT - 11 MIN CYCLES  ║"));
   console.log(C.bold("╚═══════════════════════════════════════════════╝\n"));
 
   logInfo(`Oracle: ${ORACLE_STATE.toString()}`);
@@ -879,6 +1045,10 @@ async function main() {
 
   const ammInfo = await conn.getAccountInfo(ammPda);
   if (ammInfo) {
+    log("Found existing market - wiping old positions first...");
+    await wipeAllPositions(conn, kp, ammPda);
+    await new Promise(r => setTimeout(r, 1000));
+
     log("Closing existing market...");
     await closeMarket(conn, kp, ammPda);
     await new Promise(r => setTimeout(r, 2000));
@@ -922,6 +1092,22 @@ async function main() {
   }
 
   logSuccess(C.bold("✓ ACTIVE MARKET NOW OPEN (snapshot taken)"));
+
+  // Set market end slot for trading lockout
+  const currentSlot = await conn.getSlot();
+  const remainingMs = marketEndTime - Date.now();
+  const remainingSlots = Math.floor(remainingMs / 300); // ~300ms per slot
+  const marketEndSlot = currentSlot + remainingSlots;
+
+  log(C.bold("\n=== SETTING MARKET END SLOT ==="));
+  logInfo(`  Current slot: ${currentSlot}`);
+  logInfo(`  Time until market close: ${formatCountdown(remainingMs)}`);
+  logInfo(`  Estimated slots until close: ${remainingSlots}`);
+  logInfo(`  Market end slot: ${marketEndSlot}`);
+  logInfo(`  Trading lockout starts at slot: ${marketEndSlot - 90} (90 slots ≈45s before close)`);
+
+  await setMarketEndSlot(conn, kp, ammPda, marketEndSlot, marketEndTime);
+  logSuccess(C.bold("✓ Market end slot configured - trading lockout will activate 90 slots before close!"));
 
   // Update status to ACTIVE
   writeStatus({
@@ -969,18 +1155,18 @@ async function main() {
   const settleSuccess = await settleMarket(conn, kp, ammPda);
   if (settleSuccess) {
     const marketData = await readMarketData(conn, ammPda);
+    const settlePrice = await readOraclePrice(conn);
     if (marketData) {
-      const settlePrice = await readOraclePrice(conn);
       log(`Resolution: ${C.bold(marketData.winningSide)} won (Start: $${marketData.startPrice?.toFixed(2)}, Settle: $${settlePrice?.toFixed(2)})`);
     }
 
-    await autoRedeemAllPositions(conn, kp, ammPda, vaultPda);
+    await autoRedeemAllPositions(conn, kp, ammPda, vaultPda, marketData?.startPrice, settlePrice);
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  // Update status to SETTLED
+  // Update status to STOPPED
   writeStatus({
-    state: "SETTLED",
+    state: "STOPPED",
     cycleStartTime: Date.now() - waitMs,
     snapshotTime: snapshotTime,
     marketEndTime: marketEndTime,
@@ -996,13 +1182,133 @@ async function main() {
   }
 }
 
+/* ---------------- Force Settlement (Manual Trigger) ---------------- */
+async function forceSettle() {
+  console.log(C.bold("\n╔═══════════════════════════════════════════════╗"));
+  console.log(C.bold("║        FORCE SETTLEMENT - MANUAL TRIGGER      ║"));
+  console.log(C.bold("╚═══════════════════════════════════════════════╝\n"));
+
+  logInfo(`Oracle: ${ORACLE_STATE.toString()}`);
+  logInfo(`Using wallet: ${WALLET}`);
+
+  // Load wallet
+  if (!fs.existsSync(WALLET)) {
+    logError(`Wallet not found: ${WALLET}`);
+    process.exit(1);
+  }
+  const kp = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(WALLET, "utf8"))));
+  log(`Operator: ${C.y(kp.publicKey.toString())}`);
+
+  // Connect
+  const conn = new Connection(RPC, "confirmed");
+  log(`RPC: ${C.c(RPC)}`);
+
+  // Derive PDAs
+  const [ammPda] = PublicKey.findProgramAddressSync([AMM_SEED], PID);
+  const [vaultPda] = PublicKey.findProgramAddressSync([VAULT_SOL_SEED, ammPda.toBuffer()], PID);
+
+  log(`AMM PDA: ${C.b(ammPda.toString())}`);
+  log(`Vault PDA: ${C.b(vaultPda.toString())}`);
+  log("");
+
+  // Check market state
+  const marketData = await readMarketData(conn, ammPda);
+  if (!marketData) {
+    logError("Market not found or cannot be read");
+    process.exit(1);
+  }
+
+  log(C.bold("Current Market State:"));
+  log(`  Status: ${C.y(marketData.status)}`);
+  log(`  Winner: ${marketData.winner === 0 ? 'Not set' : (marketData.winner === 1 ? 'YES (UP)' : 'NO (DOWN)')}`);
+  log("");
+
+  if (marketData.status === 'Open') {
+    logError("Market is still OPEN. Must stop market first before settling.");
+    log("Run: ANCHOR_WALLET=./operator.json node app/trade.js stop");
+    process.exit(1);
+  }
+
+  if (marketData.status === 'Stopped') {
+    // Check if settlement has been calculated (winner is set)
+    if (marketData.winner && marketData.winner !== 'Unknown') {
+      logInfo("Market is STOPPED and settled. Checking if redemptions are needed...");
+      const positions = await findAllPositions(conn, ammPda);
+      if (positions.length === 0) {
+        logSuccess("No positions to redeem. Market settlement is complete.");
+        process.exit(0);
+      }
+      logInfo(`Found ${positions.length} positions that need redemption`);
+    } else {
+      log(C.bold("🛑 Market is STOPPED but not settled. Settling now...\n"));
+      const settleSuccess = await settleMarket(conn, kp, ammPda);
+      if (!settleSuccess) {
+        logError("Settlement failed!");
+        process.exit(1);
+      }
+      await new Promise(r => setTimeout(r, 2000));
+      logSuccess("✓ Market settled successfully\n");
+    }
+  }
+
+  // Read final market state and oracle price
+  const finalMarketData = await readMarketData(conn, ammPda);
+  const settlePrice = await readOraclePrice(conn);
+
+  if (finalMarketData) {
+    log(`Resolution: ${C.bold(finalMarketData.winningSide)} won`);
+    log(`  Snapshot price: $${finalMarketData.startPrice?.toFixed(2) || '?'}`);
+    log(`  Settle price: $${settlePrice?.toFixed(2) || '?'}`);
+    log("");
+  }
+
+  // Redeem all positions
+  log(C.bold("💰 Processing redemptions...\n"));
+  await autoRedeemAllPositions(conn, kp, ammPda, vaultPda, finalMarketData?.startPrice, settlePrice);
+
+  logSuccess(C.bold("\n✓ Force settlement complete!"));
+  log("You can now start a new market cycle.");
+}
+
 /* ---------------- Run ---------------- */
-main().catch((err) => {
-  logError("Fatal error:", err);
-  writeStatus({
-    state: "ERROR",
-    error: err.message,
-    lastUpdate: Date.now()
+// Check for CLI commands
+const command = process.argv[2];
+
+if (command === 'force-settle') {
+  forceSettle().catch((err) => {
+    logError("Force settlement failed:", err);
+    process.exit(1);
   });
-  process.exit(1);
-});
+} else if (command === 'help' || command === '--help' || command === '-h') {
+  console.log(`
+${C.bold('Settlement Bot Commands:')}
+
+  ${C.y('node app/settlement_bot.js')}
+    Run the automated settlement bot (10-minute cycles)
+
+  ${C.y('node app/settlement_bot.js force-settle')}
+    Manually trigger settlement for a stopped market
+    Use this if automated settlement fails or gets stuck
+
+  ${C.y('node app/settlement_bot.js help')}
+    Show this help message
+
+${C.bold('Examples:')}
+  # Run automated bot
+  node app/settlement_bot.js
+
+  # Force manual settlement
+  ANCHOR_WALLET=./operator.json node app/settlement_bot.js force-settle
+  `);
+  process.exit(0);
+} else {
+  main().catch((err) => {
+    logError("Fatal error:", err);
+    writeStatus({
+      state: "ERROR",
+      error: err.message,
+      lastUpdate: Date.now()
+    });
+    process.exit(1);
+  });
+}

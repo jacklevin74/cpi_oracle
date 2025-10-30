@@ -1,17 +1,34 @@
-// Configuration
+// Configuration - Updated for v5 market
 const CONFIG = {
     RPC_URL: 'https://rpc.testnet.x1.xyz',
     PROGRAM_ID: 'EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF',
     ORACLE_STATE: '4KYeNyv1B9YjjQkfJk2C6Uqo71vKzFZriRe5NXg6GyCq',
-    AMM_SEED: 'amm_btc_v3',
+    AMM_SEED: 'amm_btc_v6',  // v6: time-based trading lockout
     LAMPORTS_PER_E6: 100,
     STATUS_URL: '/market_status.json'
 };
+
+// Log the config on load to verify we're using the right version
+console.log('[CONFIG] Using AMM_SEED:', CONFIG.AMM_SEED);
 
 // Global state
 let wallet = null; // Session wallet (Keypair)
 let backpackWallet = null; // Backpack wallet provider
 let currentFeeBps = 25; // Default fee in basis points (0.25%)
+
+// Alarm state for market close warning
+let alarmPlayed = false; // Track if alarm has been played for current market
+let lastMarketEndTime = null; // Track market end time to reset alarm
+let alarmEnabled = true; // User preference for alarm (saved to localStorage)
+let notificationPermission = 'default'; // Track notification permission status
+
+// Snapshot notification state
+let snapshotSoundPlayed = false; // Track if snapshot sound has been played for current market
+let lastMarketState = null; // Track market state transitions
+
+// Countdown state for smooth updates
+let countdownEndTime = null; // Cached end time for smooth countdown
+let countdownUpdateInterval = null; // Interval for countdown updates
 
 // BTC Price Chart
 let btcChart = null;
@@ -19,6 +36,9 @@ let priceHistory = []; // Stores actual BTC prices (one per second)
 let currentTimeRange = 60; // Current time range in seconds (default 1 minute for display)
 const PRICE_HISTORY_KEY = 'btc_price_history';
 const PRICE_HISTORY_MAX_AGE_MS = 60000; // Keep data for 60 seconds
+
+// Throttle price logging to once per second
+let lastPriceLogTime = 0;
 
 // High-resolution chart for smooth scrolling
 const CHART_UPDATE_INTERVAL_MS = 55; // Update chart every 55ms (~18 points/sec, 10% reduction)
@@ -57,6 +77,88 @@ let marketStartPrice = null;
 let connection = null;
 let ammPda = null;
 let vaultPda = null;
+
+let currentLockoutStartSlot = 0;
+let latestObservedSlot = 0;
+let slotPollIntervalId = null;
+
+function updateSlotHeaderDisplay() {
+    const startEl = document.getElementById('slotStartValue');
+    const endEl = document.getElementById('slotEndValue');
+    const currentEl = document.getElementById('slotCurrentValue');
+    const diffEl = document.getElementById('slotDiffValue');
+    const container = document.getElementById('slotIndicators');
+
+    if (startEl) {
+        startEl.textContent = currentLockoutStartSlot > 0
+            ? currentLockoutStartSlot.toLocaleString('en-US')
+            : '--';
+    }
+
+    if (endEl) {
+        endEl.textContent = currentMarketEndSlot > 0
+            ? currentMarketEndSlot.toLocaleString('en-US')
+            : '--';
+    }
+
+    if (currentEl) {
+        currentEl.textContent = latestObservedSlot > 0
+            ? latestObservedSlot.toLocaleString('en-US')
+            : '--';
+    }
+
+    if (diffEl) {
+        // Calculate: end slot - current slot = slots remaining
+        if (currentMarketEndSlot > 0 && latestObservedSlot > 0) {
+            const diff = currentMarketEndSlot - latestObservedSlot;
+            if (diff >= 0) {
+                diffEl.textContent = diff.toLocaleString('en-US');
+                diffEl.style.color = 'rgba(255, 255, 255, 0.4)';
+            } else {
+                // Market ended, show negative in red
+                diffEl.textContent = diff.toLocaleString('en-US');
+                diffEl.style.color = '#ff4757';
+            }
+            console.log(`[Slot Display] DIFF: ${diff} (end: ${currentMarketEndSlot}, current: ${latestObservedSlot})`);
+        } else {
+            diffEl.textContent = '--';
+            diffEl.style.color = 'rgba(255, 255, 255, 0.4)';
+            console.log(`[Slot Display] DIFF showing '--' (end: ${currentMarketEndSlot}, current: ${latestObservedSlot})`);
+        }
+    } else {
+        console.warn('[Slot Display] slotDiffValue element not found!');
+    }
+
+    if (container) {
+        const isLockedSoon = currentLockoutStartSlot > 0 && latestObservedSlot >= currentLockoutStartSlot;
+        container.classList.toggle('slot-warning', isLockedSoon);
+    }
+}
+
+async function pollCurrentSlot() {
+    if (!connection) return;
+    try {
+        const slot = await connection.getSlot();
+        latestObservedSlot = slot;
+        updateSlotHeaderDisplay();
+    } catch (err) {
+        console.error('Failed to poll current slot:', err);
+    }
+}
+
+function startSlotPolling() {
+    if (slotPollIntervalId !== null) return;
+    pollCurrentSlot();
+    slotPollIntervalId = setInterval(pollCurrentSlot, 2000);
+}
+
+function updateMarketEndSlot(slot) {
+    currentMarketEndSlot = slot || 0;
+    currentLockoutStartSlot = currentMarketEndSlot > 0
+        ? Math.max(0, currentMarketEndSlot - TRADING_LOCKOUT_SLOTS)
+        : 0;
+    updateSlotHeaderDisplay();
+}
 
 // ============= OUTLIER DETECTION =============
 
@@ -195,12 +297,37 @@ window.addEventListener('load', async () => {
         new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
     );
     ammPda = amm;
+    console.log('[INIT] Calculated AMM PDA:', ammPda.toString());
+    console.log('[INIT] Using AMM_SEED:', CONFIG.AMM_SEED);
 
     const [vault] = await solanaWeb3.PublicKey.findProgramAddressSync(
         [stringToUint8Array('vault_sol'), ammPda.toBytes()],
         new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
     );
     vaultPda = vault;
+    console.log('[INIT] Calculated Vault PDA:', vaultPda.toString());
+
+    updateSlotHeaderDisplay();
+    startSlotPolling();
+
+    // Poll market data every 5 seconds to keep market_end_slot fresh
+    fetchMarketData(); // Initial fetch
+    setInterval(fetchMarketData, 5000);
+
+    // Log trading lockout status every 10 seconds
+    setInterval(() => {
+        if (currentMarketEndTime > 0) {
+            const now = Date.now();
+            const lockoutStartTime = currentMarketEndTime - (TRADING_LOCKOUT_SECONDS * 1000);
+            const timeUntilEnd = Math.max(0, currentMarketEndTime - now) / 1000;
+            const timeUntilLockout = Math.max(0, lockoutStartTime - now) / 1000;
+            const isLocked = now >= lockoutStartTime;
+
+            if (timeUntilEnd > 0) {
+                console.log(`[Market Timing] End: ${new Date(currentMarketEndTime).toLocaleTimeString()} | Lockout in: ${timeUntilLockout.toFixed(0)}s | Closes in: ${timeUntilEnd.toFixed(0)}s | Locked: ${isLocked ? '🔒 YES' : '✅ NO'}`);
+            }
+        }
+    }, 10000);
 
     addLog('AMM PDA: ' + ammPda.toString(), 'info');
     addLog('Vault PDA: ' + vaultPda.toString(), 'info');
@@ -1075,7 +1202,7 @@ async function fetchPositionAccount() {
 
     try {
         const [ammPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
-            [stringToUint8Array('amm_btc_v3')],
+            [stringToUint8Array(CONFIG.AMM_SEED)],
             new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
         );
 
@@ -1087,10 +1214,13 @@ async function fetchPositionAccount() {
         const accountInfo = await connection.getAccountInfo(posPda);
 
         if (!accountInfo) {
+            console.log('[fetchPositionAccount] No position account found');
             return null;
         }
 
         const d = accountInfo.data;
+        console.log('[fetchPositionAccount] Account data length:', d.length, 'bytes (expected:', 8 + 89, ')');
+
         // Position struct: discriminator(8) + owner(32) + yes_shares_e6(8) + no_shares_e6(8) + master_wallet(32) + vault_balance_e6(8) + vault_bump(1)
         if (d.length >= 8 + 32 + 8 + 8 + 32 + 8) {
             let o = 8; // Skip discriminator
@@ -1100,12 +1230,18 @@ async function fetchPositionAccount() {
             o += 32; // Skip master_wallet
             const vaultBalance = readI64LE(d, o); o += 8;
 
+            console.log('[fetchPositionAccount] Raw vault_balance_e6:', vaultBalance);
+            console.log('[fetchPositionAccount] Converted to XNT:', vaultBalance / 1e7);
+
             return {
                 yes_shares_e6: sharesY,
                 no_shares_e6: sharesN,
                 vault_balance_e6: vaultBalance
             };
         }
+
+        console.log('[fetchPositionAccount] Account data too small');
+
 
         return null;
     } catch (err) {
@@ -1187,23 +1323,11 @@ This is a temporary wallet for trading only.
 
 // ============= BTC PRICE CHART =============
 
-// Save price to server (no longer using localStorage)
+// Note: Price saving is now handled by server.js polling the oracle directly
+// This function is no longer needed but kept as a no-op for backwards compatibility
 async function savePriceToServer(price) {
-    try {
-        const response = await fetch('/api/price-history', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ price })
-        });
-
-        if (!response.ok) {
-            console.warn('Failed to save price to server:', response.status);
-        }
-    } catch (err) {
-        console.warn('Failed to save price to server:', err);
-    }
+    // No-op: Server now fetches and saves prices directly from oracle
+    return;
 }
 
 // Load price history from server
@@ -1687,7 +1811,12 @@ function updateBTCChart(price) {
         return;
     }
 
-    console.log('New BTC price: $' + price.toFixed(2));
+    // Throttle logging to every 5 seconds
+    const now = Date.now();
+    if (now - lastPriceLogTime >= 5000) {
+        console.log('New BTC price: $' + price.toFixed(2));
+        lastPriceLogTime = now;
+    }
 
     // Add actual price to history (for persistence and trend calculation)
     priceHistory.push(price);
@@ -1709,79 +1838,271 @@ function updateBTCChart(price) {
 
 // ============= ORACLE DATA =============
 
+let priceEventSource = null;
+
+// Connect to SSE price stream
+function connectPriceStream() {
+    if (priceEventSource) {
+        priceEventSource.close();
+    }
+
+    // console.log('Connecting to price stream...');
+    priceEventSource = new EventSource('/api/price-stream');
+
+    priceEventSource.onopen = () => {
+        // console.log('✅ Price stream connected');
+    };
+
+    priceEventSource.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.price) {
+                updatePriceDisplay(data.price);
+            }
+        } catch (err) {
+            console.error('Failed to parse price data:', err);
+        }
+    };
+
+    priceEventSource.onerror = (error) => {
+        console.error('Price stream error, reconnecting in 5s...');
+        priceEventSource.close();
+        setTimeout(connectPriceStream, 5000);
+    };
+}
+
+function updatePriceDisplay(btcPrice) {
+    // Format price
+    const priceFormatted = '$' + btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    // Update the visible "Current Price" display
+    const chartPriceEl = document.getElementById('chartCurrentPrice');
+    const oracleAgeEl = document.getElementById('oracleAge');
+
+    // console.log('[SSE] Price update:', priceFormatted);
+    // console.log('[SSE] Elements:', {
+    //     chartCurrentPrice: !!chartPriceEl,
+    //     oracleAge: !!oracleAgeEl
+    // });
+
+    if (chartPriceEl) {
+        chartPriceEl.textContent = priceFormatted;
+        // console.log('[SSE] Updated chartCurrentPrice to:', priceFormatted);
+    } else {
+        // console.error('[SSE] chartCurrentPrice element not found!');
+    }
+
+    // Update BTC chart with numeric price
+    updateBTCChart(btcPrice);
+
+    // Update arrow indicator (shows difference from start price)
+    updatePriceArrowIndicator(btcPrice);
+
+    // Display age (SSE provides real-time data)
+    const ageText = 'live';
+    if (oracleAgeEl) {
+        oracleAgeEl.textContent = ageText;
+        oracleAgeEl.style.color = '#26de81';
+    }
+}
+
+let marketEventSource = null;
+
+// Connect to SSE market stream
+function connectMarketStream() {
+    if (marketEventSource) {
+        marketEventSource.close();
+    }
+
+    // console.log('Connecting to market stream...');
+    marketEventSource = new EventSource('/api/market-stream');
+
+    marketEventSource.onopen = () => {
+        // console.log('✅ Market stream connected');
+    };
+
+    marketEventSource.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (data) {
+                updateMarketDisplay(data);
+            }
+        } catch (err) {
+            console.error('Failed to parse market data:', err);
+        }
+    };
+
+    marketEventSource.onerror = (error) => {
+        console.error('Market stream error, reconnecting in 5s...');
+        marketEventSource.close();
+        setTimeout(connectMarketStream, 5000);
+    };
+}
+
+function updateMarketDisplay(marketData) {
+    // console.log('[Market SSE] Update:', marketData);
+
+    // Store fee for buy calculations
+    currentFeeBps = marketData.feeBps;
+
+    // Store start price for arrow indicator
+    marketStartPrice = marketData.startPrice > 0 ? marketData.startPrice : null;
+
+    // Update "Price to Beat" display
+    const beatPriceEl = document.getElementById('chartBeatPrice');
+    if (beatPriceEl && marketStartPrice && marketStartPrice > 0) {
+        const formattedPrice = marketStartPrice.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        beatPriceEl.textContent = `$${formattedPrice}`;
+    } else if (beatPriceEl) {
+        beatPriceEl.textContent = '--';
+    }
+
+    // Update market status display
+    const statusEl = document.getElementById('marketStatus');
+    if (statusEl) {
+        const statusTexts = ['OPEN', 'STOPPED', 'SETTLED'];
+        statusEl.textContent = statusTexts[marketData.status] || 'UNKNOWN';
+        statusEl.className = `status-${statusTexts[marketData.status]?.toLowerCase() || 'unknown'}`;
+    }
+
+    // Update liquidity and vault displays (if they exist)
+    const liquidityEl = document.getElementById('marketLiquidity');
+    if (liquidityEl) {
+        liquidityEl.textContent = marketData.bScaled.toFixed(2);
+    }
+
+    const vaultEl = document.getElementById('marketVault');
+    if (vaultEl) {
+        vaultEl.textContent = marketData.vault.toFixed(2);
+    }
+
+    // Update vault total display (in oracle section) - SSE path
+    if (document.getElementById('vaultTotalDisplay')) {
+        document.getElementById('vaultTotalDisplay').textContent = marketData.vault.toFixed(2);
+    }
+
+    // Update vault display (in header) - SSE path
+    if (document.getElementById('vaultDisplay')) {
+        document.getElementById('vaultDisplay').textContent = marketData.vault.toFixed(0);
+    }
+
+    // Update q_yes/q_no displays (if they exist)
+    const qYesEl = document.getElementById('qYes');
+    if (qYesEl) {
+        qYesEl.textContent = marketData.qYes.toFixed(2);
+    }
+
+    const qNoEl = document.getElementById('qNo');
+    if (qNoEl) {
+        qNoEl.textContent = marketData.qNo.toFixed(2);
+    }
+
+    // If market is settled, show winner
+    if (marketData.status === 2) {
+        const winnerEl = document.getElementById('marketWinner');
+        if (winnerEl) {
+            const winnerTexts = ['NONE', 'UP/YES', 'DOWN/NO'];
+            winnerEl.textContent = winnerTexts[marketData.winner] || 'UNKNOWN';
+        }
+    }
+}
+
+let volumeEventSource = null;
+let cycleEventSource = null;
+
+// Connect to SSE volume stream
+function connectVolumeStream() {
+    if (volumeEventSource) {
+        volumeEventSource.close();
+    }
+
+    // console.log('Connecting to volume stream...');
+    volumeEventSource = new EventSource('/api/volume-stream');
+
+    volumeEventSource.onopen = () => {
+        // console.log('✅ Volume stream connected');
+    };
+
+    volumeEventSource.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (data) {
+                updateVolumeDisplay(data);
+            }
+        } catch (err) {
+            console.error('Failed to parse volume data:', err);
+        }
+    };
+
+    volumeEventSource.onerror = (error) => {
+        console.error('Volume stream error, reconnecting in 5s...');
+        volumeEventSource.close();
+        setTimeout(connectVolumeStream, 5000);
+    };
+}
+
+function updateVolumeDisplay(volumeData) {
+    // console.log('[Volume SSE] Update:', volumeData);
+
+    // Update volume chart if it exists
+    if (typeof updateVolumeChart === 'function') {
+        updateVolumeChart(volumeData);
+    }
+}
+
+// Connect to SSE cycle status stream
+function connectCycleStream() {
+    if (cycleEventSource) {
+        // console.log('[Cycle Stream] Closing existing connection');
+        cycleEventSource.close();
+    }
+
+    // console.log('[Cycle Stream] Connecting to /api/cycle-stream...');
+    cycleEventSource = new EventSource('/api/cycle-stream');
+
+    cycleEventSource.onopen = () => {
+        // console.log('[Cycle Stream] ✅ Connected successfully');
+    };
+
+    cycleEventSource.onmessage = (event) => {
+        // console.log('[Cycle Stream] 📩 Received message:', event.data);
+        try {
+            const data = JSON.parse(event.data);
+            // console.log('[Cycle Stream] 📦 Parsed data:', data);
+            if (data) {
+                // console.log('[Cycle Stream] 🔄 Calling updateCycleDisplay with state:', data.state);
+                updateCycleDisplay(data);
+            } else {
+                // console.warn('[Cycle Stream] ⚠️ Received null/undefined data');
+            }
+        } catch (err) {
+            // console.error('[Cycle Stream] ❌ Failed to parse cycle data:', err);
+            // console.error('[Cycle Stream] Raw event data:', event.data);
+        }
+    };
+
+    cycleEventSource.onerror = (error) => {
+        // console.error('[Cycle Stream] ❌ Stream error:', error);
+        // console.error('[Cycle Stream] ReadyState:', cycleEventSource.readyState);
+        // console.error('[Cycle Stream] Reconnecting in 5s...');
+        cycleEventSource.close();
+        setTimeout(connectCycleStream, 5000);
+    };
+}
+
+// Fallback: Fetch current price (for initial load before SSE connects)
 async function fetchOracleData() {
     try {
-        const oracleKey = new solanaWeb3.PublicKey(CONFIG.ORACLE_STATE);
-        const accountInfo = await connection.getAccountInfo(oracleKey);
+        const response = await fetch('/api/current-price');
+        if (!response.ok) return;
 
-        if (!accountInfo) {
-            console.error('Oracle account not found');
-            return;
+        const data = await response.json();
+        if (data.price) {
+            updatePriceDisplay(data.price);
         }
-
-        const d = accountInfo.data;
-        if (d.length < 8 + 32 + 48*3 + 2) {
-            console.error('Oracle data invalid');
-            return;
-        }
-
-        let o = 8; // Skip discriminator
-        o += 32; // Skip update_authority
-
-        // Read triplet
-        const readI64 = () => {
-            const v = d.readBigInt64LE(o);
-            o += 8;
-            return v;
-        };
-
-        const p1 = readI64();
-        const p2 = readI64();
-        const p3 = readI64();
-        const t1 = readI64();
-        const t2 = readI64();
-        const t3 = readI64();
-
-        o += 96; // Skip ETH + SOL
-        const decimals = d.readUInt8(o);
-
-        // Calculate median
-        const median3 = (a, b, c) => {
-            const arr = [a, b, c].sort((x, y) => (x < y ? -1 : (x > y ? 1 : 0)));
-            return arr[1];
-        };
-
-        const priceRaw = median3(p1, p2, p3);
-        const scale = 10n ** BigInt(decimals);
-        const price_e6 = (priceRaw * 1_000_000n) / scale;
-
-        const maxTs = [t1, t2, t3].reduce((a, b) => a > b ? a : b);
-        const age = Math.floor(Date.now() / 1000) - Number(maxTs);
-
-        // Display current BTC price
-        const btcPrice = Number(price_e6) / 1_000_000; // Numeric value for chart
-        const priceFormatted = '$' + btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-        if (document.getElementById('oracleCurrentPrice')) {
-            document.getElementById('oracleCurrentPrice').textContent = priceFormatted;
-        }
-        if (document.getElementById('tickerPrice')) {
-            document.getElementById('tickerPrice').textContent = priceFormatted;
-        }
-
-        // Update BTC chart with numeric price
-        updateBTCChart(btcPrice);
-
-        // Update winning indicator
-        // TODO: updateWinningIndicator(btcPrice); // Function not implemented yet
-
-        // Display age
-        const ageText = age < 60 ? `${age}s ago` : `${Math.floor(age / 60)}m ago`;
-        if (document.getElementById('oracleAge')) {
-            document.getElementById('oracleAge').textContent = ageText;
-            document.getElementById('oracleAge').style.color = age > 90 ? '#ff4757' : (age > 30 ? '#ffa502' : '#778ca3');
-        }
-
     } catch (err) {
         console.error('Oracle fetch failed:', err);
     }
@@ -1803,12 +2124,17 @@ function readU16LE(buf, off) {
     return buf.readUInt16LE(off);
 }
 
+function readU64LE(buf, off) {
+    return Number(buf.readBigUInt64LE(off));
+}
+
 async function fetchMarketData() {
     try {
+        console.log('[fetchMarketData] Fetching account:', ammPda ? ammPda.toString() : 'NULL');
         const accountInfo = await connection.getAccountInfo(ammPda);
 
         if (!accountInfo) {
-            console.error('No market found');
+            console.error('No market found at:', ammPda ? ammPda.toString() : 'NULL');
             return;
         }
 
@@ -1839,9 +2165,32 @@ async function fetchMarketData() {
         o += 32; // Skip fee_dest pubkey
         const vaultSolBump = readU8(p, o); o += 1;
         const startPriceE6 = readI64LE(p, o); o += 8;
+        const startTs = readI64LE(p, o); o += 8;
+        const settlePriceE6 = readI64LE(p, o); o += 8;
+       const settleTs = readI64LE(p, o); o += 8;
+       const marketEndSlot = readU64LE(p, o); o += 8;
+       const marketEndTime = readI64LE(p, o); o += 8;  // Unix timestamp in seconds
+
+        // Store market end slot + lockout start
+        updateMarketEndSlot(marketEndSlot);
+
+        // Store market end time (convert seconds to milliseconds)
+        currentMarketEndTime = marketEndTime > 0 ? marketEndTime * 1000 : 0;
+
+        // Log market timing info
+        if (currentMarketEndTime > 0) {
+            const lockoutStartTime = currentMarketEndTime - (TRADING_LOCKOUT_SECONDS * 1000);
+            console.log('[fetchMarketData] Market Timing Configuration:');
+            console.log(`  Market End Time: ${new Date(currentMarketEndTime).toLocaleString()}`);
+            console.log(`  Lockout Start: ${new Date(lockoutStartTime).toLocaleString()}`);
+            console.log(`  Trading locks ${TRADING_LOCKOUT_SECONDS} seconds before market end`);
+        }
 
         // Store start price for arrow indicator
         marketStartPrice = startPriceE6 > 0 ? startPriceE6 / 1_000_000 : null;
+
+        console.log('[fetchMarketData] Start price E6:', startPriceE6, '→ USD:', marketStartPrice);
+        console.log('[fetchMarketData] Market end slot:', marketEndSlot);
 
         // Update "Price to Beat" display
         const beatPriceEl = document.getElementById('chartBeatPrice');
@@ -1852,8 +2201,10 @@ async function fetchMarketData() {
                     maximumFractionDigits: 2
                 });
                 beatPriceEl.textContent = `$${formattedPrice}`;
+                console.log('[fetchMarketData] ✅ Updated beatPrice display to:', formattedPrice);
             } else {
                 beatPriceEl.textContent = '--';
+                console.log('[fetchMarketData] ⚠️ No start price yet, showing --');
             }
         }
 
@@ -1861,6 +2212,7 @@ async function fetchMarketData() {
         currentB = bScaled;
         currentQYes = qY;
         currentQNo = qN;
+        currentVaultE6 = vault;
 
         // Calculate YES/NO probabilities using LMSR
         const b = bScaled;
@@ -1985,6 +2337,7 @@ let currentNoPrice = 0.50;
 let currentB = 0;
 let currentQYes = 0;
 let currentQNo = 0;
+let currentVaultE6 = 0; // AMM vault balance for covering sells
 
 // Calculate LMSR cost function
 // Returns the cost value C(q_yes, q_no) where q values are in shares (NOT e6)
@@ -2048,6 +2401,141 @@ function calculateLMSRCost(side, numShares) {
     }
 
     return netCost;
+}
+
+// Simulate Rust binary search: given desired shares, find the spend amount that will produce those shares
+/**
+ * Calculate proceeds from selling shares (matches Rust lmsr_sell_yes/lmsr_sell_no)
+ * @param {string} side - 'yes' or 'no'
+ * @param {number} numShares - Number of shares to sell
+ * @returns {number} Net proceeds in XNT after fees
+ */
+function calculateSellProceeds(side, numShares) {
+    if (numShares <= 0 || currentB === 0) {
+        const price = side === 'yes' ? currentYesPrice : currentNoPrice;
+        return numShares * price;
+    }
+
+    // Convert to e6 scale (shares in contract are stored as e6)
+    const sharesE6 = numShares * 10_000_000;
+
+    // Get current quantities in shares
+    const qYesShares = currentQYes / 10_000_000;
+    const qNoShares = currentQNo / 10_000_000;
+
+    // Limit sell to available liquidity
+    const maxSellE6 = side === 'yes' ? currentQYes : currentQNo;
+    const sellE6 = Math.min(sharesE6, maxSellE6);
+    const sellShares = sellE6 / 10_000_000;
+
+    if (sellShares <= 0) return 0;
+
+    // Calculate cost difference (matches Rust lmsr_sell_yes/lmsr_sell_no)
+    let pre, post;
+    if (side === 'yes') {
+        pre = lmsrCost(qYesShares, qNoShares);
+        post = lmsrCost(qYesShares - sellShares, qNoShares);
+    } else {
+        pre = lmsrCost(qYesShares, qNoShares);
+        post = lmsrCost(qYesShares, qNoShares - sellShares);
+    }
+
+    let grossH = pre - post;
+    if (!isFinite(grossH) || grossH < 0) grossH = 0;
+
+    // Apply fee (same calculation as Rust)
+    const feeH = (grossH * currentFeeBps) / 10_000;
+    const netH = grossH - feeH;
+
+    console.log(`[calculateSellProceeds] side=${side}, shares=${numShares}`);
+    console.log(`  LMSR: pre=${pre.toFixed(6)}, post=${post.toFixed(6)}, gross=${grossH.toFixed(6)}`);
+    console.log(`  Fee: ${feeH.toFixed(6)} (${currentFeeBps}bps), Net: ${netH.toFixed(6)}`);
+
+    return Math.max(0, netH);
+}
+
+// This matches the Rust lmsr_buy_yes/lmsr_buy_no logic exactly
+function calculateSpendForShares(side, desiredShares) {
+    if (desiredShares <= 0 || currentB === 0) {
+        return desiredShares * (side === 'yes' ? currentYesPrice : currentNoPrice);
+    }
+
+    const qYesShares = currentQYes / 10_000_000;
+    const qNoShares = currentQNo / 10_000_000;
+    const bShares = currentB / 10_000_000;
+
+    // Calculate current probability (matches Rust lmsr_p_yes)
+    const base = lmsrCost(qYesShares, qNoShares);
+    const p_yes = 1.0 / (1.0 + Math.exp((qNoShares - qYesShares) / bShares));
+    const p = side === 'yes' ? Math.max(p_yes, 1e-9) : Math.max(1.0 - p_yes, 1e-9);
+
+    // Binary search to find spend amount that produces desired shares
+    // We're inverting: Rust does spend→shares, we need shares→spend
+    let lo = 0;
+    let hi = desiredShares * p * 2.0; // Initial guess for spend (with margin)
+
+    for (let iter = 0; iter < 32; iter++) {
+        const mid = 0.5 * (lo + hi);
+
+        // Simulate what Rust does: given spend 'mid', how many shares would we get?
+        const feeRate = currentFeeBps / 10000;
+        const netSpend = mid * (1 - feeRate);
+
+        // Rust binary search for shares given netSpend
+        const rustShares = simulateRustBinarySearch(side, netSpend, qYesShares, qNoShares, bShares);
+
+        const diff = rustShares - desiredShares;
+        if (Math.abs(diff) <= 0.001) { // 0.001 shares tolerance
+            return mid;
+        }
+
+        if (diff < 0) {
+            lo = mid; // Got fewer shares, need more spend
+        } else {
+            hi = mid; // Got more shares, need less spend
+        }
+    }
+
+    return 0.5 * (lo + hi);
+}
+
+// Simulate Rust's binary search: given net spend, calculate shares using Rust's algorithm
+function simulateRustBinarySearch(side, netSpend, qYesShares, qNoShares, bShares) {
+    const base = lmsrCost(qYesShares, qNoShares);
+
+    // Rust initial high estimate (matches Rust lines 1238, 1270)
+    const p_yes = 1.0 / (1.0 + Math.exp((qNoShares - qYesShares) / bShares));
+    const p = side === 'yes' ? Math.max(p_yes, 1e-9) : Math.max(1.0 - p_yes, 1e-9);
+    let hi = Math.min(netSpend / p, bShares * 5.0);
+    if (hi < 1.0) hi = 1.0;
+    let lo = 0.0;
+
+    // Rust binary search (matches Rust lines 1241-1247)
+    for (let i = 0; i < 32; i++) {
+        const mid = 0.5 * (lo + hi);
+
+        let val;
+        if (side === 'yes') {
+            val = lmsrCost(qYesShares + mid, qNoShares) - base;
+        } else {
+            val = lmsrCost(qYesShares, qNoShares + mid) - base;
+        }
+
+        const diff = val - netSpend;
+        if (Math.abs(diff) <= 1e-9) {
+            lo = mid;
+            hi = mid;
+            break;
+        }
+
+        if (diff < 0) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+
+    return 0.5 * (lo + hi);
 }
 
 // Helper function to get current position shares without updating display
@@ -2175,6 +2663,41 @@ let currentMarketStatus = 0;
 let currentWinningSide = null; // 'yes' or 'no'
 let currentSnapshotPrice = null;
 let currentPayoutPerShare = 0; // Actual payout per winning share (in XNT)
+let currentMarketEndSlot = 0; // Slot when market ends (0 = not set) - DEPRECATED
+let currentMarketEndTime = 0; // Unix timestamp in milliseconds when market ends (0 = not set)
+let lastCalculatedMarketEndTime = 0; // Track when we last calculated end slot
+const TRADING_LOCKOUT_SLOTS = 90; // Must match Rust program constant - DEPRECATED
+const TRADING_LOCKOUT_SECONDS = 30; // Must match Rust program constant (30 seconds)
+
+// Check if trading is locked (30 seconds before market end using time-based check)
+async function isTradingLocked() {
+    if (currentMarketEndTime === 0) {
+        console.log('[isTradingLocked] Market end time not set, allowing trade');
+        return false; // Market end not set, trading allowed
+    }
+
+    try {
+        const now = Date.now(); // Current time in milliseconds
+        const lockoutStartTime = currentMarketEndTime - (TRADING_LOCKOUT_SECONDS * 1000); // 30 seconds before end
+        const timeUntilEnd = Math.max(0, currentMarketEndTime - now) / 1000; // seconds
+        const timeUntilLockout = Math.max(0, lockoutStartTime - now) / 1000; // seconds
+        const isLocked = now >= lockoutStartTime;
+
+        console.log(`[Trading Lockout Check]`);
+        console.log(`  Market start: ${new Date(currentMarketEndTime - (10 * 60 * 1000)).toLocaleTimeString()}`);
+        console.log(`  Market end: ${new Date(currentMarketEndTime).toLocaleTimeString()}`);
+        console.log(`  Lockout starts: ${new Date(lockoutStartTime).toLocaleTimeString()}`);
+        console.log(`  Current time: ${new Date(now).toLocaleTimeString()}`);
+        console.log(`  Time until lockout: ${timeUntilLockout.toFixed(1)}s`);
+        console.log(`  Time until market end: ${timeUntilEnd.toFixed(1)}s`);
+        console.log(`  🔒 Locked: ${isLocked ? 'YES' : 'NO'}`);
+
+        return isLocked;
+    } catch (err) {
+        console.error('Error checking trading lockout:', err);
+        return false; // On error, allow trading
+    }
+}
 
 function updateRedeemableBalance(sharesYes, sharesNo) {
     const redeemableSectionSidebar = document.getElementById('redeemableSectionSidebar');
@@ -2241,19 +2764,25 @@ function updateRedeemableBalance(sharesYes, sharesNo) {
         document.getElementById('redeemableAmount').textContent = totalText;
     }
 
-    // Create breakdown text
-    const yesPayoutStr = (currentMarketStatus === 2 && currentWinningSide === 'yes') ? payoutPerWinningShare.toFixed(4) : '0.00';
-    const noPayoutStr = (currentMarketStatus === 2 && currentWinningSide === 'no') ? payoutPerWinningShare.toFixed(4) : '0.00';
-    const yesLine = `UP: ${sharesYes.toFixed(2)} × ${yesPayoutStr} = ${yesValue.toFixed(2)}`;
-    const noLine = `DOWN: ${sharesNo.toFixed(2)} × ${noPayoutStr} = ${noValue.toFixed(2)}`;
+    // Create breakdown text - only show winning side
+    let breakdownLine = '';
+    if (currentMarketStatus === 2 && currentWinningSide) {
+        if (currentWinningSide === 'yes') {
+            breakdownLine = `${sharesYes.toFixed(2)} shares × ${payoutPerWinningShare.toFixed(4)} = ${yesValue.toFixed(2)} XNT`;
+        } else {
+            breakdownLine = `${sharesNo.toFixed(2)} shares × ${payoutPerWinningShare.toFixed(4)} = ${noValue.toFixed(2)} XNT`;
+        }
+    } else {
+        breakdownLine = 'Market not settled';
+    }
 
     // Update sidebar breakdown
     if (document.getElementById('redeemableBreakdownSidebar')) {
-        document.getElementById('redeemableBreakdownSidebar').innerHTML = `${yesLine}<br>${noLine}`;
+        document.getElementById('redeemableBreakdownSidebar').innerHTML = breakdownLine;
     }
     // Update main breakdown (for proto1)
     if (document.getElementById('redeemableBreakdown')) {
-        document.getElementById('redeemableBreakdown').innerHTML = `${yesLine}<br>${noLine}`;
+        document.getElementById('redeemableBreakdown').innerHTML = breakdownLine;
     }
 }
 
@@ -2449,10 +2978,18 @@ function showToast(type, title, message) {
 }
 
 async function executeTrade() {
-    // Check if market is open
-    if (currentMarketStatus !== 0) {
-        addLog('ERROR: Market is not open for trading', 'error');
+    // Check if market is open (status 0 = Premarket, 1 = Open, 2 = Stopped)
+    // Trading is allowed in both Premarket (0) and Open (1) states
+    if (currentMarketStatus !== 0 && currentMarketStatus !== 1) {
+        addLog('ERROR: Market is not open for trading (status: ' + currentMarketStatus + ')', 'error');
         showError('Market closed');
+        return;
+    }
+
+    // Check if trading is locked (90 slots before market end)
+    if (await isTradingLocked()) {
+        addLog('ERROR: Trading is locked - market is closing soon', 'error');
+        showToast('error', '🔒 Trading Locked', 'Market is closing soon. Trading locked to prevent last-second manipulation.');
         return;
     }
 
@@ -2480,43 +3017,51 @@ async function executeTrade() {
     let estimatedCost;
 
     if (action === 'buy') {
-        // Use LMSR formula to calculate exact cost for numShares
-        const netCost = calculateLMSRCost(side, numShares);
+        // NEW: For BUY, send SHARES (not spend) - on-chain will calculate exact cost
+        console.log(`[BUY CALCULATION DEBUG] Buying exact shares: ${numShares}`);
+        console.log(`[BUY CALCULATION DEBUG] Current B (e6): ${currentB} → ${(currentB/10_000_000).toFixed(2)} shares`);
+        console.log(`[BUY CALCULATION DEBUG] Current Q_YES (e6): ${currentQYes} → ${(currentQYes/10_000_000).toFixed(2)} shares`);
+        console.log(`[BUY CALCULATION DEBUG] Current Q_NO (e6): ${currentQNo} → ${(currentQNo/10_000_000).toFixed(2)} shares`);
 
-        // Check if calculation returned a valid number
-        if (!isFinite(netCost) || netCost <= 0) {
-            addLog(`ERROR: Invalid cost calculation: ${netCost}`, 'error');
-            showError('Cannot calculate trade cost - market parameters may be invalid');
+        // Convert shares to e6 units (amount now represents SHARES, not spend!)
+        amount_e6 = Math.floor(numShares * 10_000_000);
+
+        // Estimate cost for display purposes only (on-chain does exact calculation)
+        estimatedCost = calculateSpendForShares(side, numShares);
+
+        console.log(`[BUY CALCULATION DEBUG] Shares to buy (e6): ${amount_e6}`);
+        console.log(`[BUY CALCULATION DEBUG] Estimated cost: ${estimatedCost.toFixed(6)} XNT (on-chain will calculate exact)`);
+
+        // Validate against contract limits (shares now, not spend)
+        const MAX_SHARES_E6 = 50_000_000_000; // 50k shares max
+        const MIN_SHARES_E6 = 100_000; // 0.1 shares min
+
+        if (amount_e6 > MAX_SHARES_E6) {
+            addLog(`ERROR: Share amount ${amount_e6} exceeds max ${MAX_SHARES_E6}`, 'error');
+            showError(`Trade too large (max 50k shares)`);
+            return;
+        }
+        if (amount_e6 < MIN_SHARES_E6) {
+            addLog(`ERROR: Share amount ${amount_e6} below min ${MIN_SHARES_E6}`, 'error');
+            showError(`Trade too small (min 0.1 shares)`);
             return;
         }
 
-        // Account for fees: grossAmount = netAmount / (1 - fee)
-        const feeMultiplier = 1 - (currentFeeBps / 10000);
-        estimatedCost = netCost / feeMultiplier; // Gross amount including fees
-        // Convert to e6 units: 1 XNT = 10_000_000 e6 (due to LAMPORTS_PER_E6 = 100)
-        amount_e6 = Math.floor(estimatedCost * 10_000_000);
-
-        // Validate against contract limits (from CLAUDE.md)
-        const MAX_SPEND_E6 = 50_000_000_000; // $50k max
-        const MIN_BUY_E6 = 100_000; // $0.10 min
-
-        if (amount_e6 > MAX_SPEND_E6) {
-            addLog(`ERROR: Trade amount ${amount_e6} exceeds max ${MAX_SPEND_E6}`, 'error');
-            showError(`Trade too large (max $50k)`);
-            return;
-        }
-        if (amount_e6 < MIN_BUY_E6) {
-            addLog(`ERROR: Trade amount ${amount_e6} below min ${MIN_BUY_E6}`, 'error');
-            showError(`Trade too small (min $0.10)`);
-            return;
-        }
-
-        // Check if user has sufficient balance
+        // Check if user has sufficient balance IN VAULT (not session wallet)
         const currentBalance = window.walletBalance || 0;
+        console.log(`[BUY CALCULATION DEBUG] User vault balance: ${currentBalance.toFixed(6)} XNT`);
+        console.log(`[BUY CALCULATION DEBUG] Required (with slippage): ${estimatedCost.toFixed(6)} XNT`);
+
         if (estimatedCost > currentBalance) {
             const shortfall = estimatedCost - currentBalance;
-            addLog(`ERROR: Insufficient balance. Need ${estimatedCost.toFixed(4)} XNT, have ${currentBalance.toFixed(4)} XNT (short ${shortfall.toFixed(4)} XNT)`, 'error');
-            showError(`Insufficient balance: need ${estimatedCost.toFixed(2)} XNT, have ${currentBalance.toFixed(2)} XNT`);
+            addLog(`ERROR: Insufficient VAULT balance. Need ${estimatedCost.toFixed(4)} XNT in vault, have ${currentBalance.toFixed(4)} XNT (short ${shortfall.toFixed(4)} XNT)`, 'error');
+            addLog(`💡 TIP: Use the DEPOSIT button to transfer XNT from your Backpack wallet to your trading vault`, 'info');
+            showError(`Insufficient vault: need ${estimatedCost.toFixed(2)} XNT, have ${currentBalance.toFixed(2)} XNT. Click DEPOSIT.`);
+            showToast(
+                'error',
+                '🚫 Not Enough Funds',
+                `Need ${estimatedCost.toFixed(2)} XNT in vault, have ${currentBalance.toFixed(2)} XNT. Use DEPOSIT to add funds.`
+            );
             return;
         }
 
@@ -2525,7 +3070,24 @@ async function executeTrade() {
         // For selling, pass number of shares
         // 1 share = 10_000_000 e6 units (LAMPORTS scale matching contract)
         amount_e6 = Math.floor(numShares * 10_000_000);
-        estimatedCost = numShares * sharePrice;
+
+        // Calculate expected proceeds using LMSR formula
+        const expectedProceeds = calculateSellProceeds(side, numShares);
+        const expectedProceedsE6 = Math.floor(expectedProceeds * 10_000_000);
+
+        console.log(`[SELL VALIDATION]`);
+        console.log(`  Selling: ${numShares} ${side.toUpperCase()} shares`);
+        console.log(`  Expected proceeds: ${expectedProceeds.toFixed(6)} XNT (${expectedProceedsE6} e6)`);
+        console.log(`  Vault balance: ${(currentVaultE6/10_000_000).toFixed(6)} XNT (${currentVaultE6} e6)`);
+        console.log(`  Current Q_YES: ${(currentQYes/10_000_000).toFixed(2)}, Q_NO: ${(currentQNo/10_000_000).toFixed(2)}`);
+        console.log(`  Current B: ${(currentB/10_000_000).toFixed(2)}`);
+
+        // Removed preflight vault coverage check - let the on-chain program handle it
+        // This allows sells to proceed and get proper error messages from the contract
+
+        estimatedCost = expectedProceeds;
+
+        console.log(`[SELL] Proceeding with transaction (on-chain validation will check vault coverage)`);
     }
 
     const tradeDesc = `${action.toUpperCase()} ${numShares} ${side.toUpperCase()} shares (~${estimatedCost.toFixed(2)} XNT)`;
@@ -2566,6 +3128,11 @@ async function executeTrade() {
         const view = new DataView(amountBuf.buffer);
         view.setBigInt64(0, BigInt(amount_e6), true); // true = little endian
 
+        console.log(`[TRANSACTION DATA]`);
+        console.log(`  Side: ${side} (${sideNum}), Action: ${action} (${actionNum})`);
+        console.log(`  Amount e6: ${amount_e6} → ${(amount_e6/10_000_000).toFixed(6)} XNT`);
+        console.log(`  Amount BigInt: ${BigInt(amount_e6)}`);
+
         const data = concatUint8Arrays(
             discriminator,
             new Uint8Array([sideNum]),
@@ -2575,12 +3142,20 @@ async function executeTrade() {
 
         const feeDest = await getFeeDest();
 
+        // Calculate user_vault PDA
+        const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('user_vault'), posPda.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
         const keys = [
             { pubkey: ammPda, isSigner: false, isWritable: true },
             { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
             { pubkey: posPda, isSigner: false, isWritable: true },
+            { pubkey: userVaultPda, isSigner: false, isWritable: true },  // user_vault PDA
             { pubkey: feeDest, isSigner: false, isWritable: true },
             { pubkey: vaultPda, isSigner: false, isWritable: true },
+            { pubkey: new solanaWeb3.PublicKey(CONFIG.ORACLE_STATE), isSigner: false, isWritable: false },  // oracle_state for timestamp
             { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
             { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
         ];
@@ -2593,7 +3168,7 @@ async function executeTrade() {
 
         const budgetIxs = createComputeBudgetInstructions();
         const transaction = new solanaWeb3.Transaction().add(...budgetIxs, instruction);
-        transaction.feePayer = wallet.publicKey;  // Session wallet pays fees (has 0.01 XNT reserve)
+        transaction.feePayer = wallet.publicKey;  // Session wallet pays fees (has 1.01 XNT reserve)
         transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         transaction.sign(wallet);
 
@@ -2643,6 +3218,9 @@ async function executeTrade() {
             const toastTitle = `${actionText} ${sideText} Success`;
             const toastMessage = `${numShares.toFixed(2)} shares @ $${sharePrice.toFixed(4)}`;
             showToast('success', toastTitle, toastMessage);
+
+            // Volume is updated by trade_monitor.js (reads from on-chain logs)
+            // Don't update here to avoid double-counting
         }
 
         // Update last trade info
@@ -2692,6 +3270,173 @@ async function executeTrade() {
         showToast('error', `${actionText} ${sideText} Issue`, shortError);
 
         console.error('ERROR: Trade failed:', err);
+    }
+}
+
+// Open close position modal with estimates (called by button click)
+async function closePosition() {
+    console.log('[CLOSE POSITION MODAL] Opening confirmation modal...');
+
+    // Check if market is open
+    if (currentMarketStatus !== 0 && currentMarketStatus !== 1) {
+        addLog('ERROR: Market is not open for trading (status: ' + currentMarketStatus + ')', 'error');
+        showError('Market closed');
+        return;
+    }
+
+    // Check if trading is locked (90 slots before market end)
+    if (await isTradingLocked()) {
+        addLog('ERROR: Trading is locked - market is closing soon', 'error');
+        showToast('error', '🔒 Trading Locked', 'Market is closing soon. Trading locked to prevent last-second manipulation.');
+        return;
+    }
+
+    if (!wallet) {
+        addLog('ERROR: No wallet connected', 'error');
+        showError('No wallet');
+        return;
+    }
+
+    // Get current positions
+    const yesSharesE6 = parseFloat(document.getElementById('posYesDisplay').textContent.replace(/[^\d.-]/g, '')) || 0;
+    const noSharesE6 = parseFloat(document.getElementById('posNoDisplay').textContent.replace(/[^\d.-]/g, '')) || 0;
+
+    console.log('[CLOSE POSITION MODAL] Current positions - YES:', yesSharesE6, 'NO:', noSharesE6);
+
+    if (yesSharesE6 === 0 && noSharesE6 === 0) {
+        addLog('ERROR: No positions to close', 'error');
+        showError('No positions');
+        return;
+    }
+
+    // Calculate estimated proceeds
+    let estimatedProceeds = 0;
+
+    // Estimate YES shares sell proceeds
+    if (yesSharesE6 > 0) {
+        const yesSharesCount = yesSharesE6;
+        const yesProceeds = calculateSellProceeds('yes', yesSharesCount);
+        estimatedProceeds += yesProceeds;
+        console.log('[CLOSE POSITION MODAL] YES estimated proceeds:', yesProceeds.toFixed(6), 'XNT');
+    }
+
+    // Estimate NO shares sell proceeds
+    if (noSharesE6 > 0) {
+        const noSharesCount = noSharesE6;
+        const noProceeds = calculateSellProceeds('no', noSharesCount);
+        estimatedProceeds += noProceeds;
+        console.log('[CLOSE POSITION MODAL] NO estimated proceeds:', noProceeds.toFixed(6), 'XNT');
+    }
+
+    console.log('[CLOSE POSITION MODAL] Total estimated proceeds:', estimatedProceeds.toFixed(6), 'XNT');
+
+    // Update modal content
+    document.getElementById('closeYesShares').textContent = yesSharesE6.toFixed(2);
+    document.getElementById('closeNoShares').textContent = noSharesE6.toFixed(2);
+    document.getElementById('closeEstimatedProceeds').textContent = '~' + estimatedProceeds.toFixed(4) + ' XNT';
+
+    // Show modal
+    document.getElementById('closePositionModal').classList.remove('hidden');
+}
+
+// Close the close position modal
+function closeClosePositionModal() {
+    document.getElementById('closePositionModal').classList.add('hidden');
+}
+
+// Execute close position (called from modal confirm button)
+async function executeClosePosition() {
+    console.log('[CLOSE POSITION] Executing position closure...');
+
+    // Close modal immediately
+    closeClosePositionModal();
+
+    try {
+        addLog('🔒 Closing all positions...', 'info');
+        console.log('[CLOSE POSITION] Building transaction...');
+
+        // Derive PDAs
+        const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('user_vault'), posPda.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const feeDest = await getFeeDest();
+
+        console.log('[CLOSE POSITION] AMM PDA:', ammPda.toString());
+        console.log('[CLOSE POSITION] Position PDA:', posPda.toString());
+        console.log('[CLOSE POSITION] User Vault PDA:', userVaultPda.toString());
+        console.log('[CLOSE POSITION] Vault SOL PDA:', vaultPda.toString());
+
+        // Build close_position instruction
+        const discriminator = await createDiscriminator('close_position');
+        const oraclePk = new solanaWeb3.PublicKey(CONFIG.ORACLE_STATE);
+
+        const keys = [
+            { pubkey: ammPda, isSigner: false, isWritable: true },
+            { pubkey: wallet.publicKey, isSigner: true, isWritable: false },
+            { pubkey: posPda, isSigner: false, isWritable: true },
+            { pubkey: userVaultPda, isSigner: false, isWritable: true },
+            { pubkey: feeDest, isSigner: false, isWritable: true },
+            { pubkey: vaultPda, isSigner: false, isWritable: true },
+            { pubkey: oraclePk, isSigner: false, isWritable: false },  // Oracle for lockout check
+            { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+            { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false }
+        ];
+
+        const instruction = new solanaWeb3.TransactionInstruction({
+            programId: new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID),
+            keys,
+            data: discriminator  // No additional data needed
+        });
+
+        const budgetIxs = createComputeBudgetInstructions();
+        const transaction = new solanaWeb3.Transaction().add(...budgetIxs, instruction);
+        transaction.feePayer = wallet.publicKey;
+        transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        transaction.sign(wallet);
+
+        console.log('[CLOSE POSITION] Submitting transaction...');
+        addLog('Submitting transaction...', 'tx');
+
+        const signature = await connection.sendRawTransaction(transaction.serialize(), {
+            skipPreflight: false,
+            maxRetries: 3
+        });
+        addLog('TX: ' + signature, 'tx');
+
+        addLog('Confirming transaction...', 'info');
+        console.log('[CLOSE POSITION] Waiting for confirmation...');
+
+        await connection.confirmTransaction(signature, 'confirmed');
+
+        addLog('✅ Position closed successfully!', 'success');
+        console.log('[CLOSE POSITION] Position closed successfully! TX:', signature);
+
+        showToast('success', '🔒 Position Closed', `All shares sold. TX: ${signature.substring(0, 8)}...`);
+
+        // Refresh UI data
+        setTimeout(() => {
+            fetchMarketData();
+        }, 1000);
+
+    } catch (err) {
+        console.error('[CLOSE POSITION] Error:', err);
+        addLog('ERROR: Failed to close position - ' + err.message, 'error');
+
+        let errorMsg = err.message || 'Unknown error';
+        if (err.logs) {
+            console.error('[CLOSE POSITION] Transaction logs:', err.logs);
+            errorMsg = err.logs.join(' | ');
+        }
+
+        const shortError = errorMsg.length > 60 ? errorMsg.substring(0, 60) + '...' : errorMsg;
+        showToast('error', 'Close Position Failed', shortError);
     }
 }
 
@@ -2807,6 +3552,14 @@ async function redeemWinnings() {
     }
 
     try {
+        // Capture position data BEFORE redemption
+        const balanceBefore = await connection.getBalance(wallet.publicKey);
+        const positionBefore = await getPositionShares();
+        const yesShares = positionBefore ? positionBefore.yes : 0;
+        const noShares = positionBefore ? positionBefore.no : 0;
+        const vaultBalance = positionBefore ? positionBefore.vault : 0;
+        const totalShares = yesShares + noShares;
+
         addLog('Redeeming winnings...', 'info');
         showStatus('Redeeming...');
 
@@ -2845,14 +3598,46 @@ async function redeemWinnings() {
         addLog('TX: ' + signature, 'tx');
 
         await connection.confirmTransaction(signature, 'confirmed');
-        addLog('Redeem SUCCESS! Position wiped.', 'success');
-        showStatus('Redeem success');
 
-        setTimeout(() => {
+        // Calculate profit/loss
+        setTimeout(async () => {
+            const balanceAfter = await connection.getBalance(wallet.publicKey);
+            const balanceChange = (balanceAfter - balanceBefore) / 1e9; // Convert lamports to SOL
+            const winningsXNT = balanceChange; // In XNT (assuming 1 SOL = 1 XNT for display)
+
+            // Determine which side won based on current winning_side
+            const winningSide = currentWinningSide; // 'yes' or 'no'
+            const winningSideText = winningSide === 'yes' ? 'UP' : 'DOWN';
+            const userWinningShares = winningSide === 'yes' ? yesShares : noShares;
+            const userLosingShares = winningSide === 'yes' ? noShares : yesShares;
+
+            if (balanceChange > 0.001) {
+                // USER WON
+                addLog(`✅ WINNER! ${userWinningShares.toFixed(2)} ${winningSideText} shares won ${winningsXNT.toFixed(4)} XNT`, 'success');
+                showToast('success', '🎉 You Won!', `${userWinningShares.toFixed(2)} ${winningSideText} shares → +${winningsXNT.toFixed(4)} XNT`);
+            } else if (balanceChange < -0.001) {
+                // USER LOST (unlikely, but handle edge cases like fees)
+                const lossAmount = Math.abs(balanceChange);
+                addLog(`❌ LOSS: ${totalShares.toFixed(2)} shares lost ${lossAmount.toFixed(4)} XNT`, 'error');
+                showToast('error', '📉 You Lost', `Lost ${lossAmount.toFixed(4)} XNT`);
+            } else {
+                // BREAK EVEN or had no winning shares
+                if (totalShares > 0.01) {
+                    addLog(`➖ Position closed. ${totalShares.toFixed(2)} shares had no value (wrong side won)`, 'info');
+                    showToast('info', '📊 Position Closed', `${userLosingShares.toFixed(2)} ${winningSide === 'yes' ? 'DOWN' : 'UP'} shares were worthless`);
+                } else {
+                    addLog('Position redeemed (no shares)', 'info');
+                    showToast('info', '✓ Redeemed', 'Position cleared');
+                }
+            }
+
+            addLog('Redeem SUCCESS! Position wiped.', 'success');
+            showStatus('Redeem success');
+
             fetchMarketData();
             fetchPositionData();
             updateWalletBalance();
-        }, 1000);
+        }, 1500);
 
     } catch (err) {
         addLog('Redeem FAILED: ' + err.message, 'error');
@@ -2934,91 +3719,60 @@ async function withdrawToBackpack() {
 
     const lamports = Math.floor(amount * solanaWeb3.LAMPORTS_PER_SOL);
 
-    // Check balance (need to leave enough for rent + transaction fees)
     try {
-        const balance = await connection.getBalance(wallet.publicKey);
-        const minFeeBuffer = 0.001 * solanaWeb3.LAMPORTS_PER_SOL; // 0.001 SOL for fee
+        // Get Position account
+        const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
 
-        if (lamports + minFeeBuffer >= balance) {
-            addLog('ERROR: Insufficient balance for withdrawal', 'error');
-            showError('Insufficient balance (need to keep ~0.001 XNT for fees)');
+        const positionAccount = await connection.getAccountInfo(posPda);
+        if (!positionAccount) {
+            addLog('ERROR: Position account not found', 'error');
+            showError('Position not initialized');
             return;
         }
 
-        // SECURITY 1: Verify withdrawal destination matches Position master_wallet
-        const destinationAddress = backpackWallet.publicKey.toString();
-
-        try {
-            // Fetch Position account to verify master_wallet
-            const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
-                [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
-                new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
-            );
-
-            const positionAccount = await connection.getAccountInfo(posPda);
-            if (!positionAccount) {
-                addLog('ERROR: Position account not found', 'error');
-                showError('Position not initialized');
-                return;
-            }
-
-            // Parse Position account (skip 8-byte discriminator)
-            // Position layout: owner(32) + yes_shares(8) + no_shares(8) + master_wallet(32)
-            const positionData = positionAccount.data;
-
-            // Check if position has master_wallet field (new format is 88 bytes: 8 + 32 + 8 + 8 + 32)
-            const expectedSize = 8 + 32 + 8 + 8 + 32; // 88 bytes
-            if (positionData.length < expectedSize) {
-                addLog(`ERROR: Position account is old format (${positionData.length} bytes, expected ${expectedSize})`, 'error');
-                addLog('MIGRATION REQUIRED: Your position needs to be upgraded', 'error');
-                addLog('', 'info');
-                addLog('To migrate to the new secure format:', 'info');
-                addLog('1. Open browser DevTools (F12)', 'info');
-                addLog('2. Go to Console tab', 'info');
-                addLog('3. Run: sessionStorage.clear(); location.reload();', 'info');
-                addLog('4. Click Connect Wallet again', 'info');
-                addLog('', 'info');
-                addLog('This will create a new session wallet with the updated security features.', 'info');
-                showError('Position format outdated. See Activity log for migration steps.');
-                return;
-            }
-
-            const masterWalletBytes = positionData.slice(8 + 32 + 8 + 8, 8 + 32 + 8 + 8 + 32);
-            const storedMasterWallet = new solanaWeb3.PublicKey(masterWalletBytes);
-
-            addLog(`Verifying withdrawal destination...`, 'info');
-            addLog(`  Destination: ${destinationAddress}`, 'info');
-            addLog(`  Master wallet: ${storedMasterWallet.toString()}`, 'info');
-
-            if (storedMasterWallet.toString() !== destinationAddress) {
-                addLog('ERROR: Withdrawal destination does not match authorized master wallet!', 'error');
-                showError('Security error: Can only withdraw to master wallet');
-                return;
-            }
-
-            addLog('✓ Destination verified: matches master wallet', 'success');
-        } catch (err) {
-            addLog('ERROR: Failed to verify master wallet: ' + err.message, 'error');
-            showError('Verification failed: ' + err.message);
+        // Check vault balance
+        const position = await fetchPositionAccount();
+        if (!position || position.vault_balance_e6 === undefined) {
+            addLog('ERROR: Could not read vault balance', 'error');
+            showError('Failed to read vault balance');
             return;
         }
 
-        // SECURITY 2: Verify Backpack wallet ownership before withdrawal
+        const vaultBalanceLamports = Math.floor((position.vault_balance_e6 / 1e7) * solanaWeb3.LAMPORTS_PER_SOL);
+
+        console.log('[withdrawToBackpack] Vault balance:', position.vault_balance_e6, 'e6 =', vaultBalanceLamports, 'lamports');
+        console.log('[withdrawToBackpack] Requested withdrawal:', lamports, 'lamports');
+
+        if (lamports > vaultBalanceLamports) {
+            addLog(`ERROR: Insufficient vault balance. Have ${(vaultBalanceLamports / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4)} XNT, need ${amount.toFixed(4)} XNT`, 'error');
+            showError('Insufficient vault balance');
+            return;
+        }
+
+        // Get user_vault PDA
+        const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('user_vault'), posPda.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        console.log('[withdrawToBackpack] Position PDA:', posPda.toString());
+        console.log('[withdrawToBackpack] User Vault PDA:', userVaultPda.toString());
+
+        // SECURITY: Verify Backpack wallet ownership before withdrawal
         addLog('Requesting Backpack signature for withdrawal verification...', 'info');
         showStatus('Please sign the verification message in Backpack wallet...');
 
         try {
-            // Create verification message
             const timestamp = Date.now();
-            const verificationMessage = `X1 Markets Withdrawal Verification\n\nWithdraw: ${amount.toFixed(4)} XNT\nTo: ${destinationAddress}\nFrom Session: ${wallet.publicKey.toString()}\nTimestamp: ${timestamp}\n\nSign to confirm you own this wallet.`;
+            const verificationMessage = `X1 Markets Withdrawal Verification\n\nWithdraw: ${amount.toFixed(4)} XNT\nTo: ${backpackWallet.publicKey.toString()}\nFrom Session: ${wallet.publicKey.toString()}\nTimestamp: ${timestamp}\n\nSign to confirm you own this wallet.`;
             const encodedMessage = new TextEncoder().encode(verificationMessage);
 
-            // Request signature from Backpack wallet
-            // The act of successfully getting a signature proves the user has access to the private key
-            const signature = await backpackWallet.signMessage(encodedMessage);
+            const verificationSignature = await backpackWallet.signMessage(encodedMessage);
 
-            // Verify we got a valid signature response
-            if (!signature || signature.length === 0) {
+            if (!verificationSignature || verificationSignature.length === 0) {
                 addLog('ERROR: Invalid signature response from Backpack', 'error');
                 showError('Security error: Invalid signature');
                 return;
@@ -3031,30 +3785,60 @@ async function withdrawToBackpack() {
             return;
         }
 
-        addLog(`Withdrawing ${amount.toFixed(4)} XNT to Backpack...`, 'info');
-        showStatus('Withdrawing ' + amount.toFixed(4) + ' XNT to Backpack...');
+        addLog(`Withdrawing ${amount.toFixed(4)} XNT from vault to Backpack...`, 'info');
+        showStatus('Withdrawing ' + amount.toFixed(4) + ' XNT from vault to Backpack...');
 
-        const transaction = new solanaWeb3.Transaction().add(
-            solanaWeb3.SystemProgram.transfer({
-                fromPubkey: wallet.publicKey,
-                toPubkey: backpackWallet.publicKey,
-                lamports: lamports
-            })
-        );
+        // Create withdraw instruction
+        const discriminator = await createDiscriminator('withdraw');
+        const amountBuffer = new ArrayBuffer(8);
+        const amountView = new DataView(amountBuffer);
+        amountView.setBigUint64(0, BigInt(lamports), true);
 
-        transaction.feePayer = wallet.publicKey;
-        const { blockhash } = await connection.getLatestBlockhash();
-        transaction.recentBlockhash = blockhash;
-        transaction.sign(wallet);
+        const data = new Uint8Array(discriminator.length + 8);
+        data.set(discriminator, 0);
+        data.set(new Uint8Array(amountBuffer), discriminator.length);
+
+        console.log('[withdrawToBackpack] Instruction data:', Array.from(data).map(b => b.toString(16).padStart(2, '0')).join(' '));
+
+        const keys = [
+            { pubkey: ammPda, isSigner: false, isWritable: false },
+            { pubkey: posPda, isSigner: false, isWritable: true },
+            { pubkey: userVaultPda, isSigner: false, isWritable: true },
+            { pubkey: wallet.publicKey, isSigner: true, isWritable: true },  // session wallet (mut in Rust)
+            { pubkey: backpackWallet.publicKey, isSigner: true, isWritable: true },  // master wallet receives
+            { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+        ];
+
+        const withdrawIx = new solanaWeb3.TransactionInstruction({
+            keys,
+            programId: new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID),
+            data,
+        });
+
+        const tx = new solanaWeb3.Transaction().add(withdrawIx);
+        tx.feePayer = backpackWallet.publicKey;  // Backpack pays transaction fees
+        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+        // Sign with session wallet first
+        tx.sign(wallet);
+
+        addLog('Requesting Backpack signature for withdrawal transaction...', 'info');
+        showStatus('Please approve withdrawal in Backpack wallet...');
+
+        // Then sign with Backpack
+        const fullySignedTx = await backpackWallet.signTransaction(tx);
 
         addLog('Submitting withdrawal transaction...', 'tx');
-        const signature = await connection.sendRawTransaction(transaction.serialize());
+        const signature = await connection.sendRawTransaction(fullySignedTx.serialize(), {
+            skipPreflight: false,
+            maxRetries: 3
+        });
         addLog('TX: ' + signature, 'tx');
 
         addLog('Confirming transaction...', 'info');
         await connection.confirmTransaction(signature, 'confirmed');
 
-        addLog(`Withdrawal SUCCESS: ${amount.toFixed(4)} XNT transferred`, 'success');
+        addLog(`Withdrawal SUCCESS: ${amount.toFixed(4)} XNT transferred from vault to Backpack`, 'success');
         showStatus('Withdrawal success! Tx: ' + signature.substring(0, 16) + '...');
 
         // Show toast notification
@@ -3062,15 +3846,23 @@ async function withdrawToBackpack() {
 
         // Clear input and update balance
         document.getElementById('withdrawAmount').value = '';
-        setTimeout(() => {
-            updateWalletBalance();
+
+        // Update balance multiple times to ensure it catches the on-chain update
+        setTimeout(async () => {
+            await updateWalletBalance();
         }, 1000);
+        setTimeout(async () => {
+            await updateWalletBalance();
+        }, 3000);
+        setTimeout(async () => {
+            await updateWalletBalance();
+        }, 6000);
 
     } catch (err) {
         addLog('Withdrawal FAILED: ' + err.message, 'error');
         showError('Withdrawal failed: ' + err.message);
         showToast('error', 'Withdrawal Failed', err.message);
-        console.error(err);
+        console.error('Withdrawal error:', err);
     }
 }
 
@@ -3183,8 +3975,8 @@ async function initPosition() {
             data: discriminator
         });
 
-        // Also fund session wallet with small amount for transaction fees (0.01 XNT)
-        const feeReserve = 0.01 * solanaWeb3.LAMPORTS_PER_SOL;
+        // Also fund session wallet with small amount for transaction fees (1.01 XNT)
+        const feeReserve = 1.01 * solanaWeb3.LAMPORTS_PER_SOL;
         const fundSessionIx = solanaWeb3.SystemProgram.transfer({
             fromPubkey: backpackWallet.publicKey,
             toPubkey: wallet.publicKey,
@@ -3202,12 +3994,12 @@ async function initPosition() {
         // Then sign with Backpack
         const signedTx = await backpackWallet.signTransaction(transaction);
 
-        addLog('Submitting init position transaction (+ funding session wallet with 0.01 XNT for fees)...', 'tx');
+        addLog('Submitting init position transaction (+ funding session wallet with 1.01 XNT for fees)...', 'tx');
         const signature = await connection.sendRawTransaction(signedTx.serialize());
         addLog('TX: ' + signature, 'tx');
 
         await connection.confirmTransaction(signature, 'confirmed');
-        addLog('Position initialized! Session wallet funded with 0.01 XNT for transaction fees.', 'success');
+        addLog('Position initialized! Session wallet funded with 1.01 XNT for transaction fees.', 'success');
         return true;
 
     } catch (err) {
@@ -3551,12 +4343,253 @@ function updateWinnerBanner(status) {
     }
 }
 
+// Play alarm sound using Web Audio API (urgent - market closing)
+function playAlarmSound() {
+    try {
+        console.log('🔊 playAlarmSound() called - creating audio context...');
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        console.log('✅ AudioContext created:', audioContext.state);
+
+        // Create a sequence of beeps (3 beeps, urgent tone)
+        const beepTimes = [0, 0.2, 0.4]; // Three beeps 200ms apart
+
+        beepTimes.forEach((time, index) => {
+            // Create oscillator for beep sound
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // High-pitched urgent beep (880 Hz = A5)
+            oscillator.frequency.value = 880;
+            oscillator.type = 'sine';
+
+            // Envelope: quick attack and decay
+            const now = audioContext.currentTime + time;
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01); // Attack
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15); // Decay
+
+            oscillator.start(now);
+            oscillator.stop(now + 0.15);
+            console.log(`🔔 Beep ${index + 1}/3 scheduled at ${now.toFixed(2)}s`);
+        });
+
+        console.log('✅ Market close alarm played successfully!');
+    } catch (err) {
+        console.error('❌ Failed to play alarm sound:', err);
+    }
+}
+
+// Expose to window for manual testing
+window.testAlarm = playAlarmSound;
+window.testNotification = async () => {
+    console.log('🧪 Testing notification...');
+    console.log('Current permission:', Notification.permission);
+    console.log('Alarm enabled:', alarmEnabled);
+    console.log('notificationPermission var:', notificationPermission);
+
+    // Request permission if needed
+    if (Notification.permission === 'default') {
+        console.log('Requesting permission...');
+        await requestNotificationPermission();
+    }
+
+    // Update our tracking variable
+    notificationPermission = Notification.permission;
+
+    // Try to show notification
+    showMarketCloseNotification(15);
+};
+
+/**
+ * Request notification permission from the user
+ * Called on page load and when alarm is first enabled
+ */
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        console.log('❌ Browser does not support notifications');
+        return 'denied';
+    }
+
+    // If already granted or denied, return current status
+    if (Notification.permission !== 'default') {
+        notificationPermission = Notification.permission;
+        console.log(`🔔 Notification permission already set: ${notificationPermission}`);
+        return notificationPermission;
+    }
+
+    // Request permission
+    try {
+        notificationPermission = await Notification.requestPermission();
+        console.log(`🔔 Notification permission requested: ${notificationPermission}`);
+        return notificationPermission;
+    } catch (err) {
+        console.error('❌ Failed to request notification permission:', err);
+        notificationPermission = 'denied';
+        return 'denied';
+    }
+}
+
+/**
+ * Show browser notification for market close warning
+ * @param {number} seconds - Seconds remaining until market close
+ */
+function showMarketCloseNotification(seconds) {
+    if (!alarmEnabled) {
+        console.log('🔕 Notification skipped (alarm disabled)');
+        return;
+    }
+
+    if (!('Notification' in window)) {
+        console.log('❌ Notifications not supported in this browser');
+        return;
+    }
+
+    if (notificationPermission !== 'granted') {
+        console.log(`🔕 Notification permission not granted (status: ${notificationPermission})`);
+        return;
+    }
+
+    try {
+        const notification = new Notification('⏰ Market Closing Soon!', {
+            body: `Market closes in ${seconds} seconds`,
+            icon: '/favicon.ico',
+            tag: 'market-close', // Replace previous notification with same tag
+            requireInteraction: false, // Don't require user to dismiss
+            silent: true // Don't play system sound (we have our own alarm)
+        });
+
+        console.log('✅ Browser notification shown');
+
+        // Auto-close notification after 8 seconds
+        setTimeout(() => {
+            notification.close();
+        }, 8000);
+    } catch (err) {
+        console.error('❌ Failed to show notification:', err);
+    }
+}
+
+// Play snapshot notification sound (gentle, informative)
+function playSnapshotSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Create a pleasant two-tone notification (like a camera shutter)
+        const notes = [
+            { freq: 523.25, time: 0, duration: 0.1 },    // C5
+            { freq: 659.25, time: 0.08, duration: 0.12 }  // E5
+        ];
+
+        notes.forEach(note => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // Smooth sine wave for pleasant tone
+            oscillator.frequency.value = note.freq;
+            oscillator.type = 'sine';
+
+            // Gentle envelope
+            const now = audioContext.currentTime + note.time;
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.2, now + 0.02); // Soft attack
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + note.duration); // Gentle decay
+
+            oscillator.start(now);
+            oscillator.stop(now + note.duration);
+        });
+
+        console.log('📸 Snapshot notification played!');
+    } catch (err) {
+        console.error('Failed to play snapshot sound:', err);
+    }
+}
+
+// Update countdown timer display (called every second for smooth countdown)
+function updateCountdownDisplay() {
+    const countdownTimer = document.getElementById('countdownTimer');
+    if (!countdownTimer || !countdownEndTime) return;
+
+    const now = new Date();
+    const remainingMs = countdownEndTime - now;
+
+    if (remainingMs > 0) {
+        // Format countdown as MM:SS
+        const minutes = Math.floor(remainingMs / 60000);
+        const seconds = Math.floor((remainingMs % 60000) / 1000);
+        const countdownText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        countdownTimer.textContent = countdownText;
+
+        // Add urgent styling if less than 1 minute
+        if (remainingMs < 60000) {
+            countdownTimer.classList.add('urgent');
+        } else {
+            countdownTimer.classList.remove('urgent');
+        }
+
+        // Play alarm at 15 seconds remaining (only once per market, if enabled)
+        // Widen window to 13-16 seconds to ensure it triggers
+        if (remainingMs <= 16000 && remainingMs > 13000 && !alarmPlayed && alarmEnabled) {
+            const secondsRemaining = Math.floor(remainingMs / 1000);
+            console.log(`🔔 Triggering alarm at ${secondsRemaining}s remaining (enabled: ${alarmEnabled})`);
+            playAlarmSound();
+            showMarketCloseNotification(secondsRemaining);
+            alarmPlayed = true;
+            console.log('⏰ 15 seconds to market close! Alarm and notification sent.');
+        }
+    } else {
+        // Countdown expired
+        countdownTimer.textContent = '0:00';
+        stopCountdownTimer();
+    }
+}
+
+// Start smooth countdown timer
+function startCountdownTimer(endTime) {
+    // Stop any existing timer
+    stopCountdownTimer();
+
+    countdownEndTime = endTime;
+
+    // Update immediately
+    updateCountdownDisplay();
+
+    // Then update every second
+    countdownUpdateInterval = setInterval(updateCountdownDisplay, 1000);
+}
+
+// Stop countdown timer
+function stopCountdownTimer() {
+    if (countdownUpdateInterval) {
+        clearInterval(countdownUpdateInterval);
+        countdownUpdateInterval = null;
+    }
+    countdownEndTime = null;
+}
+
 function updateCycleDisplay(status) {
+    console.log('[updateCycleDisplay] 🎯 Called with status:', status);
+
     const stateEl = document.getElementById('cycleState');
     const currentTimeEl = document.getElementById('currentTime');
     const nextMarketTimeEl = document.getElementById('nextMarketTime');
 
-    if (!stateEl || !currentTimeEl || !nextMarketTimeEl) return;
+    console.log('[updateCycleDisplay] 🔍 DOM elements:', {
+        stateEl: stateEl ? 'found' : 'NOT FOUND',
+        currentTimeEl: currentTimeEl ? 'found' : 'NOT FOUND',
+        nextMarketTimeEl: nextMarketTimeEl ? 'found' : 'NOT FOUND'
+    });
+
+    if (!stateEl || !currentTimeEl || !nextMarketTimeEl) {
+        console.error('[updateCycleDisplay] ❌ Missing required DOM elements!');
+        return;
+    }
 
     // Update current time clock
     const now = new Date();
@@ -3570,13 +4603,33 @@ function updateCycleDisplay(status) {
 
     // Remove all state classes
     stateEl.classList.remove('active', 'waiting', 'error', 'premarket');
+    console.log('[updateCycleDisplay] 🔄 Processing state:', status.state);
 
     // Update winner banner
     updateWinnerBanner(status);
 
     if (status.state === 'PREMARKET') {
+        console.log('[updateCycleDisplay] 📋 State: PREMARKET');
         stateEl.textContent = 'PRE-MARKET';
         stateEl.classList.add('premarket');
+        updateMarketEndSlot(0);
+
+        // Reset alarm and snapshot sound for new market
+        alarmPlayed = false;
+        snapshotSoundPlayed = false;
+
+        // Stop countdown timer
+        stopCountdownTimer();
+
+        // Hide countdown, show NEXT
+        const countdownItem = document.getElementById('countdownItem');
+        const nextMarketItem = nextMarketTimeEl.parentElement;
+        if (countdownItem) {
+            countdownItem.style.display = 'none';
+        }
+        if (nextMarketItem) {
+            nextMarketItem.style.display = 'block';
+        }
 
         // Hide the snapshot section entirely during premarket
         const snapshotSection = document.querySelector('.snapshot-section');
@@ -3590,6 +4643,7 @@ function updateCycleDisplay(status) {
             const snapshotTimeStr = snapshotTime.toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
+                second: '2-digit',
                 hour12: false
             });
             nextMarketTimeEl.textContent = `Snapshot: ${snapshotTimeStr}`;
@@ -3597,8 +4651,15 @@ function updateCycleDisplay(status) {
             nextMarketTimeEl.textContent = 'Pre-market betting';
         }
     } else if (status.state === 'ACTIVE') {
+        console.log('[updateCycleDisplay] 📋 State: ACTIVE');
         stateEl.textContent = 'MARKET ACTIVE';
         stateEl.classList.add('active');
+
+        // Play snapshot sound on transition from PREMARKET to ACTIVE (only once, if alarm enabled)
+        if (lastMarketState === 'PREMARKET' && !snapshotSoundPlayed && alarmEnabled) {
+            playSnapshotSound();
+            snapshotSoundPlayed = true;
+        }
 
         // Show the snapshot section for active markets
         const snapshotSection = document.querySelector('.snapshot-section');
@@ -3621,21 +4682,78 @@ function updateCycleDisplay(status) {
             }
         }
 
-        // Show when market ends
+        // Show countdown timer and end time
+        const countdownItem = document.getElementById('countdownItem');
+        const countdownTimer = document.getElementById('countdownTimer');
+        const nextMarketItem = nextMarketTimeEl.parentElement;
+        const nextMarketLabel = document.getElementById('nextMarketLabel');
+
         if (status.marketEndTime) {
             const endTime = new Date(status.marketEndTime);
-            const endTimeStr = endTime.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-            nextMarketTimeEl.textContent = `Closes: ${endTimeStr}`;
+            const now = new Date();
+            const remainingMs = endTime - now;
+
+            // Note: market_end_slot comes from on-chain AMM data (fetched by fetchMarketData)
+            // We don't calculate it here to avoid drift - settlement bot sets it authoritatively
+
+            // Reset alarm if market end time changed (new market started)
+            if (lastMarketEndTime !== status.marketEndTime) {
+                lastMarketEndTime = status.marketEndTime;
+                alarmPlayed = false;
+                console.log('🔄 New market detected, alarm reset');
+            }
+
+            if (remainingMs > 0) {
+                // Show countdown timer
+                if (countdownItem) {
+                    countdownItem.style.display = 'block';
+                }
+                if (nextMarketItem) {
+                    nextMarketItem.style.display = 'none';
+                }
+
+                // Start smooth countdown timer (updates every second)
+                startCountdownTimer(endTime);
+            } else {
+                // Market should have closed - hide countdown
+                stopCountdownTimer();
+                if (countdownItem) {
+                    countdownItem.style.display = 'none';
+                }
+                if (nextMarketItem) {
+                    nextMarketItem.style.display = 'block';
+                }
+                nextMarketTimeEl.textContent = 'Closing...';
+            }
         } else {
+            // No end time - hide countdown, show NEXT
+            stopCountdownTimer();
+            if (countdownItem) {
+                countdownItem.style.display = 'none';
+            }
+            if (nextMarketItem) {
+                nextMarketItem.style.display = 'block';
+            }
             nextMarketTimeEl.textContent = 'Market open';
         }
-    } else if (status.state === 'SETTLED') {
+    } else if (status.state === 'SETTLED' || status.state === 'STOPPED_SETTLED') {
+        console.log('[updateCycleDisplay] 📋 State: SETTLED/STOPPED_SETTLED');
         stateEl.textContent = 'SETTLED';
         stateEl.classList.add('settled');
+        updateMarketEndSlot(0);
+
+        // Stop countdown timer
+        stopCountdownTimer();
+
+        // Hide countdown, show NEXT
+        const countdownItem = document.getElementById('countdownItem');
+        const nextMarketItem = nextMarketTimeEl.parentElement;
+        if (countdownItem) {
+            countdownItem.style.display = 'none';
+        }
+        if (nextMarketItem) {
+            nextMarketItem.style.display = 'block';
+        }
 
         // Hide the snapshot section
         const snapshotSection = document.querySelector('.snapshot-section');
@@ -3649,8 +4767,8 @@ function updateCycleDisplay(status) {
             const now = new Date();
 
             // If the next cycle start time is in the past, calculate the next future occurrence
-            // Market cycles are 10 minutes (600000ms)
-            const CYCLE_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
+            // Market cycles are 15 minutes (900000ms)
+            const CYCLE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
             while (nextStartTime <= now) {
                 nextStartTime = new Date(nextStartTime.getTime() + CYCLE_DURATION);
             }
@@ -3665,8 +4783,10 @@ function updateCycleDisplay(status) {
             nextMarketTimeEl.textContent = 'Market settled';
         }
     } else if (status.state === 'WAITING') {
+        console.log('[updateCycleDisplay] 📋 State: WAITING');
         stateEl.textContent = 'PRE-MARKET';
         stateEl.classList.add('premarket');  // Use premarket styling (orange)
+        updateMarketEndSlot(0);
 
         // Hide the snapshot section - previous market is over, new one hasn't started
         const snapshotSection = document.querySelector('.snapshot-section');
@@ -3680,8 +4800,8 @@ function updateCycleDisplay(status) {
             const now = new Date();
 
             // If the next cycle start time is in the past, calculate the next future occurrence
-            // Market cycles are 10 minutes (600000ms)
-            const CYCLE_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
+            // Market cycles are 15 minutes (900000ms)
+            const CYCLE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
             while (nextStartTime <= now) {
                 nextStartTime = new Date(nextStartTime.getTime() + CYCLE_DURATION);
             }
@@ -3696,13 +4816,17 @@ function updateCycleDisplay(status) {
             nextMarketTimeEl.textContent = 'Pre-market betting';
         }
     } else if (status.state === 'ERROR') {
+        console.log('[updateCycleDisplay] 📋 State: ERROR');
         stateEl.textContent = 'ERROR';
         stateEl.classList.add('error');
+        updateMarketEndSlot(0);
         nextMarketTimeEl.textContent = 'Check bot';
     } else {
         // OFFLINE or unknown
+        console.log('[updateCycleDisplay] 📋 State: OFFLINE or unknown:', status.state);
         stateEl.textContent = 'OFFLINE';
         stateEl.classList.add('waiting');
+        updateMarketEndSlot(0);
         nextMarketTimeEl.textContent = 'Bot not running';
 
         // Show current snapshot price if available
@@ -3720,6 +4844,11 @@ function updateCycleDisplay(status) {
             }
         }
     }
+
+    // Track state for next update (to detect transitions)
+    lastMarketState = status.state;
+
+    console.log('[updateCycleDisplay] ✅ Display updated. Current text:', stateEl.textContent);
 }
 
 function formatCountdown(ms) {
@@ -3732,14 +4861,33 @@ function formatCountdown(ms) {
 // ============= POLLING =============
 
 function startPolling() {
-    fetchOracleData();
-    fetchMarketData();
-    fetchCycleStatus();
+    // console.log('[startPolling] 🚀 Initializing all SSE streams...');
+    // Connect to all SSE streams (replaces polling for price, market, volume, and cycle)
+    connectPriceStream();
+    connectMarketStream();
+    connectVolumeStream();
+    // console.log('[startPolling] 📅 Connecting to cycle stream...');
+    connectCycleStream();
+    // console.log('[startPolling] ✅ All SSE streams initialized');
+
+    // Update clock every second
+    setInterval(() => {
+        const currentTimeEl = document.getElementById('currentTime');
+        if (currentTimeEl) {
+            const now = new Date();
+            const currentTimeStr = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            currentTimeEl.textContent = currentTimeStr;
+        }
+    }, 1000);
 
     setInterval(() => {
-        fetchOracleData();
-        fetchMarketData();
-        fetchCycleStatus();
+        // Note: Price, market, volume, and cycle updates come via SSE
+        // Only poll wallet-specific data
         if (wallet) {
             updateWalletBalance();
             fetchPositionData();
@@ -3882,15 +5030,50 @@ function updateTradeButton() {
 
     let cost;
     if (currentAction === 'buy') {
-        // Use LMSR formula for accurate cost calculation
-        const netCost = calculateLMSRCost(currentSide, shares);
-        // Account for fees
-        const feeMultiplier = 1 - (currentFeeBps / 10000);
-        cost = netCost / feeMultiplier;
+        // Calculate base cost for desired shares
+        const baseCost = calculateSpendForShares(currentSide, shares);
+
+        // Predict price impact: larger trades need more buffer
+        // As we buy, price moves against us (slippage)
+        // Add dynamic buffer based on trade size relative to liquidity
+        const bShares = currentB / 10_000_000;
+        const tradeImpact = shares / bShares; // Ratio of trade to liquidity
+
+        // Dynamic slippage buffer:
+        // - Small trades (<1% of liquidity): 0.5% buffer
+        // - Medium trades (1-5% of liquidity): 1-3% buffer
+        // - Large trades (>5% of liquidity): 3-10% buffer
+        let slippageBuffer;
+        if (tradeImpact < 0.01) {
+            slippageBuffer = 1.005; // 0.5%
+        } else if (tradeImpact < 0.05) {
+            slippageBuffer = 1.01 + (tradeImpact * 0.4); // 1-3%
+        } else {
+            slippageBuffer = 1.03 + (tradeImpact * 1.4); // 3-10%+
+        }
+
+        // Cap maximum buffer at 15% for extreme cases
+        slippageBuffer = Math.min(slippageBuffer, 1.15);
+
+        cost = baseCost * slippageBuffer;
+
+        // Safety check
+        if (!isFinite(cost) || cost <= 0) {
+            cost = shares * (currentSide === 'yes' ? currentYesPrice : currentNoPrice);
+        }
+
+        console.log(`[UI Estimate] ${shares} shares: base=${baseCost.toFixed(4)}, impact=${(tradeImpact*100).toFixed(2)}%, buffer=${((slippageBuffer-1)*100).toFixed(2)}%, total=${cost.toFixed(4)} XNT`);
     } else {
-        // Sell: use current price
-        const sharePrice = currentSide === 'yes' ? currentYesPrice : currentNoPrice;
-        cost = shares * sharePrice;
+        // Sell: use LMSR calculation for accurate proceeds
+        cost = calculateSellProceeds(currentSide, shares);
+
+        // Safety check
+        if (!isFinite(cost) || cost <= 0) {
+            const sharePrice = currentSide === 'yes' ? currentYesPrice : currentNoPrice;
+            cost = shares * sharePrice;
+        }
+
+        console.log(`[UI Estimate SELL] ${shares} shares → ${cost.toFixed(4)} XNT proceeds`);
     }
 
     const action = currentAction === 'buy' ? 'Buy' : 'Sell';
@@ -3934,8 +5117,11 @@ function displaySettlementHistory(history) {
 
     settlementFeed.innerHTML = '';
 
-    if (history.length === 0) {
-        settlementFeed.innerHTML = '<div class="trade-feed-empty"><span class="empty-icon">📜</span><span class="empty-text">No settlement history</span></div>';
+    // Filter to only show WIN results (hide losing side)
+    const winningHistory = history.filter(item => item.result === 'WIN');
+
+    if (winningHistory.length === 0) {
+        settlementFeed.innerHTML = '<div class="trade-feed-empty"><span class="empty-icon">📜</span><span class="empty-text">No winning settlements</span></div>';
         return;
     }
 
@@ -3943,13 +5129,13 @@ function displaySettlementHistory(history) {
     const table = document.createElement('div');
     table.className = 'settlement-table';
 
-    // Add header
+    // Add header (removed SIDE and RESULT columns, added DIFF)
     table.innerHTML = `
         <div class="settlement-table-header">
             <div class="col-time">TIME</div>
             <div class="col-user">USER</div>
-            <div class="col-side">SIDE</div>
-            <div class="col-result">RESULT</div>
+            <div class="col-btcmove">BTC PRICES</div>
+            <div class="col-diff">DIFF</div>
             <div class="col-payout">PAYOUT</div>
         </div>
     `;
@@ -3958,7 +5144,7 @@ function displaySettlementHistory(history) {
     const tbody = document.createElement('div');
     tbody.className = 'settlement-table-body';
 
-    history.forEach(item => {
+    winningHistory.forEach(item => {
         const isWin = item.result === 'WIN';
         const sideDisplay = item.side === 'YES' ? 'UP' : 'DOWN';
         const amount = parseFloat(item.amount).toFixed(4);
@@ -3972,16 +5158,64 @@ function displaySettlementHistory(history) {
         });
 
         const sideClass = sideDisplay === 'UP' ? 'side-up' : 'side-down';
-        const resultClass = isWin ? 'result-win' : 'result-lose';
-        const resultText = isWin ? 'WIN' : 'LOSE';
+
+        // Calculate BTC movement and diff
+        let btcMove = '?';
+        let btcMoveClass = 'btc-unknown';
+        let btcDiff = '?';
+        let btcDiffClass = 'diff-neutral';
+
+        if (item.snapshot_price && item.settle_price) {
+            const snapshotPrice = parseFloat(item.snapshot_price);
+            const settlePrice = parseFloat(item.settle_price);
+            const priceDiff = settlePrice - snapshotPrice;
+
+            // Format prices with K suffix for compact display
+            const formatPrice = (price) => {
+                if (price >= 100000) {
+                    return '$' + (price / 1000).toFixed(1) + 'K';
+                }
+                return '$' + price.toLocaleString('en-US', { maximumFractionDigits: 0 });
+            };
+
+            // Format diff with sign and K suffix
+            const formatDiff = (diff) => {
+                const absDiff = Math.abs(diff);
+                const sign = diff >= 0 ? '+' : '-';
+                if (absDiff >= 1000) {
+                    return sign + '$' + (absDiff / 1000).toFixed(2) + 'K';
+                }
+                return sign + '$' + absDiff.toFixed(0);
+            };
+
+            const snapStr = formatPrice(snapshotPrice);
+            const settleStr = formatPrice(settlePrice);
+
+            if (settlePrice > snapshotPrice) {
+                btcMove = `${snapStr} → ${settleStr}`;
+                btcMoveClass = 'btc-up';
+                btcDiff = formatDiff(priceDiff);
+                btcDiffClass = 'diff-positive';
+            } else if (settlePrice < snapshotPrice) {
+                btcMove = `${snapStr} → ${settleStr}`;
+                btcMoveClass = 'btc-down';
+                btcDiff = formatDiff(priceDiff);
+                btcDiffClass = 'diff-negative';
+            } else {
+                btcMove = `${snapStr} → ${settleStr}`;
+                btcMoveClass = 'btc-flat';
+                btcDiff = '$0';
+                btcDiffClass = 'diff-neutral';
+            }
+        }
 
         const row = document.createElement('div');
         row.className = 'settlement-table-row';
         row.innerHTML = `
             <div class="col-time">${dateStr} ${timeStr}</div>
             <div class="col-user">${item.user_prefix}</div>
-            <div class="col-side ${sideClass}">${sideDisplay}</div>
-            <div class="col-result ${resultClass}">${resultText}</div>
+            <div class="col-btcmove ${btcMoveClass}">${btcMove}</div>
+            <div class="col-diff ${btcDiffClass}">${btcDiff}</div>
             <div class="col-payout">${amount}</div>
         `;
 
@@ -4057,7 +5291,10 @@ function displayTradingHistory(history) {
     const tbody = document.createElement('div');
     tbody.className = 'trading-table-body';
 
-    history.forEach(item => {
+    // Sort by timestamp descending (newest first)
+    const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
+
+    sortedHistory.forEach(item => {
         const isBuy = item.action === 'BUY';
         const time = new Date(item.timestamp);
         const dateStr = time.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
@@ -4204,9 +5441,64 @@ function switchFeedTab(tab) {
     }
 }
 
+// Auto-refresh settlement history if tab is active
+setInterval(() => {
+    if (currentFeedTab === 'settlement') {
+        loadSettlementHistory();
+    }
+}, 10000); // Refresh every 10 seconds
+
 // ============= INITIALIZATION =============
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+    // Initialize alarm toggle from localStorage
+    const alarmToggle = document.getElementById('alarmToggle');
+
+    // Load saved preference (default: enabled)
+    const savedPref = localStorage.getItem('alarmEnabled');
+    alarmEnabled = savedPref !== null ? savedPref === 'true' : true;
+    console.log(`🔔 Alarm initialized: ${alarmEnabled ? 'ENABLED' : 'DISABLED'} (savedPref: ${savedPref})`);
+
+    // Sync notification permission status
+    if ('Notification' in window) {
+        notificationPermission = Notification.permission;
+        console.log(`🔔 Initial notification permission: ${notificationPermission}`);
+    }
+
+    // Request notification permission if alarm is enabled
+    if (alarmEnabled) {
+        await requestNotificationPermission();
+    }
+
+    // Initialize countdown toggle
+    if (alarmToggle) {
+        alarmToggle.checked = alarmEnabled;
+        console.log(`✅ Alarm toggle element found and set to: ${alarmToggle.checked}`);
+
+        alarmToggle.addEventListener('change', async (e) => {
+            alarmEnabled = e.target.checked;
+            localStorage.setItem('alarmEnabled', alarmEnabled);
+            console.log(`🔔 Alarm toggled: ${alarmEnabled ? 'ENABLED' : 'DISABLED'}`);
+
+            // Request notification permission when alarm is enabled
+            if (alarmEnabled) {
+                await requestNotificationPermission();
+            }
+
+            // Show brief visual feedback
+            const label = e.target.parentElement;
+            if (label) {
+                const originalTransform = label.style.transform;
+                label.style.transform = 'scale(1.08)';
+                setTimeout(() => {
+                    label.style.transform = originalTransform || '';
+                }, 150);
+            }
+        });
+    } else {
+        console.warn('⚠️ Alarm toggle element NOT FOUND (#alarmToggle)');
+    }
+
     // Add input listener for trade amount (shares)
     const tradeAmountInput = document.getElementById('tradeAmountShares');
     if (tradeAmountInput) {
@@ -4231,9 +5523,9 @@ function updateButtonStates() {
     const tradeBtn = document.getElementById('tradeBtn');
     const yesBtn = document.getElementById('yesBtn');
     const noBtn = document.getElementById('noBtn');
-    
-    // Trade buttons - enable only when market is OPEN (status = 0)
-    const canTrade = currentMarketStatus === 0;
+
+    // Trade buttons - enable when market is PREMARKET (status = 0) or OPEN (status = 1)
+    const canTrade = currentMarketStatus === 0 || currentMarketStatus === 1;
     
     if (tradeBtn) {
         tradeBtn.disabled = !canTrade;
@@ -4282,4 +5574,562 @@ function updateButtonStates() {
             btn.style.cursor = 'pointer';
         }
     });
+}
+
+// ============= DEPOSIT/WITHDRAW MODAL FUNCTIONS =============
+
+async function openDepositModal() {
+    if (!backpackWallet || !wallet) {
+        addLog('ERROR: Wallet not connected', 'error');
+        showError('Connect wallet first');
+        return;
+    }
+
+    // Show modal
+    const modal = document.getElementById('depositModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+
+    // Update balances
+    await updateDepositModalBalances();
+
+    // Add button hover tracking for smart MAX button
+    const depositBtn = document.getElementById('depositBtn');
+    const withdrawBtn = document.getElementById('withdrawBtn');
+
+    if (depositBtn) {
+        depositBtn.addEventListener('mouseenter', () => { lastFocusedAction = 'deposit'; });
+        depositBtn.addEventListener('focus', () => { lastFocusedAction = 'deposit'; });
+    }
+
+    if (withdrawBtn) {
+        withdrawBtn.addEventListener('mouseenter', () => { lastFocusedAction = 'withdraw'; });
+        withdrawBtn.addEventListener('focus', () => { lastFocusedAction = 'withdraw'; });
+    }
+
+    // Populate account addresses
+    await populateAccountAddresses();
+}
+
+async function toggleAccountsDisplay() {
+    const checkbox = document.getElementById('showAccountsToggle');
+    const section = document.getElementById('accountAddressesSection');
+
+    if (checkbox && section) {
+        if (checkbox.checked) {
+            section.style.display = 'block';
+            // Populate addresses when shown
+            await populateAccountAddresses();
+        } else {
+            section.style.display = 'none';
+        }
+    }
+}
+
+async function populateAccountAddresses() {
+    if (!wallet || !backpackWallet) return;
+
+    try {
+        // Backpack wallet
+        const backpackAddr = backpackWallet.publicKey.toString();
+        document.getElementById('backpackWalletAddr').textContent = backpackAddr;
+
+        // Session wallet
+        const sessionAddr = wallet.publicKey.toString();
+        document.getElementById('sessionWalletAddr').textContent = sessionAddr;
+
+        // Position PDA
+        const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+        document.getElementById('positionPdaAddr').textContent = posPda.toString();
+
+        // User Vault PDA
+        const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('user_vault'), posPda.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+        document.getElementById('userVaultPdaAddr').textContent = userVaultPda.toString();
+
+    } catch (err) {
+        console.error('Failed to populate account addresses:', err);
+    }
+}
+
+function copyAddress(element) {
+    const address = element.textContent;
+    if (address && address !== '-') {
+        navigator.clipboard.writeText(address).then(() => {
+            // Visual feedback
+            const originalText = element.textContent;
+            element.textContent = '✓ Copied!';
+            element.style.color = '#0f0';
+            setTimeout(() => {
+                element.textContent = originalText;
+                element.style.color = '#0f0';
+            }, 1000);
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+        });
+    }
+}
+
+function closeDepositModal() {
+    const modal = document.getElementById('depositModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    // Reset toggle state
+    const checkbox = document.getElementById('showAccountsToggle');
+    if (checkbox) checkbox.checked = false;
+    const section = document.getElementById('accountAddressesSection');
+    if (section) section.style.display = 'none';
+
+    // Reset to default
+    lastFocusedAction = 'deposit';
+}
+
+async function updateDepositModalBalances() {
+    console.log('[updateDepositModalBalances] Starting balance refresh...');
+    try {
+        // Get Backpack wallet balance
+        if (backpackWallet && backpackWallet.publicKey) {
+            const balance = await connection.getBalance(backpackWallet.publicKey);
+            const balanceXNT = balance / 1e9;
+            const elem = document.getElementById('sessionWalletBalance');
+            if (elem) {
+                elem.textContent = `${balanceXNT.toFixed(4)} XNT`;
+                console.log('[updateDepositModalBalances] Updated Backpack balance:', balanceXNT.toFixed(4));
+            }
+        }
+
+        // Get session wallet balance (for TX fees)
+        if (wallet && wallet.publicKey) {
+            const balance = await connection.getBalance(wallet.publicKey);
+            const balanceXNT = balance / 1e9;
+            const elem = document.getElementById('tradingWalletBalance');
+            if (elem) {
+                elem.textContent = `${balanceXNT.toFixed(4)} XNT`;
+                console.log('[updateDepositModalBalances] Updated Session wallet balance:', balanceXNT.toFixed(4));
+            }
+        }
+
+        // Get vault balance (user_vault PDA)
+        const vaultBalance = await getUserVaultBalance();
+        const elem = document.getElementById('currentVaultBalance');
+        if (elem) {
+            elem.textContent = `${vaultBalance.toFixed(4)} XNT`;
+            console.log('[updateDepositModalBalances] Updated Vault balance:', vaultBalance.toFixed(4));
+        }
+        console.log('[updateDepositModalBalances] ✅ Balance refresh complete');
+    } catch (err) {
+        console.error('[updateDepositModalBalances] ❌ Failed to update:', err);
+        addLog('ERROR: Failed to load balances', 'error');
+    }
+}
+
+async function getUserVaultBalance() {
+    if (!wallet || !ammPda) {
+        console.log('[getUserVaultBalance] Missing wallet or ammPda');
+        return 0;
+    }
+
+    try {
+        const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const positionInfo = await connection.getAccountInfo(posPda);
+        if (!positionInfo || !positionInfo.data || positionInfo.data.length < 8 + 32 + 8 + 8 + 32 + 8) {
+            console.log('[getUserVaultBalance] No position data found');
+            return 0;
+        }
+
+        const data = positionInfo.data;
+        const offset = 8 + 32 + 8 + 8 + 32; // Skip discriminator, owner, yes_shares, no_shares, master_wallet
+        const vaultBalanceE6 = Number(data.readBigInt64LE(offset));
+
+        // Convert e6 to XNT: 1 XNT = 10,000,000 e6 (LAMPORTS_PER_E6 = 100)
+        const vaultBalanceXNT = vaultBalanceE6 / 10_000_000;
+        console.log('[getUserVaultBalance] Raw e6:', vaultBalanceE6, '→ XNT:', vaultBalanceXNT);
+        return vaultBalanceXNT;
+    } catch (err) {
+        console.error('[getUserVaultBalance] Error:', err);
+        return 0;
+    }
+}
+
+// Smart MAX button - sets max based on which button was last focused
+let lastFocusedAction = 'deposit'; // default to deposit
+
+function setMaxDeposit() {
+    // Set to Backpack wallet balance (for deposits)
+    if (backpackWallet && backpackWallet.publicKey) {
+        connection.getBalance(backpackWallet.publicKey).then(balance => {
+            const balanceXNT = balance / 1e9;
+            // Leave a bit for fees
+            const maxDeposit = Math.max(0, balanceXNT - 0.01);
+            const input = document.getElementById('depositAmount');
+            if (input) {
+                input.value = maxDeposit.toFixed(4);
+            }
+        }).catch(err => {
+            console.error('Failed to get balance:', err);
+            addLog('ERROR: Failed to get balance', 'error');
+        });
+    }
+}
+
+async function setMaxWithdraw() {
+    // Set to vault balance minus rent-exempt minimum (for withdrawals)
+    const vaultBalance = await getUserVaultBalance();
+    // Leave 0.001 XNT (1,000,000 lamports) for rent exemption
+    const rentReserve = 0.001;
+    const maxWithdrawable = Math.max(0, vaultBalance - rentReserve);
+    const input = document.getElementById('depositAmount');
+    if (input) {
+        input.value = maxWithdrawable.toFixed(4);
+    }
+}
+
+async function setMaxAmount() {
+    // Smart MAX: set based on last focused button or input field
+    const depositBtn = document.getElementById('depositBtn');
+    const withdrawBtn = document.getElementById('withdrawBtn');
+
+    // Check which button is currently highlighted/focused
+    if (document.activeElement === withdrawBtn || lastFocusedAction === 'withdraw') {
+        await setMaxWithdraw();
+    } else {
+        setMaxDeposit();
+    }
+}
+
+async function executeDeposit() {
+    lastFocusedAction = 'deposit'; // Track action
+
+    if (!backpackWallet || !wallet) {
+        addLog('ERROR: Wallet not connected', 'error');
+        showError('Connect wallet first');
+        return;
+    }
+
+    const amountInput = document.getElementById('depositAmount');
+    const amount = parseFloat(amountInput.value);
+
+    if (isNaN(amount) || amount <= 0) {
+        addLog('ERROR: Invalid deposit amount', 'error');
+        showError('Invalid amount');
+        return;
+    }
+
+    const amountLamports = Math.floor(amount * 1e9);
+
+    addLog(`Depositing ${amount.toFixed(4)} XNT to vault...`, 'info');
+    showStatus('Depositing...');
+
+    try {
+        const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('user_vault'), posPda.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const discriminator = await createDiscriminator('deposit');
+
+        // Create amount buffer (8 bytes, little endian, unsigned)
+        const amountBuf = new Uint8Array(8);
+        const view = new DataView(amountBuf.buffer);
+        view.setBigUint64(0, BigInt(amountLamports), true);
+
+        const data = concatUint8Arrays(discriminator, amountBuf);
+
+        const keys = [
+            { pubkey: ammPda, isSigner: false, isWritable: false },
+            { pubkey: posPda, isSigner: false, isWritable: true },
+            { pubkey: userVaultPda, isSigner: false, isWritable: true },
+            { pubkey: wallet.publicKey, isSigner: true, isWritable: true },  // ✅ Make writable for session wallet funding
+            { pubkey: backpackWallet.publicKey, isSigner: true, isWritable: true },
+            { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+        ];
+
+        const instruction = new solanaWeb3.TransactionInstruction({
+            programId: new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID),
+            keys,
+            data
+        });
+
+        // ========================================
+        // Add 1.0 XNT funding to session wallet
+        // ========================================
+        const sessionFunding = 1.0 * solanaWeb3.LAMPORTS_PER_SOL; // 1.0 XNT
+
+        const fundSessionIx = solanaWeb3.SystemProgram.transfer({
+            fromPubkey: backpackWallet.publicKey,  // Source: Backpack wallet
+            toPubkey: wallet.publicKey,            // Destination: Session wallet
+            lamports: sessionFunding               // Amount: 1.0 XNT
+        });
+
+        // Build transaction with TWO instructions:
+        // 1. Fund session wallet (SystemProgram transfer)
+        // 2. Deposit to vault (program instruction)
+        const transaction = new solanaWeb3.Transaction().add(
+            fundSessionIx,     // Transfer 1.0 XNT to session wallet
+            instruction        // Deposit to vault
+        );
+        transaction.feePayer = backpackWallet.publicKey;
+
+        const { blockhash } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+
+        // Sign with session wallet first
+        transaction.sign(wallet);
+
+        // Then sign with Backpack
+        const signedTx = await backpackWallet.signTransaction(transaction);
+        const signature = await connection.sendRawTransaction(signedTx.serialize());
+
+        addLog(`TX: ${signature}`, 'tx');
+        showStatus('Confirming...');
+
+        await connection.confirmTransaction(signature, 'confirmed');
+
+        addLog(`✓ Deposited ${amount.toFixed(4)} XNT to vault + funded session wallet with 1.0 XNT`, 'success');
+
+        // Wait a moment for blockchain state to settle
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Update all balances in the modal
+        await updateDepositModalBalances();
+
+        // Update main wallet balance display
+        await updateWalletBalance();
+
+        // Clear input
+        amountInput.value = '';
+
+    } catch (err) {
+        console.error('Deposit failed:', err);
+        addLog(`ERROR: ${err.message}`, 'error');
+        showError('Deposit failed');
+    }
+}
+
+async function executeWithdraw() {
+    lastFocusedAction = 'withdraw'; // Track action
+
+    if (!backpackWallet || !wallet) {
+        addLog('ERROR: Wallet not connected', 'error');
+        showError('Connect wallet first');
+        return;
+    }
+
+    const amountInput = document.getElementById('depositAmount');
+    const amount = parseFloat(amountInput.value);
+
+    if (isNaN(amount) || amount <= 0) {
+        addLog('ERROR: Invalid withdrawal amount', 'error');
+        showError('Invalid amount');
+        return;
+    }
+
+    const amountLamports = Math.floor(amount * 1e9);
+
+    addLog(`Withdrawing ${amount.toFixed(4)} XNT from vault to Backpack...`, 'info');
+    showStatus('Withdrawing...');
+
+    try {
+        const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('user_vault'), posPda.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const discriminator = await createDiscriminator('withdraw');
+
+        // Create amount buffer (8 bytes, little endian, unsigned)
+        const amountBuf = new Uint8Array(8);
+        const view = new DataView(amountBuf.buffer);
+        view.setBigUint64(0, BigInt(amountLamports), true);
+
+        const data = concatUint8Arrays(discriminator, amountBuf);
+
+        const keys = [
+            { pubkey: ammPda, isSigner: false, isWritable: false },
+            { pubkey: posPda, isSigner: false, isWritable: true },
+            { pubkey: userVaultPda, isSigner: false, isWritable: true },
+            { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+            { pubkey: backpackWallet.publicKey, isSigner: true, isWritable: true },
+            { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+        ];
+
+        const instruction = new solanaWeb3.TransactionInstruction({
+            programId: new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID),
+            keys,
+            data
+        });
+
+        const transaction = new solanaWeb3.Transaction().add(instruction);
+        transaction.feePayer = backpackWallet.publicKey;
+
+        const { blockhash } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+
+        // Sign with both wallets (both need to sign for withdrawal security)
+        transaction.partialSign(wallet);
+
+        // Sign and send with Backpack
+        const signed = await backpackWallet.signTransaction(transaction);
+        const signature = await connection.sendRawTransaction(signed.serialize());
+
+        addLog(`TX: ${signature}`, 'tx');
+        showStatus('Confirming...');
+
+        await connection.confirmTransaction(signature, 'confirmed');
+
+        addLog(`✓ Withdrew ${amount.toFixed(4)} XNT to Backpack wallet`, 'success');
+
+        // Wait a moment for blockchain state to settle
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        console.log('[executeWithdraw] About to refresh balances...');
+        // Update all balances in the modal
+        await updateDepositModalBalances();
+
+        // Update main wallet balance display
+        await updateWalletBalance();
+
+        // Clear input
+        amountInput.value = '';
+        console.log('[executeWithdraw] Balance refresh complete');
+
+    } catch (err) {
+        console.error('Withdrawal failed:', err);
+        addLog(`ERROR: ${err.message}`, 'error');
+        showError('Withdrawal failed');
+    }
+}
+
+async function topupSessionWallet() {
+    if (!backpackWallet || !wallet) {
+        addLog('ERROR: Wallet not connected', 'error');
+        showError('Connect wallet first');
+        return;
+    }
+
+    const topupAmount = 0.1 * 1e9; // 0.1 XNT in lamports
+
+    addLog('Topping up session wallet with 0.1 XNT...', 'info');
+    showStatus('Topping up...');
+
+    try {
+        const [posPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('pos'), ammPda.toBytes(), wallet.publicKey.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+            [stringToUint8Array('user_vault'), posPda.toBytes()],
+            new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+        );
+
+        const discriminator = await createDiscriminator('topup_session_wallet');
+
+        // Create amount buffer (8 bytes, little endian, unsigned)
+        const amountBuf = new Uint8Array(8);
+        const view = new DataView(amountBuf.buffer);
+        view.setBigUint64(0, BigInt(topupAmount), true);
+
+        const data = concatUint8Arrays(discriminator, amountBuf);
+
+        const keys = [
+            { pubkey: ammPda, isSigner: false, isWritable: false },
+            { pubkey: posPda, isSigner: false, isWritable: true },
+            { pubkey: userVaultPda, isSigner: false, isWritable: true },
+            { pubkey: wallet.publicKey, isSigner: false, isWritable: true },
+            { pubkey: backpackWallet.publicKey, isSigner: true, isWritable: true },
+            { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+        ];
+
+        const instruction = new solanaWeb3.TransactionInstruction({
+            programId: new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID),
+            keys,
+            data
+        });
+
+        const transaction = new solanaWeb3.Transaction().add(instruction);
+        transaction.feePayer = backpackWallet.publicKey;
+
+        const { blockhash } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+
+        // Sign and send with Backpack only
+        const signed = await backpackWallet.signTransaction(transaction);
+        const signature = await connection.sendRawTransaction(signed.serialize());
+
+        addLog(`TX: ${signature}`, 'tx');
+        showStatus('Confirming...');
+
+        await connection.confirmTransaction(signature, 'confirmed');
+
+        addLog('✓ Session wallet topped up with 0.1 XNT', 'success');
+
+        // Wait a moment for blockchain state to settle
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Update all balances in the modal
+        await updateDepositModalBalances();
+
+    } catch (err) {
+        console.error('Top-up failed:', err);
+        addLog(`ERROR: ${err.message}`, 'error');
+        showError('Top-up failed');
+    }
+}
+
+// ============================================================================
+// Debug Toggle Handler
+// ============================================================================
+
+// Initialize debug mode from localStorage or default to true (checked)
+function initDebugToggle() {
+    const debugToggle = document.getElementById('debugToggle');
+    if (!debugToggle) return;
+
+    // Load saved preference or default to true
+    const savedDebugMode = localStorage.getItem('debugMode');
+    const isDebugMode = savedDebugMode === null ? true : savedDebugMode === 'true';
+
+    debugToggle.checked = isDebugMode;
+    document.body.classList.toggle('debug-mode', isDebugMode);
+
+    // Handle toggle changes
+    debugToggle.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        document.body.classList.toggle('debug-mode', enabled);
+        localStorage.setItem('debugMode', enabled.toString());
+        console.log(`[Debug] Slot display ${enabled ? 'enabled' : 'disabled'}`);
+    });
+
+    console.log(`[Debug] Toggle initialized, mode: ${isDebugMode ? 'ON' : 'OFF'}`);
+}
+
+// Initialize on page load
+if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDebugToggle);
+    } else {
+        initDebugToggle();
+    }
 }

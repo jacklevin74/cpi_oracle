@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Positions - X1 Markets</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e27;
+            color: #00ff41;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #00ff41;
+            margin-bottom: 10px;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 4px;
+        }
+
+        .stat-item {
+            padding: 10px;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 11px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            color: #00ff41;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: rgba(0, 255, 65, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(0, 255, 65, 0.3);
+            border-top-color: #00ff41;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(0, 255, 65, 0.02);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+        }
+
+        thead {
+            background: rgba(0, 255, 65, 0.1);
+            border-bottom: 2px solid #00ff41;
+        }
+
+        th {
+            padding: 12px 8px;
+            text-align: left;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        tr:hover {
+            background: rgba(0, 255, 65, 0.05);
+        }
+
+        .address {
+            font-family: 'Courier New', monospace;
+            color: #00bfff;
+            font-size: 11px;
+        }
+
+        .address-short {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .address-short:hover {
+            color: #00ff41;
+            text-decoration: underline;
+        }
+
+        .shares-yes {
+            color: #00ff41;
+        }
+
+        .shares-no {
+            color: #ff4136;
+        }
+
+        .vault-balance {
+            color: #ffdc00;
+        }
+
+        .total-value {
+            color: #00ff41;
+            font-weight: bold;
+        }
+
+        .empty {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .error {
+            background: rgba(255, 65, 54, 0.1);
+            border: 1px solid #ff4136;
+            color: #ff4136;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .filter-input {
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            color: #00ff41;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            width: 300px;
+        }
+
+        .filter-input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #00ff41;
+            box-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
+        }
+
+        .sort-arrow {
+            display: inline-block;
+            margin-left: 5px;
+            opacity: 0.5;
+        }
+
+        .sort-arrow.active {
+            opacity: 1;
+        }
+
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable:hover {
+            background: rgba(0, 255, 65, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 All Trading Positions</h1>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-label">Total Positions</div>
+                <div class="stat-value" id="totalPositions">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Active Positions</div>
+                <div class="stat-value" id="activePositions">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Total YES Shares</div>
+                <div class="stat-value shares-yes" id="totalYesShares">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Total NO Shares</div>
+                <div class="stat-value shares-no" id="totalNoShares">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Total Vault</div>
+                <div class="stat-value vault-balance" id="totalVault">--</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Unique Masters</div>
+                <div class="stat-value" id="uniqueMasters">--</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="loadPositions()">🔄 Refresh</button>
+            <button onclick="exportCSV()">💾 Export CSV</button>
+            <input type="text" class="filter-input" id="filterInput" placeholder="Filter by address..." oninput="filterPositions()">
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="loading" class="loading" style="display: none;">
+            <span class="spinner"></span>
+            Loading positions...
+        </div>
+
+        <table id="positionsTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th class="sortable" onclick="sortTable('index')">#</th>
+                    <th class="sortable" onclick="sortTable('session')">Session Wallet <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('master')">Master Wallet <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('position')">Position PDA <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('vault')">User Vault PDA <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('yes')">YES Shares <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('no')">NO Shares <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('vaultBalance')">Vault Balance <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('total')">Total Value <span class="sort-arrow">↕</span></th>
+                </tr>
+            </thead>
+            <tbody id="positionsBody">
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script>
+        const CONFIG = {
+            RPC_ENDPOINT: 'https://rpc.testnet.x1.xyz',
+            PROGRAM_ID: 'EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF',
+            AMM_SEED: 'amm_btc_v6',
+        };
+
+        const connection = new solanaWeb3.Connection(CONFIG.RPC_ENDPOINT, 'confirmed');
+        let allPositions = [];
+        let filteredPositions = [];
+        let sortColumn = null;
+        let sortDirection = 'asc';
+
+        // Helper to convert string to Uint8Array (replaces Buffer.from in browser)
+        function stringToUint8Array(str) {
+            const encoder = new TextEncoder();
+            return encoder.encode(str);
+        }
+
+        function shortAddress(address) {
+            return address.substring(0, 4) + '...' + address.substring(address.length - 4);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            showNotification('Copied to clipboard: ' + shortAddress(text));
+        }
+
+        function showNotification(message) {
+            // Simple notification - could be enhanced
+            console.log(message);
+        }
+
+        async function loadPositions() {
+            const loadingEl = document.getElementById('loading');
+            const errorEl = document.getElementById('error');
+            const tableEl = document.getElementById('positionsTable');
+
+            loadingEl.style.display = 'block';
+            errorEl.style.display = 'none';
+            tableEl.style.display = 'none';
+
+            try {
+                // Get AMM PDA
+                const [ammPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+                    [stringToUint8Array(CONFIG.AMM_SEED)],
+                    new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+                );
+
+                console.log('AMM PDA:', ammPda.toString());
+
+                // Get all program accounts
+                const accounts = await connection.getProgramAccounts(
+                    new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+                );
+
+                console.log('Total program accounts:', accounts.length);
+
+                allPositions = [];
+
+                // Parse position accounts
+                for (const acc of accounts) {
+                    const data = acc.account.data;
+
+                    // Position accounts are 89 bytes (32+8+8+32+8+1)
+                    if (data.length >= 89 && data.length <= 200) {
+                        try {
+                            // Position layout: owner(32) + yes(8) + no(8) + master_wallet(32) + vault_balance(8) + vault_bump(1)
+                            const owner = new solanaWeb3.PublicKey(data.slice(0, 32));
+                            const yesShares = Number(data.readBigInt64LE(32)) / 1e6;
+                            const noShares = Number(data.readBigInt64LE(40)) / 1e6;
+                            const masterWallet = new solanaWeb3.PublicKey(data.slice(48, 80));
+                            const vaultBalance = Number(data.readBigInt64LE(80)) / 1e6;
+                            const vaultBump = data.readUInt8(88);
+
+                            // Derive user vault PDA
+                            const [userVaultPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
+                                [stringToUint8Array('user_vault'), acc.pubkey.toBytes()],
+                                new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
+                            );
+
+                            allPositions.push({
+                                positionPda: acc.pubkey.toString(),
+                                sessionWallet: owner.toString(),
+                                masterWallet: masterWallet.toString(),
+                                userVaultPda: userVaultPda.toString(),
+                                yesShares,
+                                noShares,
+                                vaultBalance,
+                                vaultBump,
+                                totalValue: yesShares + noShares + vaultBalance
+                            });
+                        } catch (e) {
+                            // Skip invalid position accounts
+                            console.warn('Failed to parse position:', acc.pubkey.toString(), e.message);
+                        }
+                    }
+                }
+
+                console.log('Found', allPositions.length, 'positions');
+
+                // Update stats
+                updateStats();
+
+                // Display positions
+                filteredPositions = [...allPositions];
+                displayPositions();
+
+                loadingEl.style.display = 'none';
+                tableEl.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading positions:', error);
+                errorEl.textContent = 'Error: ' + error.message;
+                errorEl.style.display = 'block';
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        function updateStats() {
+            const totalYes = allPositions.reduce((sum, p) => sum + p.yesShares, 0);
+            const totalNo = allPositions.reduce((sum, p) => sum + p.noShares, 0);
+            const totalVault = allPositions.reduce((sum, p) => sum + p.vaultBalance, 0);
+            const activePositions = allPositions.filter(p => p.totalValue > 0.01).length;
+            const uniqueMasters = new Set(allPositions.map(p => p.masterWallet)).size;
+
+            document.getElementById('totalPositions').textContent = allPositions.length;
+            document.getElementById('activePositions').textContent = activePositions;
+            document.getElementById('totalYesShares').textContent = totalYes.toFixed(2);
+            document.getElementById('totalNoShares').textContent = totalNo.toFixed(2);
+            document.getElementById('totalVault').textContent = totalVault.toFixed(4) + ' XNT';
+            document.getElementById('uniqueMasters').textContent = uniqueMasters;
+        }
+
+        function displayPositions() {
+            const tbody = document.getElementById('positionsBody');
+            tbody.innerHTML = '';
+
+            filteredPositions.forEach((pos, index) => {
+                const row = document.createElement('tr');
+
+                const isEmpty = pos.totalValue < 0.01;
+                const rowClass = isEmpty ? 'empty' : '';
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td class="address address-short" onclick="copyToClipboard('${pos.sessionWallet}')" title="${pos.sessionWallet}">
+                        ${shortAddress(pos.sessionWallet)}
+                    </td>
+                    <td class="address address-short" onclick="copyToClipboard('${pos.masterWallet}')" title="${pos.masterWallet}">
+                        ${shortAddress(pos.masterWallet)}
+                    </td>
+                    <td class="address address-short" onclick="copyToClipboard('${pos.positionPda}')" title="${pos.positionPda}">
+                        ${shortAddress(pos.positionPda)}
+                    </td>
+                    <td class="address address-short" onclick="copyToClipboard('${pos.userVaultPda}')" title="${pos.userVaultPda}">
+                        ${shortAddress(pos.userVaultPda)}
+                    </td>
+                    <td class="shares-yes ${isEmpty ? 'empty' : ''}">${pos.yesShares.toFixed(2)}</td>
+                    <td class="shares-no ${isEmpty ? 'empty' : ''}">${pos.noShares.toFixed(2)}</td>
+                    <td class="vault-balance ${isEmpty ? 'empty' : ''}">${pos.vaultBalance.toFixed(4)}</td>
+                    <td class="total-value ${isEmpty ? 'empty' : ''}">${pos.totalValue.toFixed(4)}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterPositions() {
+            const filterText = document.getElementById('filterInput').value.toLowerCase();
+
+            if (!filterText) {
+                filteredPositions = [...allPositions];
+            } else {
+                filteredPositions = allPositions.filter(pos =>
+                    pos.sessionWallet.toLowerCase().includes(filterText) ||
+                    pos.masterWallet.toLowerCase().includes(filterText) ||
+                    pos.positionPda.toLowerCase().includes(filterText) ||
+                    pos.userVaultPda.toLowerCase().includes(filterText)
+                );
+            }
+
+            displayPositions();
+        }
+
+        function sortTable(column) {
+            // Toggle direction if clicking same column
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+
+            // Sort the filtered positions
+            filteredPositions.sort((a, b) => {
+                let valA, valB;
+
+                switch(column) {
+                    case 'index':
+                        return 0; // Don't sort by index
+                    case 'session':
+                        valA = a.sessionWallet;
+                        valB = b.sessionWallet;
+                        break;
+                    case 'master':
+                        valA = a.masterWallet;
+                        valB = b.masterWallet;
+                        break;
+                    case 'position':
+                        valA = a.positionPda;
+                        valB = b.positionPda;
+                        break;
+                    case 'vault':
+                        valA = a.userVaultPda;
+                        valB = b.userVaultPda;
+                        break;
+                    case 'yes':
+                        valA = a.yesShares;
+                        valB = b.yesShares;
+                        break;
+                    case 'no':
+                        valA = a.noShares;
+                        valB = b.noShares;
+                        break;
+                    case 'vaultBalance':
+                        valA = a.vaultBalance;
+                        valB = b.vaultBalance;
+                        break;
+                    case 'total':
+                        valA = a.totalValue;
+                        valB = b.totalValue;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                // Compare values
+                if (typeof valA === 'string') {
+                    return sortDirection === 'asc'
+                        ? valA.localeCompare(valB)
+                        : valB.localeCompare(valA);
+                } else {
+                    return sortDirection === 'asc'
+                        ? valA - valB
+                        : valB - valA;
+                }
+            });
+
+            // Update sort arrows
+            document.querySelectorAll('.sort-arrow').forEach(arrow => {
+                arrow.classList.remove('active');
+                arrow.textContent = '↕';
+            });
+
+            const activeHeader = document.querySelector(`th[onclick="sortTable('${column}')"] .sort-arrow`);
+            if (activeHeader) {
+                activeHeader.classList.add('active');
+                activeHeader.textContent = sortDirection === 'asc' ? '↑' : '↓';
+            }
+
+            displayPositions();
+        }
+
+        function exportCSV() {
+            const headers = ['#', 'Session Wallet', 'Master Wallet', 'Position PDA', 'User Vault PDA', 'YES Shares', 'NO Shares', 'Vault Balance', 'Total Value'];
+
+            const rows = filteredPositions.map((pos, index) => [
+                index + 1,
+                pos.sessionWallet,
+                pos.masterWallet,
+                pos.positionPda,
+                pos.userVaultPda,
+                pos.yesShares.toFixed(2),
+                pos.noShares.toFixed(2),
+                pos.vaultBalance.toFixed(4),
+                pos.totalValue.toFixed(4)
+            ]);
+
+            const csv = [
+                headers.join(','),
+                ...rows.map(row => row.join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `positions_${Date.now()}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Auto-load on page load
+        window.addEventListener('load', loadPositions);
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadPositions, 30000);
+    </script>
+</body>
+</html>

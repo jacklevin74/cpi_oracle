@@ -2,12 +2,48 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
+const { Connection, PublicKey } = require('@solana/web3.js');
+const WebSocket = require('ws');
 
 const PORT = 3434;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const STATUS_FILE = path.join(__dirname, '..', 'market_status.json');
 const DB_FILE = path.join(__dirname, 'price_history.db');
 const VOLUME_FILE = path.join(__dirname, 'cumulative_volume.json');
+
+// Solana Oracle Configuration
+const RPC_URL = 'https://rpc.testnet.x1.xyz';
+const ORACLE_STATE = '4KYeNyv1B9YjjQkfJk2C6Uqo71vKzFZriRe5NXg6GyCq';
+const ORACLE_POLL_INTERVAL = 1000; // 1 second (for real-time UI updates)
+
+// Solana connection
+const connection = new Connection(RPC_URL, 'confirmed');
+const oracleKey = new PublicKey(ORACLE_STATE);
+
+// Current BTC price cache
+let currentBTCPrice = null;
+let lastOracleUpdate = null;
+
+// SSE clients for price updates
+const sseClients = new Set();
+
+// SSE clients for market data updates
+const marketStreamClients = new Set();
+
+// SSE clients for volume updates
+const volumeStreamClients = new Set();
+
+// SSE clients for cycle status updates
+const cycleStreamClients = new Set();
+
+// AMM Configuration
+const PROGRAM_ID = 'EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF';
+const AMM_SEED = 'amm_btc_v6';
+const MARKET_POLL_INTERVAL = 1500; // 1.5 seconds
+
+// Current market data cache
+let currentMarketData = null;
+let lastMarketUpdate = null;
 
 // SQLite database for price history
 const db = new Database(DB_FILE);
@@ -28,7 +64,9 @@ db.exec(`
         result TEXT NOT NULL,
         amount REAL NOT NULL,
         side TEXT NOT NULL,
-        timestamp INTEGER NOT NULL
+        timestamp INTEGER NOT NULL,
+        snapshot_price REAL,
+        settle_price REAL
     );
     CREATE INDEX IF NOT EXISTS idx_settlement_timestamp ON settlement_history(timestamp);
 
@@ -44,14 +82,31 @@ db.exec(`
         timestamp INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_trading_user_timestamp ON trading_history(user_prefix, timestamp DESC);
+
+    CREATE TABLE IF NOT EXISTS volume_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cycle_id TEXT NOT NULL UNIQUE,
+        cycle_start_time INTEGER NOT NULL,
+        up_volume REAL NOT NULL DEFAULT 0,
+        down_volume REAL NOT NULL DEFAULT 0,
+        total_volume REAL NOT NULL DEFAULT 0,
+        up_shares REAL NOT NULL DEFAULT 0,
+        down_shares REAL NOT NULL DEFAULT 0,
+        total_shares REAL NOT NULL DEFAULT 0,
+        last_update INTEGER NOT NULL,
+        market_state TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_volume_cycle ON volume_history(cycle_id);
+    CREATE INDEX IF NOT EXISTS idx_volume_start_time ON volume_history(cycle_start_time DESC);
 `);
 
 const MAX_PRICE_HISTORY_HOURS = 24; // Keep up to 24 hours of price data
 const MAX_SETTLEMENT_HISTORY_HOURS = 168; // Keep 7 days of settlement history
 const MAX_TRADING_HISTORY_HOURS = 168; // Keep 7 days of trading history
 
-// Current market volume (resets each market cycle)
+// Current market volume (persisted to SQLite per cycle)
 let cumulativeVolume = {
+    cycleId: null,   // Unique ID for this market cycle (timestamp-based)
     upVolume: 0,     // Total XNT spent on UP/YES trades this cycle
     downVolume: 0,   // Total XNT spent on DOWN/NO trades this cycle
     totalVolume: 0,  // Sum of both
@@ -119,63 +174,238 @@ function cleanupOldPrices() {
     }
 }
 
-// Load cumulative volume from disk on startup
+// Fetch BTC price from Solana oracle
+async function fetchOraclePrice() {
+    try {
+        const accountInfo = await connection.getAccountInfo(oracleKey);
+
+        if (!accountInfo) {
+            console.error('Oracle account not found');
+            return null;
+        }
+
+        const d = accountInfo.data;
+        if (d.length < 8 + 32 + 48*3 + 2) {
+            console.error('Oracle data invalid');
+            return null;
+        }
+
+        let o = 8; // Skip discriminator
+        o += 32; // Skip update_authority
+
+        // Read triplet (price values and timestamps)
+        const readI64 = () => {
+            const v = d.readBigInt64LE(o);
+            o += 8;
+            return v;
+        };
+
+        const p1 = readI64();
+        const p2 = readI64();
+        const p3 = readI64();
+        const t1 = readI64();
+        const t2 = readI64();
+        const t3 = readI64();
+
+        o += 96; // Skip ETH + SOL
+        const decimals = d.readUInt8(o);
+
+        // Calculate median price
+        const median3 = (a, b, c) => {
+            const arr = [a, b, c].sort((x, y) => (x < y ? -1 : (x > y ? 1 : 0)));
+            return arr[1];
+        };
+
+        const priceRaw = median3(p1, p2, p3);
+        const scale = 10n ** BigInt(decimals);
+        const price_e6 = (priceRaw * 1_000_000n) / scale;
+        const btcPrice = Number(price_e6) / 1_000_000;
+
+        // Calculate age
+        const maxTs = [t1, t2, t3].reduce((a, b) => a > b ? a : b);
+        const age = Math.floor(Date.now() / 1000) - Number(maxTs);
+
+        console.log(`📊 Oracle: BTC $${btcPrice.toFixed(2)} (age: ${age}s)`);
+
+        return {
+            price: btcPrice,
+            age: age,
+            timestamp: Date.now()
+        };
+    } catch (err) {
+        console.error('Failed to fetch oracle price:', err.message);
+        return null;
+    }
+}
+
+// Fetch market data from Solana AMM account
+async function fetchMarketData() {
+    try {
+        // Derive AMM PDA
+        const [ammPda] = await PublicKey.findProgramAddressSync(
+            [Buffer.from(AMM_SEED)],
+            new PublicKey(PROGRAM_ID)
+        );
+        console.log('[SERVER fetchMarketData] Using AMM_SEED:', AMM_SEED, 'PDA:', ammPda.toString());
+
+        const accountInfo = await connection.getAccountInfo(ammPda);
+        if (!accountInfo) {
+            console.error('Market account not found at:', ammPda.toString());
+            return null;
+        }
+
+        const d = accountInfo.data;
+        if (d.length < 8 + 62) {
+            console.error('Market data invalid');
+            return null;
+        }
+
+        const p = d.subarray(8);
+        let o = 0;
+
+        // Read AMM struct fields
+        const readU8 = (offset) => p.readUInt8(offset);
+        const readU16LE = (offset) => p.readUInt16LE(offset);
+        const readI64LE = (offset) => p.readBigInt64LE(offset);
+
+        const bump = readU8(o); o += 1;
+        const decimals = readU8(o); o += 1;
+        const bScaled = readI64LE(o); o += 8;
+        const feeBps = readU16LE(o); o += 2;
+        const qY = readI64LE(o); o += 8;
+        const qN = readI64LE(o); o += 8;
+        const fees = readI64LE(o); o += 8;
+        const vault = readI64LE(o); o += 8;
+        const status = readU8(o); o += 1;
+        const winner = readU8(o); o += 1;
+        const wTotal = readI64LE(o); o += 8;
+        const pps = readI64LE(o); o += 8;
+        o += 32; // Skip fee_dest pubkey
+        const vaultSolBump = readU8(o); o += 1;
+        const startPriceE6 = readI64LE(o); o += 8;
+
+        // Convert to JavaScript numbers (e6 scale)
+        // NOTE: vault uses LAMPORTS_PER_E6 = 100, so 1 XNT = 10_000_000 e6 units
+        const marketData = {
+            bScaled: Number(bScaled) / 1_000_000,
+            feeBps: feeBps,
+            qYes: Number(qY) / 1_000_000,
+            qNo: Number(qN) / 1_000_000,
+            fees: Number(fees) / 1_000_000,
+            vault: Number(vault) / 10_000_000,  // ✅ Fixed: vault uses different scale (LAMPORTS_PER_E6 = 100)
+            status: status, // 0=Open, 1=Stopped, 2=Settled
+            winner: winner, // 0=None, 1=Yes, 2=No
+            winningTotal: Number(wTotal) / 1_000_000,
+            pricePerShare: Number(pps) / 1_000_000,
+            startPrice: Number(startPriceE6) / 1_000_000,
+            timestamp: Date.now()
+        };
+
+        console.log(`📈 Market: status=${status} vault=${marketData.vault.toFixed(2)} qY=${marketData.qYes.toFixed(2)} qN=${marketData.qNo.toFixed(2)}`);
+
+        return marketData;
+    } catch (err) {
+        console.error('Failed to fetch market data:', err.message);
+        return null;
+    }
+}
+
+// Load cumulative volume from SQLite (current cycle)
 function loadCumulativeVolume() {
     try {
-        if (fs.existsSync(VOLUME_FILE)) {
-            const data = fs.readFileSync(VOLUME_FILE, 'utf8');
-            const parsed = JSON.parse(data);
-            if (parsed && typeof parsed.upVolume === 'number') {
-                // Ensure all fields exist (backward compatibility)
-                cumulativeVolume = {
-                    upVolume: parsed.upVolume || 0,
-                    downVolume: parsed.downVolume || 0,
-                    totalVolume: parsed.totalVolume || 0,
-                    upShares: parsed.upShares || 0,
-                    downShares: parsed.downShares || 0,
-                    totalShares: parsed.totalShares || 0,
-                    lastUpdate: parsed.lastUpdate || 0,
-                    cycleStartTime: parsed.cycleStartTime || Date.now()
-                };
-                console.log(`Loaded cumulative volume: UP=${cumulativeVolume.upVolume.toFixed(2)} XNT / ${cumulativeVolume.upShares.toFixed(2)} shares, DOWN=${cumulativeVolume.downVolume.toFixed(2)} XNT / ${cumulativeVolume.downShares.toFixed(2)} shares, TOTAL=${cumulativeVolume.totalVolume.toFixed(2)} XNT / ${cumulativeVolume.totalShares.toFixed(2)} shares`);
-            }
+        // Try to load the most recent cycle
+        const stmt = db.prepare('SELECT * FROM volume_history ORDER BY cycle_start_time DESC LIMIT 1');
+        const row = stmt.get();
+
+        if (row) {
+            cumulativeVolume = {
+                cycleId: row.cycle_id,
+                upVolume: row.up_volume,
+                downVolume: row.down_volume,
+                totalVolume: row.total_volume,
+                upShares: row.up_shares,
+                downShares: row.down_shares,
+                totalShares: row.total_shares,
+                lastUpdate: row.last_update,
+                cycleStartTime: row.cycle_start_time
+            };
+            console.log(`Loaded volume for cycle ${row.cycle_id}: ${row.total_volume.toFixed(2)} XNT total`);
+        } else {
+            // No existing cycle, start fresh
+            const cycleId = `cycle_${Date.now()}`;
+            cumulativeVolume = {
+                cycleId: cycleId,
+                upVolume: 0,
+                downVolume: 0,
+                totalVolume: 0,
+                upShares: 0,
+                downShares: 0,
+                totalShares: 0,
+                lastUpdate: Date.now(),
+                cycleStartTime: Date.now()
+            };
+            saveCumulativeVolume();
+            console.log(`New volume cycle started: ${cycleId}`);
         }
     } catch (err) {
-        console.warn('Failed to load cumulative volume:', err.message);
+        console.error('Failed to load volume from database:', err.message);
+        // Fallback to fresh state
+        const cycleId = `cycle_${Date.now()}`;
         cumulativeVolume = {
+            cycleId: cycleId,
             upVolume: 0,
             downVolume: 0,
             totalVolume: 0,
             upShares: 0,
             downShares: 0,
             totalShares: 0,
-            lastUpdate: 0,
+            lastUpdate: Date.now(),
             cycleStartTime: Date.now()
         };
     }
 }
 
-// Save cumulative volume to disk (throttled)
-let volumeSavePending = false;
+// Save cumulative volume to SQLite
 function saveCumulativeVolume() {
-    if (volumeSavePending) return;
-    volumeSavePending = true;
+    try {
+        const stmt = db.prepare(`
+            INSERT INTO volume_history (
+                cycle_id, cycle_start_time, up_volume, down_volume, total_volume,
+                up_shares, down_shares, total_shares, last_update, market_state
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(cycle_id) DO UPDATE SET
+                up_volume = excluded.up_volume,
+                down_volume = excluded.down_volume,
+                total_volume = excluded.total_volume,
+                up_shares = excluded.up_shares,
+                down_shares = excluded.down_shares,
+                total_shares = excluded.total_shares,
+                last_update = excluded.last_update,
+                market_state = excluded.market_state
+        `);
 
-    setTimeout(() => {
-        try {
-            fs.writeFileSync(VOLUME_FILE, JSON.stringify(cumulativeVolume, null, 2));
-        } catch (err) {
-            console.warn('Failed to save cumulative volume:', err.message);
-        }
-        volumeSavePending = false;
-    }, 1000); // Batch writes every 1 second
+        stmt.run(
+            cumulativeVolume.cycleId,
+            cumulativeVolume.cycleStartTime,
+            cumulativeVolume.upVolume,
+            cumulativeVolume.downVolume,
+            cumulativeVolume.totalVolume,
+            cumulativeVolume.upShares,
+            cumulativeVolume.downShares,
+            cumulativeVolume.totalShares,
+            cumulativeVolume.lastUpdate,
+            null // market_state (can be populated later if needed)
+        );
+    } catch (err) {
+        console.error('Failed to save volume to database:', err.message);
+    }
 }
 
 // Settlement history functions
-function addSettlementHistory(userPrefix, result, amount, side) {
+function addSettlementHistory(userPrefix, result, amount, side, snapshotPrice = null, settlePrice = null) {
     try {
-        const stmt = db.prepare('INSERT INTO settlement_history (user_prefix, result, amount, side, timestamp) VALUES (?, ?, ?, ?, ?)');
-        stmt.run(userPrefix, result, amount, side, Date.now());
+        const stmt = db.prepare('INSERT INTO settlement_history (user_prefix, result, amount, side, timestamp, snapshot_price, settle_price) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        stmt.run(userPrefix, result, amount, side, Date.now(), snapshotPrice, settlePrice);
         return true;
     } catch (err) {
         console.error('Failed to add settlement:', err.message);
@@ -273,7 +503,7 @@ const SECURITY_HEADERS = {
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://rpc.testnet.x1.xyz wss://rpc.testnet.x1.xyz ws://localhost:3435 wss://localhost:3435; img-src 'self' data:; font-src 'self'"
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://rpc.testnet.x1.xyz wss://rpc.testnet.x1.xyz ws://localhost:3435 wss://localhost:3435 http://127.0.0.1:8899 http://localhost:8899; img-src 'self' data:; font-src 'self'"
 };
 
 const MIME_TYPES = {
@@ -330,6 +560,9 @@ const server = http.createServer((req, res) => {
                     // Save to disk
                     saveCumulativeVolume();
 
+                    // Broadcast to SSE clients
+                    broadcastVolume(cumulativeVolume);
+
                     console.log(`Volume updated: ${side} +${amount.toFixed(2)} XNT / +${shares.toFixed(2)} shares (Total: ${cumulativeVolume.totalVolume.toFixed(2)} XNT / ${cumulativeVolume.totalShares.toFixed(2)} shares)`);
 
                     res.writeHead(200, {
@@ -357,7 +590,10 @@ const server = http.createServer((req, res) => {
 
     // API: Reset volume for new market cycle
     if (req.url === '/api/volume/reset' && req.method === 'POST') {
+        // Create new cycle with unique ID
+        const cycleId = `cycle_${Date.now()}`;
         cumulativeVolume = {
+            cycleId: cycleId,
             upVolume: 0,
             downVolume: 0,
             totalVolume: 0,
@@ -368,7 +604,7 @@ const server = http.createServer((req, res) => {
             cycleStartTime: Date.now()
         };
         saveCumulativeVolume();
-        console.log('📊 Volume reset for new market cycle');
+        console.log(`📊 Volume reset - new cycle started: ${cycleId}`);
 
         res.writeHead(200, {
             'Content-Type': 'application/json',
@@ -450,6 +686,139 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // API: Get current BTC price from oracle cache
+    if (req.url === '/api/current-price' && req.method === 'GET') {
+        res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            ...SECURITY_HEADERS
+        });
+        res.end(JSON.stringify({
+            price: currentBTCPrice,
+            lastUpdate: lastOracleUpdate
+        }));
+        return;
+    }
+
+    // SSE: Stream price updates
+    if (req.url === '/api/price-stream' && req.method === 'GET') {
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            ...SECURITY_HEADERS
+        });
+
+        // Send initial price immediately
+        if (currentBTCPrice !== null) {
+            res.write(`data: ${JSON.stringify({ price: currentBTCPrice, timestamp: lastOracleUpdate })}\n\n`);
+        }
+
+        // Add client to set
+        sseClients.add(res);
+        console.log(`SSE client connected (${sseClients.size} total)`);
+
+        // Remove client on disconnect
+        req.on('close', () => {
+            sseClients.delete(res);
+            console.log(`SSE client disconnected (${sseClients.size} remaining)`);
+        });
+
+        return;
+    }
+
+    // SSE: Stream market data updates
+    if (req.url === '/api/market-stream' && req.method === 'GET') {
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            ...SECURITY_HEADERS
+        });
+
+        // Send initial market data immediately
+        if (currentMarketData !== null) {
+            res.write(`data: ${JSON.stringify(currentMarketData)}\n\n`);
+        }
+
+        // Add client to set
+        marketStreamClients.add(res);
+        console.log(`Market SSE client connected (${marketStreamClients.size} total)`);
+
+        // Remove client on disconnect
+        req.on('close', () => {
+            marketStreamClients.delete(res);
+            console.log(`Market SSE client disconnected (${marketStreamClients.size} remaining)`);
+        });
+
+        return;
+    }
+
+    // SSE: Stream volume updates
+    if (req.url === '/api/volume-stream' && req.method === 'GET') {
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            ...SECURITY_HEADERS
+        });
+
+        // Send initial volume data immediately
+        res.write(`data: ${JSON.stringify(cumulativeVolume)}\n\n`);
+
+        // Add client to set
+        volumeStreamClients.add(res);
+        console.log(`Volume SSE client connected (${volumeStreamClients.size} total)`);
+
+        // Remove client on disconnect
+        req.on('close', () => {
+            volumeStreamClients.delete(res);
+            console.log(`Volume SSE client disconnected (${volumeStreamClients.size} remaining)`);
+        });
+
+        return;
+    }
+
+    // SSE: Stream cycle status updates
+    if (req.url === '/api/cycle-stream' && req.method === 'GET') {
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            ...SECURITY_HEADERS
+        });
+
+        // Send initial cycle status (read from file if exists)
+        try {
+            const cycleStatusPath = path.join(__dirname, '..', 'market_status.json');
+            console.log(`[Cycle SSE] Reading initial status from: ${cycleStatusPath}`);
+            const cycleStatusRaw = fs.readFileSync(cycleStatusPath, 'utf8');
+            // Parse and re-stringify to ensure compact JSON (no newlines)
+            const cycleStatusObj = JSON.parse(cycleStatusRaw);
+            const cycleStatus = JSON.stringify(cycleStatusObj);
+            console.log(`[Cycle SSE] Initial status data: ${cycleStatus}`);
+            res.write(`data: ${cycleStatus}\n\n`);
+        } catch (err) {
+            // File doesn't exist, send offline status
+            console.error(`[Cycle SSE] Failed to read status file, sending OFFLINE:`, err.message);
+            const offlineStatus = JSON.stringify({ state: 'OFFLINE' });
+            console.log(`[Cycle SSE] Sending offline status: ${offlineStatus}`);
+            res.write(`data: ${offlineStatus}\n\n`);
+        }
+
+        // Add client to set
+        cycleStreamClients.add(res);
+        console.log(`[Cycle SSE] Client connected (${cycleStreamClients.size} total)`);
+
+        // Remove client on disconnect
+        req.on('close', () => {
+            cycleStreamClients.delete(res);
+            console.log(`[Cycle SSE] Client disconnected (${cycleStreamClients.size} remaining)`);
+        });
+
+        return;
+    }
+
     // API: Get settlement history
     if (req.url === '/api/settlement-history' && req.method === 'GET') {
         const history = getSettlementHistory(100);
@@ -475,7 +844,14 @@ const server = http.createServer((req, res) => {
             try {
                 const data = JSON.parse(body);
                 if (data.userPrefix && data.result && typeof data.amount === 'number' && data.side) {
-                    const success = addSettlementHistory(data.userPrefix, data.result, data.amount, data.side);
+                    const success = addSettlementHistory(
+                        data.userPrefix,
+                        data.result,
+                        data.amount,
+                        data.side,
+                        data.snapshotPrice || null,
+                        data.settlePrice || null
+                    );
                     if (success) {
                         res.writeHead(200, {
                             'Content-Type': 'application/json',
@@ -657,4 +1033,188 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${PORT}/`);
     console.log(`Local: http://localhost:${PORT}/`);
+    console.log(`WebSocket server running on ws://0.0.0.0:${PORT}/ws`);
 });
+
+// WebSocket server for real-time price updates
+const wss = new WebSocket.Server({ server, path: '/ws' });
+
+wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+
+    // Send current price immediately on connection
+    if (currentBTCPrice !== null) {
+        ws.send(JSON.stringify({
+            type: 'price',
+            price: currentBTCPrice,
+            timestamp: lastOracleUpdate
+        }));
+    }
+
+    ws.on('close', () => {
+        console.log('WebSocket client disconnected');
+    });
+
+    ws.on('error', (error) => {
+        console.error('WebSocket error:', error.message);
+    });
+});
+
+// Broadcast price to all connected clients (WebSocket + SSE)
+function broadcastPrice(priceData) {
+    // WebSocket broadcast
+    const message = JSON.stringify({
+        type: 'price',
+        price: priceData.price,
+        age: priceData.age,
+        timestamp: priceData.timestamp
+    });
+
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+
+    // SSE broadcast
+    const sseData = JSON.stringify({
+        price: priceData.price,
+        timestamp: priceData.timestamp
+    });
+
+    sseClients.forEach((client) => {
+        try {
+            client.write(`data: ${sseData}\n\n`);
+        } catch (err) {
+            // Client disconnected, remove it
+            sseClients.delete(client);
+        }
+    });
+}
+
+// Broadcast market data to all connected SSE clients
+function broadcastMarket(marketData) {
+    const sseData = JSON.stringify(marketData);
+
+    marketStreamClients.forEach((client) => {
+        try {
+            client.write(`data: ${sseData}\n\n`);
+        } catch (err) {
+            // Client disconnected, remove it
+            marketStreamClients.delete(client);
+        }
+    });
+}
+
+// Broadcast volume data to all connected SSE clients
+function broadcastVolume(volumeData) {
+    const sseData = JSON.stringify(volumeData);
+
+    volumeStreamClients.forEach((client) => {
+        try {
+            client.write(`data: ${sseData}\n\n`);
+        } catch (err) {
+            // Client disconnected, remove it
+            volumeStreamClients.delete(client);
+        }
+    });
+}
+
+// Broadcast cycle status to all connected SSE clients
+function broadcastCycle(cycleData) {
+    const sseData = JSON.stringify(cycleData);
+    console.log(`[broadcastCycle] 📡 Broadcasting to ${cycleStreamClients.size} clients:`, sseData);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    cycleStreamClients.forEach((client) => {
+        try {
+            client.write(`data: ${sseData}\n\n`);
+            successCount++;
+        } catch (err) {
+            // Client disconnected, remove it
+            console.error(`[broadcastCycle] Failed to send to client:`, err.message);
+            cycleStreamClients.delete(client);
+            failCount++;
+        }
+    });
+
+    console.log(`[broadcastCycle] ✅ Sent to ${successCount} clients, ${failCount} failures`);
+}
+
+// Oracle polling loop - fetch price every ORACLE_POLL_INTERVAL
+async function startOraclePolling() {
+    console.log(`🔄 Starting oracle polling (every ${ORACLE_POLL_INTERVAL/1000}s)...`);
+
+    const poll = async () => {
+        const priceData = await fetchOraclePrice();
+
+        if (priceData) {
+            currentBTCPrice = priceData.price;
+            lastOracleUpdate = priceData.timestamp;
+
+            // Save to SQLite
+            addPriceToHistory(priceData.price, priceData.timestamp);
+
+            // Broadcast to WebSocket clients
+            broadcastPrice(priceData);
+        }
+    };
+
+    // Initial fetch
+    await poll();
+
+    // Then poll at interval
+    setInterval(poll, ORACLE_POLL_INTERVAL);
+}
+
+// Start oracle polling
+startOraclePolling().catch(err => {
+    console.error('Failed to start oracle polling:', err);
+});
+
+// Market polling loop - fetch market data every MARKET_POLL_INTERVAL
+async function startMarketPolling() {
+    console.log(`🔄 Starting market polling (every ${MARKET_POLL_INTERVAL/1000}s)...`);
+
+    const poll = async () => {
+        const marketData = await fetchMarketData();
+
+        if (marketData) {
+            currentMarketData = marketData;
+            lastMarketUpdate = marketData.timestamp;
+
+            // Broadcast to SSE clients
+            broadcastMarket(marketData);
+        }
+    };
+
+    // Initial fetch
+    await poll();
+
+    // Then poll at interval
+    setInterval(poll, MARKET_POLL_INTERVAL);
+}
+
+// Start market polling
+startMarketPolling().catch(err => {
+    console.error('Failed to start market polling:', err);
+});
+
+// Watch market_status.json for changes and broadcast to cycle stream clients
+// Watch the actual file in the project root, not the symlink in public/
+const MARKET_STATUS_FILE = path.join(__dirname, '..', 'market_status.json');
+fs.watch(MARKET_STATUS_FILE, (eventType, filename) => {
+    if (eventType === 'change') {
+        try {
+            const cycleStatus = fs.readFileSync(MARKET_STATUS_FILE, 'utf8');
+            const cycleData = JSON.parse(cycleStatus);
+            console.log(`📅 Cycle status updated: ${cycleData.state}`);
+            broadcastCycle(cycleData);
+        } catch (err) {
+            console.error('Failed to read or broadcast cycle status:', err.message);
+        }
+    }
+});
+console.log(`👀 Watching ${MARKET_STATUS_FILE} for cycle status changes...`);

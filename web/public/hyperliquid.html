@@ -16,6 +16,13 @@
         <header class="top-bar">
             <div class="top-left">
                 <div class="brand">X1 <span class="brand-subtitle">Vero Prediction Markets</span></div>
+                <label class="debug-toggle" title="Toggle slot debug view">
+                    <input type="checkbox" id="debugToggle" checked>
+                    <span class="debug-toggle-track">
+                        <span class="debug-toggle-thumb"></span>
+                    </span>
+                    <span class="debug-label">DEBUG</span>
+                </label>
             </div>
             <div class="top-right">
                 <div id="walletNavDisconnected" class="hidden">
@@ -36,44 +43,160 @@
             <div class="modal-overlay" onclick="closeDepositModal()"></div>
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 class="modal-title">Deposit to Trading Vault</h3>
+                    <div class="modal-title-section">
+                        <h3 class="modal-title">Deposit</h3>
+                        <p class="modal-subtitle">Transfer funds to trading account</p>
+                    </div>
                     <button class="modal-close" onclick="closeDepositModal()">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="deposit-instructions">Deposit funds from your Backpack wallet directly to your secure trading vault:</p>
-
                     <div class="balance-info">
                         <div class="balance-row">
-                            <span class="balance-label">Backpack Wallet Balance:</span>
+                            <div class="balance-label-section">
+                                <span class="balance-label">Backpack Wallet</span>
+                                <span class="balance-sublabel">Available</span>
+                            </div>
                             <span class="balance-value" id="sessionWalletBalance">Loading...</span>
                         </div>
                         <div class="balance-row">
-                            <span class="balance-label">Current Vault Balance:</span>
+                            <div class="balance-label-section">
+                                <span class="balance-label">Session Wallet</span>
+                                <span class="balance-sublabel">TX Fees</span>
+                            </div>
+                            <span class="balance-value" id="tradingWalletBalance">Loading...</span>
+                        </div>
+                        <div class="balance-row">
+                            <div class="balance-label-section">
+                                <span class="balance-label">Trading Account</span>
+                                <span class="balance-sublabel">Current</span>
+                            </div>
                             <span class="balance-value" id="currentVaultBalance">Loading...</span>
                         </div>
                     </div>
 
+                    <!-- Show Accounts Toggle -->
+                    <div style="margin: 16px 0; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: #888;">
+                            <input type="checkbox" id="showAccountsToggle" onchange="toggleAccountsDisplay()" style="cursor: pointer;">
+                            <span>Show Account Addresses</span>
+                        </label>
+                    </div>
+
+                    <!-- Account Addresses (hidden by default) -->
+                    <div id="accountAddressesSection" style="display: none; margin: 16px 0; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div style="font-size: 11px; color: #888; margin-bottom: 12px;">
+                            <div style="margin-bottom: 8px;">
+                                <div style="color: #aaa; margin-bottom: 2px;">Backpack Wallet (Master)</div>
+                                <div style="font-family: monospace; color: #0f0; word-break: break-all; cursor: pointer;" id="backpackWalletAddr" onclick="copyAddress(this)" title="Click to copy">-</div>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <div style="color: #aaa; margin-bottom: 2px;">Session Wallet (Derived)</div>
+                                <div style="font-family: monospace; color: #0f0; word-break: break-all; cursor: pointer;" id="sessionWalletAddr" onclick="copyAddress(this)" title="Click to copy">-</div>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <div style="color: #aaa; margin-bottom: 2px;">Position PDA</div>
+                                <div style="font-family: monospace; color: #0f0; word-break: break-all; cursor: pointer;" id="positionPdaAddr" onclick="copyAddress(this)" title="Click to copy">-</div>
+                            </div>
+                            <div>
+                                <div style="color: #aaa; margin-bottom: 2px;">User Vault PDA</div>
+                                <div style="font-family: monospace; color: #0f0; word-break: break-all; cursor: pointer;" id="userVaultPdaAddr" onclick="copyAddress(this)" title="Click to copy">-</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="input-group">
-                        <label for="depositAmount">Amount (XNT):</label>
-                        <input type="number" id="depositAmount" placeholder="0.00" step="0.01" min="0.01">
-                        <button class="btn-max-deposit" onclick="setMaxDeposit()">MAX</button>
+                        <label for="depositAmount">Amount</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="depositAmount" placeholder="0.00" step="0.01" min="0.01">
+                            <span class="input-currency">XNT</span>
+                            <button class="btn-max-deposit" onclick="setMaxAmount()">MAX</button>
+                        </div>
                     </div>
 
                     <div class="modal-actions">
-                        <button class="btn-primary" onclick="executeDeposit()">Deposit to Vault</button>
+                        <button class="btn-primary" id="depositBtn" onclick="executeDeposit()">Deposit</button>
+                        <button class="btn-withdraw" id="withdrawBtn" onclick="executeWithdraw()">Withdraw</button>
                         <button class="btn-secondary" onclick="closeDepositModal()">Cancel</button>
                     </div>
 
-                    <p class="deposit-note">💡 Your session wallet can trade with vault funds. Only your Backpack wallet can deposit or withdraw.</p>
-                    <p class="deposit-note deposit-warning">⚠️ Funds go directly from Backpack → Vault. Session wallet never holds funds (more secure!).</p>
-                    <div class="deposit-address-container">
-                        <div class="deposit-address-small" id="depositAddress">Loading...</div>
-                        <button class="btn-copy-small" onclick="copyDepositAddress()" title="Copy session wallet address (for reference)">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
+                    <div class="modal-actions-secondary">
+                        <button class="btn-fund-session" onclick="fundSessionWallet()">Fund Session Wallet</button>
+                    </div>
+
+                    <div class="deposit-info-section">
+                        <div class="deposit-info-item">
+                            <div class="info-icon">ℹ️</div>
+                            <div class="info-text">
+                                <strong>Direct transfer</strong> from Backpack to vault. Session wallet trades using vault funds.
+                            </div>
+                        </div>
+                        <div class="deposit-info-item">
+                            <div class="info-icon">🔒</div>
+                            <div class="info-text">
+                                <strong>Secure architecture</strong> — Session wallet never holds funds. Only Backpack can withdraw.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Close Position Confirmation Modal -->
+        <div id="closePositionModal" class="modal hidden">
+            <div class="modal-overlay" onclick="closeClosePositionModal()"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-section">
+                        <h3 class="modal-title">🔒 Close All Positions</h3>
+                        <p class="modal-subtitle">Review estimated proceeds before closing</p>
+                    </div>
+                    <button class="modal-close" onclick="closeClosePositionModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="balance-info">
+                        <div class="balance-row">
+                            <div class="balance-label-section">
+                                <span class="balance-label">YES Shares</span>
+                                <span class="balance-sublabel">To Sell</span>
+                            </div>
+                            <span class="balance-value" id="closeYesShares">0</span>
+                        </div>
+                        <div class="balance-row">
+                            <div class="balance-label-section">
+                                <span class="balance-label">NO Shares</span>
+                                <span class="balance-sublabel">To Sell</span>
+                            </div>
+                            <span class="balance-value" id="closeNoShares">0</span>
+                        </div>
+                        <div class="balance-row highlight">
+                            <div class="balance-label-section">
+                                <span class="balance-label">Estimated Proceeds</span>
+                                <span class="balance-sublabel">After Fees</span>
+                            </div>
+                            <span class="balance-value" id="closeEstimatedProceeds">~0.00 XNT</span>
+                        </div>
+                    </div>
+
+                    <div class="deposit-info-section">
+                        <div class="deposit-info-item">
+                            <div class="info-icon">💰</div>
+                            <div class="info-text">
+                                <strong>Instant liquidation</strong> — Both YES and NO positions will be sold at current market prices.
+                            </div>
+                        </div>
+                        <div class="deposit-info-item">
+                            <div class="info-icon">⚠️</div>
+                            <div class="info-text">
+                                <strong>Price impact</strong> — Final proceeds may vary based on LMSR curve and market depth.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn-close-position-confirm" id="confirmCloseBtn" onclick="executeClosePosition()">
+                            Confirm Close
                         </button>
+                        <button class="btn-secondary" onclick="closeClosePositionModal()">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -167,16 +290,45 @@
                         <div class="stat-value" id="currentTime">--:--:--</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-label">NEXT</div>
+                        <div class="stat-label" id="nextMarketLabel">NEXT</div>
                         <div class="stat-value" id="nextMarketTime">--:--</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">START PRICE</div>
-                        <div class="stat-value" id="oracleSnapshotPrice">--</div>
+                    <div class="stat-item countdown-item" id="countdownItem" style="display: none;">
+                        <div class="stat-label-with-toggle">
+                            <span class="stat-label">CLOSES IN</span>
+                            <label class="alarm-toggle-inline" title="Toggle alarm sounds">
+                                <input type="checkbox" id="alarmToggle" checked>
+                                <span class="toggle-track">
+                                    <span class="toggle-thumb">
+                                        <svg class="toggle-icon" width="8" height="8" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M3 4.5C3 2.567 4.567 1 6.5 1C8.433 1 10 2.567 10 4.5V6.5C10 7.328 10.672 8 11.5 8V9C10.119 9 9 7.881 9 6.5V4.5C9 3.119 7.881 2 6.5 2C5.119 2 4 3.119 4 4.5V6.5C4 7.881 2.881 9 1.5 9V8C2.328 8 3 7.328 3 6.5V4.5Z" fill="currentColor"/>
+                                            <path d="M6.5 10.5C7.328 10.5 8 9.828 8 9H5C5 9.828 5.672 10.5 6.5 10.5Z" fill="currentColor"/>
+                                        </svg>
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="stat-value countdown-value" id="countdownTimer">--:--</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-label">VAULT</div>
                         <div class="stat-value"><span id="vaultTotalDisplay">0.00</span> XNT</div>
+                    </div>
+                    <div class="stat-item debug-slot-item">
+                        <div class="stat-label">START SLOT</div>
+                        <div class="stat-value slot-info" id="slotStartValue">--</div>
+                    </div>
+                    <div class="stat-item debug-slot-item">
+                        <div class="stat-label">END SLOT</div>
+                        <div class="stat-value slot-info" id="slotEndValue">--</div>
+                    </div>
+                    <div class="stat-item debug-slot-item">
+                        <div class="stat-label">CURRENT SLOT</div>
+                        <div class="stat-value slot-info" id="slotCurrentValue">--</div>
+                    </div>
+                    <div class="stat-item debug-slot-item">
+                        <div class="stat-label">SLOT DIFF</div>
+                        <div class="stat-value slot-info" id="slotDiffValue">--</div>
                     </div>
                 </div>
 
@@ -290,6 +442,11 @@
                     <button class="btn-execute" id="tradeBtn" onclick="executeTrade()">
                         <span id="tradeBtnText">BUY 10 UP</span>
                     </button>
+
+                    <!-- Close Position Button -->
+                    <button class="btn-close-position" id="closePositionBtn" onclick="closePosition()" style="margin-top: 10px;">
+                        <span>🔒 CLOSE ALL POSITIONS</span>
+                    </button>
                 </div>
 
                 <!-- Position Display -->
@@ -401,6 +558,10 @@
         function updateFromSlider() {
             const value = document.getElementById('sharesSlider').value;
             document.getElementById('tradeAmountShares').value = value;
+            // Update the BUY/SELL button text with new amount
+            if (typeof updateTradeButton === 'function') {
+                updateTradeButton();
+            }
         }
 
         function updateFromInput() {
@@ -409,6 +570,10 @@
             const sharesSlider = document.getElementById('sharesSlider');
             if (sharesInput.value) {
                 sharesSlider.value = Math.min(Math.max(sharesInput.value, 1), 500);
+            }
+            // Update the BUY/SELL button text with new amount
+            if (typeof updateTradeButton === 'function') {
+                updateTradeButton();
             }
         }
 
@@ -492,7 +657,45 @@
             }
         }
 
-        // Fetch and update cumulative volume from server
+        // Local volume tracking for optimistic updates
+        let localVolume = {
+            upVolume: 0,
+            downVolume: 0,
+            totalVolume: 0,
+            upShares: 0,
+            downShares: 0,
+            totalShares: 0
+        };
+
+        // Update volume display (shared function)
+        function updateVolumeDisplay(volume) {
+            document.getElementById('volumeUp').textContent = volume.upVolume.toFixed(2) + ' XNT';
+            document.getElementById('volumeDown').textContent = volume.downVolume.toFixed(2) + ' XNT';
+            document.getElementById('volumeTotal').textContent = volume.totalVolume.toFixed(2) + ' XNT';
+
+            document.getElementById('volumeUpShares').textContent = (volume.upShares || 0).toFixed(2) + ' shares';
+            document.getElementById('volumeDownShares').textContent = (volume.downShares || 0).toFixed(2) + ' shares';
+            document.getElementById('volumeTotalShares').textContent = (volume.totalShares || 0).toFixed(2) + ' shares';
+        }
+
+        // Volume update - fetch from server (removes double-counting issue)
+        function updateVolumeOptimistic(trade) {
+            // Only update for BUY trades
+            if (trade.action !== 'BUY') return;
+
+            // Don't do optimistic local updates - they cause double counting
+            // because trade_monitor.js POSTs to /api/volume when it detects trades
+            // Just fetch the latest server data immediately
+            if (!updateVolumeOptimistic.pending) {
+                updateVolumeOptimistic.pending = true;
+                setTimeout(() => {
+                    updateCumulativeVolume();
+                    updateVolumeOptimistic.pending = false;
+                }, 500); // Fetch server data after brief delay
+            }
+        }
+
+        // Fetch and update cumulative volume from server (confirmation)
         async function updateCumulativeVolume() {
             try {
                 const response = await fetch('/api/volume');
@@ -503,15 +706,18 @@
 
                 const data = await response.json();
 
-                // Update UI with cumulative volume (always increasing, never decreasing)
-                document.getElementById('volumeUp').textContent = data.upVolume.toFixed(2) + ' XNT';
-                document.getElementById('volumeDown').textContent = data.downVolume.toFixed(2) + ' XNT';
-                document.getElementById('volumeTotal').textContent = data.totalVolume.toFixed(2) + ' XNT';
+                // Update local tracking to match server truth
+                localVolume = {
+                    upVolume: data.upVolume,
+                    downVolume: data.downVolume,
+                    totalVolume: data.totalVolume,
+                    upShares: data.upShares || 0,
+                    downShares: data.downShares || 0,
+                    totalShares: data.totalShares || 0
+                };
 
-                // Update share amounts
-                document.getElementById('volumeUpShares').textContent = (data.upShares || 0).toFixed(2) + ' shares';
-                document.getElementById('volumeDownShares').textContent = (data.downShares || 0).toFixed(2) + ' shares';
-                document.getElementById('volumeTotalShares').textContent = (data.totalShares || 0).toFixed(2) + ' shares';
+                // Update UI with confirmed server data
+                updateVolumeDisplay(localVolume);
             } catch (err) {
                 console.error('Error fetching cumulative volume:', err);
             }
@@ -519,7 +725,7 @@
 
         // Update volume on page load and periodically
         updateCumulativeVolume();
-        setInterval(updateCumulativeVolume, 5000); // Update every 5 seconds
+        setInterval(updateCumulativeVolume, 10000); // Sync with server every 10 seconds
 
         // DEPRECATED: Old function that used market state (qY/qN)
         // Keeping for backward compatibility but no longer used
@@ -661,8 +867,9 @@
 
             document.getElementById('tradeCount').textContent = tradeHistory.length;
 
-            // Update volume stats after adding trade
-            updateVolumeStats();
+            // REMOVED: Don't update volume from trade history
+            // We now use server-side session volume (in-memory only)
+            // updateVolumeStats();
         }
 
         // ============= WEBSOCKET TRADE MONITOR =============
@@ -726,6 +933,9 @@
                             user: trade.user || 'Unknown',
                             timestamp: trade.timestamp
                         }, true);
+
+                        // Optimistic volume update (instant UI feedback!)
+                        updateVolumeOptimistic(trade);
 
                         // Auto-update trading history if this is the user's trade and trading tab is active
                         if (wallet && wallet.publicKey && trade.user) {
@@ -1007,13 +1217,11 @@
         // Deposit Modal Functions
         async function openDepositModal() {
             const modal = document.getElementById('depositModal');
-            const depositAddress = document.getElementById('depositAddress');
             const sessionBalanceEl = document.getElementById('sessionWalletBalance');
+            const tradingWalletBalanceEl = document.getElementById('tradingWalletBalance');
             const vaultBalanceEl = document.getElementById('currentVaultBalance');
 
             if (wallet && wallet.publicKey && backpackWallet) {
-                depositAddress.textContent = wallet.publicKey.toString();
-
                 // Get Backpack wallet balance (this is where funds will come from)
                 try {
                     const backpackBalance = await connection.getBalance(backpackWallet.publicKey);
@@ -1022,11 +1230,20 @@
                     sessionBalanceEl.textContent = 'Error loading';
                 }
 
+                // Get session wallet (trading wallet) balance (for TX fees)
+                try {
+                    const tradingBalance = await connection.getBalance(wallet.publicKey);
+                    const tradingBalanceXNT = tradingBalance / 1e9;
+                    tradingWalletBalanceEl.textContent = tradingBalanceXNT.toFixed(4) + ' XNT';
+                } catch (err) {
+                    tradingWalletBalanceEl.textContent = 'Error loading';
+                }
+
                 // Get vault balance from Position account
                 try {
                     const position = await fetchPositionAccount();
                     if (position && position.vault_balance_e6 !== undefined) {
-                        vaultBalanceEl.textContent = (position.vault_balance_e6 / 1e6).toFixed(4) + ' XNT';
+                        vaultBalanceEl.textContent = (position.vault_balance_e6 / 1e7).toFixed(4) + ' XNT';
                     } else {
                         vaultBalanceEl.textContent = '0.0000 XNT';
                     }
@@ -1035,6 +1252,8 @@
                 }
 
                 modal.classList.remove('hidden');
+            } else {
+                showError('Please connect your Backpack wallet first');
             }
         }
 
@@ -1075,7 +1294,7 @@
             try {
                 // Check if position exists first, initialize if needed
                 const [ammPda] = await solanaWeb3.PublicKey.findProgramAddressSync(
-                    [stringToUint8Array('amm_btc_v3')],
+                    [stringToUint8Array(CONFIG.AMM_SEED)],
                     new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID)
                 );
 
@@ -1132,7 +1351,7 @@
                     { pubkey: ammPda, isSigner: false, isWritable: false },
                     { pubkey: posPda, isSigner: false, isWritable: true },
                     { pubkey: userVaultPda, isSigner: false, isWritable: true },
-                    { pubkey: wallet.publicKey, isSigner: true, isWritable: false },  // session wallet (for position lookup)
+                    { pubkey: wallet.publicKey, isSigner: true, isWritable: false },  // session wallet
                     { pubkey: backpackWallet.publicKey, isSigner: true, isWritable: true },  // master wallet (pays for deposit)
                     { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
                 ];
@@ -1160,16 +1379,89 @@
                 await connection.confirmTransaction(txid, 'confirmed');
 
                 addLog(`✅ Deposited ${amount.toFixed(4)} XNT to vault successfully!`, 'success');
-                closeDepositModal();
 
-                // Refresh balances
-                await fetchMarketState();
-                await fetchPositionAccount();
+                // Wait a moment for blockchain state to settle
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Refresh balances in the modal (keep modal open)
+                if (typeof updateDepositModalBalances === 'function') {
+                    await updateDepositModalBalances();
+                }
+
+                // Also refresh main wallet balance display
+                if (typeof updateWalletBalance === 'function') {
+                    await updateWalletBalance();
+                }
+
+                // Clear the input field
+                amountInput.value = '';
 
             } catch (err) {
                 console.error('Deposit error:', err);
                 addLog(`ERROR: Deposit failed - ${err.message}`, 'error');
                 showError('Deposit failed: ' + err.message);
+            }
+        }
+
+        async function fundSessionWallet() {
+            if (!wallet || !wallet.publicKey || !backpackWallet) {
+                showError('Wallet not connected');
+                return;
+            }
+
+            // Read amount from the deposit amount input field
+            const amountInput = document.getElementById('depositAmount');
+            const fundAmount = parseFloat(amountInput.value);
+
+            if (!fundAmount || fundAmount <= 0) {
+                showError('Please enter a valid amount');
+                return;
+            }
+
+            const fundLamports = Math.floor(fundAmount * 1e9);
+
+            try {
+                addLog(`Funding session wallet with ${fundAmount} XNT...`, 'info');
+
+                // Create simple SystemProgram transfer from Backpack to Session wallet
+                const fundSessionIx = solanaWeb3.SystemProgram.transfer({
+                    fromPubkey: backpackWallet.publicKey,  // Source: Backpack wallet
+                    toPubkey: wallet.publicKey,            // Destination: Session wallet
+                    lamports: fundLamports                 // Amount from input field
+                });
+
+                // Build transaction
+                const transaction = new solanaWeb3.Transaction().add(fundSessionIx);
+                transaction.feePayer = backpackWallet.publicKey;
+                transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+                // Sign with Backpack wallet
+                const signedTx = await backpackWallet.signTransaction(transaction);
+
+                // Send transaction
+                const txid = await connection.sendRawTransaction(signedTx.serialize());
+
+                addLog(`Fund transaction sent: ${txid}`, 'success');
+                addLog('Waiting for confirmation...', 'info');
+
+                await connection.confirmTransaction(txid, 'confirmed');
+
+                addLog(`✅ Funded session wallet with ${fundAmount} XNT!`, 'success');
+
+                // Wait a moment for blockchain state to settle
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Refresh balances in the modal (without reopening)
+                if (typeof updateDepositModalBalances === 'function') {
+                    await updateDepositModalBalances();
+                } else {
+                    await openDepositModal();
+                }
+
+            } catch (err) {
+                console.error('Fund session wallet error:', err);
+                addLog(`ERROR: Funding failed - ${err.message}`, 'error');
+                showError('Funding failed: ' + err.message);
             }
         }
 

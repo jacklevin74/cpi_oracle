@@ -15,7 +15,7 @@ const ADMIN_WALLET = process.env.ANCHOR_WALLET || `${process.env.HOME}/.config/s
 const ORACLE_STATE = new PublicKey(process.env.ORACLE_STATE || "4KYeNyv1B9YjjQkfJk2C6Uqo71vKzFZriRe5NXg6GyCq");
 
 const PID = new PublicKey("EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF");
-const AMM_SEED = Buffer.from("amm_btc_v3");
+const AMM_SEED = Buffer.from("amm_btc_v6");  // v6: time-based trading lockout
 const VAULT_SOL_SEED = Buffer.from("vault_sol");
 const POS_SEED = Buffer.from("pos");
 

@@ -80,6 +80,43 @@ body {
     border: 1px solid var(--border-color);
 }
 
+.nav-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.slot-indicators {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+}
+
+.slot-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+}
+
+.slot-label {
+    font-weight: 500;
+    color: var(--text-dim);
+}
+
+.slot-value {
+    font-family: 'SF Mono', Monaco, monospace;
+    color: var(--text-secondary);
+}
+
+.slot-indicators.slot-warning .slot-value.slot-current {
+    color: var(--orange);
+}
+
 .ticker-label {
     font-size: 12px;
     color: var(--text-dim);

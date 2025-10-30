@@ -18,9 +18,10 @@ const WALLET = process.env.ANCHOR_WALLET || `${process.env.HOME}/.config/solana/
 
 // === PROGRAM IDs / SEEDS ===
 const PID            = new PublicKey("EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF");
-const AMM_SEED       = Buffer.from("amm_btc_v3");  // bump to v3 if you want a new PDA
+const AMM_SEED       = Buffer.from("amm_btc_v6");  // v6: time-based trading lockout
 const POS_SEED       = Buffer.from("pos");
 const VAULT_SOL_SEED = Buffer.from("vault_sol");
+const USER_VAULT_SEED = Buffer.from("user_vault");
 
 // Must match the on-chain LAMPORTS_PER_E6 for correct SOL reporting
 const LAMPORTS_PER_E6 = 100; // CRITICAL: Must match Rust program (lib.rs:982)
@@ -96,6 +97,7 @@ function whoKeyByIndex(i){ return String.fromCharCode(65 + i); }            // "
 async function ammPda(){ return PublicKey.findProgramAddressSync([AMM_SEED], PID)[0]; }
 function posPda(owner, amm){ return PublicKey.findProgramAddressSync([POS_SEED, amm.toBuffer(), owner.toBuffer()], PID)[0]; }
 function vaultSolPda(amm){ return PublicKey.findProgramAddressSync([VAULT_SOL_SEED, amm.toBuffer()], PID)[0]; }
+function userVaultPda(pos){ return PublicKey.findProgramAddressSync([USER_VAULT_SEED, pos.toBuffer()], PID)[0]; }
 
 function disc(name){ return crypto.createHash("sha256").update("global:"+name).digest().subarray(0,8); }
 const D_INIT_AMM       = disc("init_amm");
@@ -107,6 +109,9 @@ const D_REDEEM         = disc("redeem");
 const D_CLOSE          = disc("close_amm");
 const D_SNAPSHOT_START = disc("snapshot_start");
 const D_SETTLE_BY_ORAC = disc("settle_by_oracle");
+const D_DEPOSIT        = disc("deposit");
+const D_WITHDRAW       = disc("withdraw");
+const D_TOPUP_SESSION  = disc("topup_session_wallet");
 
 function budgetIxs(units=800_000, microLamports=1){
   return [
@@ -261,23 +266,53 @@ async function ixInitAmm(conn, payer, bHuman=500000, feeBps=25){
   await sendTx(conn, tx, [payer], "init");
   await logState(conn, "after init");
 }
-async function ixInitPos(conn, payer){
+async function ixInitPos(conn, payer, masterWallet = null){
   const amm = await ammPda();
   const pos = posPda(payer.publicKey, amm);
   const info = await conn.getAccountInfo(pos,"processed");
   if (info) { if (VERBOSE && (AUDIT || (!SIMPLE && !QUIET))) console.log(C.k(`[pos] exists ${pos.toBase58()}`)); return; }
+
+  const userVault = userVaultPda(pos);
+  const master = masterWallet || payer;
+
   const keys = [
     { pubkey: amm, isSigner:false, isWritable:false },
     { pubkey: pos, isSigner:false, isWritable:true },
+    { pubkey: userVault, isSigner:false, isWritable:false },
     { pubkey: payer.publicKey, isSigner:true, isWritable:true },
+    { pubkey: master.publicKey, isSigner:true, isWritable:true },
     { pubkey: SystemProgram.programId, isSigner:false, isWritable:false },
   ];
+  const signers = masterWallet && masterWallet !== payer ? [payer, master] : [payer];
   const tx = new Transaction().add(...budgetIxs(200_000,0), new TransactionInstruction({ programId: PID, keys, data: Buffer.from(D_INIT_POS) }));
-  await sendTx(conn, tx, [payer], "init-pos");
+  await sendTx(conn, tx, signers, "init-pos");
+}
+async function ixDeposit(conn, user, masterWallet, amountLamports){
+  const amm = await ammPda();
+  const pos = posPda(user.publicKey, amm);
+  const userVault = userVaultPda(pos);
+  const master = masterWallet || user;
+
+  const data = Buffer.concat([D_DEPOSIT, Buffer.alloc(8)]);
+  data.writeBigUInt64LE(BigInt(amountLamports), 8);
+
+  const keys = [
+    { pubkey: amm,                     isSigner:false, isWritable:false },
+    { pubkey: pos,                     isSigner:false, isWritable:true  },
+    { pubkey: userVault,               isSigner:false, isWritable:true  },
+    { pubkey: user.publicKey,          isSigner:true,  isWritable:false },
+    { pubkey: master.publicKey,        isSigner:true,  isWritable:true  },
+    { pubkey: SystemProgram.programId, isSigner:false, isWritable:false },
+  ];
+  const signers = masterWallet && masterWallet !== user ? [user, master] : [user];
+  const tx = new Transaction().add(...budgetIxs(200_000,0), new TransactionInstruction({ programId: PID, keys, data }));
+  await sendTx(conn, tx, signers, "deposit");
+  if (VERBOSE && (AUDIT || (!SIMPLE && !QUIET))) console.log(C.g(`✓ Deposited ${amountLamports} lamports (${(amountLamports/1e9).toFixed(6)} SOL) to user vault`));
 }
 async function ixTrade(conn, payer, side /*1 yes 2 no*/, action /*1 buy 2 sell*/, amountScaled){
   const amm = await ammPda();
   const pos = posPda(payer.publicKey, amm);
+  const userVault = userVaultPda(pos);
   const feeDest = FEE_DEST_GLOBAL || getFeeDest(payer.publicKey);
   const vaultSol = vaultSolPda(amm);
 
@@ -286,6 +321,7 @@ async function ixTrade(conn, payer, side /*1 yes 2 no*/, action /*1 buy 2 sell*/
     { pubkey: amm,                     isSigner:false, isWritable:true  },
     { pubkey: payer.publicKey,         isSigner:true,  isWritable:true  },
     { pubkey: pos,                     isSigner:false, isWritable:true  },
+    { pubkey: userVault,               isSigner:false, isWritable:true  },
     { pubkey: feeDest,                 isSigner:false, isWritable:true  },
     { pubkey: vaultSol,                isSigner:false, isWritable:true  },
     { pubkey: SystemProgram.programId, isSigner:false, isWritable:false },
@@ -315,6 +351,7 @@ async function ixSettle(conn, payer, winner /*1 yes 2 no*/){
 async function ixRedeem(conn, payer){
   const amm = await ammPda();
   const pos = posPda(payer.publicKey, amm);
+  const userVault = userVaultPda(pos);
   const vaultSol = vaultSolPda(amm);
   const feeDest  = FEE_DEST_GLOBAL || getFeeDest(payer.publicKey);
 
@@ -328,6 +365,7 @@ async function ixRedeem(conn, payer){
         { pubkey: pos,                     isSigner:false, isWritable:true  },
         { pubkey: feeDest,                 isSigner:false, isWritable:true  },
         { pubkey: vaultSol,                isSigner:false, isWritable:true  },
+        { pubkey: userVault,               isSigner:false, isWritable:true  },
         { pubkey: SystemProgram.programId, isSigner:false, isWritable:false },
         { pubkey: SYSVAR_RENT_PUBKEY,      isSigner:false, isWritable:false },
       ],
@@ -529,7 +567,16 @@ async function ensureOpenMarket(conn, admin, payersUniq, opts){
     try { await ixClose(conn, admin); } catch(_){}
     await ixInitAmm(conn, admin, 500000, opts.reinitFeeBps);
   }
-  for (const p of payersUniq) await ixInitPos(conn, p);
+  for (const p of payersUniq) {
+    await ixInitPos(conn, p);
+    // Auto-deposit 10 SOL to each user's vault for trading
+    const depositAmt = 10 * 1e9; // 10 SOL in lamports
+    try {
+      await ixDeposit(conn, p, null, depositAmt);
+    } catch (e) {
+      if (VERBOSE && !QUIET) console.log(C.y(`⚠ Could not auto-deposit for ${p.publicKey.toBase58().slice(0,8)}: ${e.message}`));
+    }
+  }
 }
 
 async function runLoop(conn, payers, opts){
@@ -827,6 +874,7 @@ function parseWallets(argv){
     console.log(`Usage:
   node app/trade.js init [bShares] [feeBps]
   node app/trade.js init-pos
+  node app/trade.js deposit <SOL_amount>
   node app/trade.js buy  yes|no <USD>
   node app/trade.js sell yes|no <SHARES>
   node app/trade.js stop
@@ -853,6 +901,13 @@ Env:   FEE_DEST=<pubkey>     (optional; default is init admin)
       return;
     }
     if (cmd==="init-pos"){ await ixInitPos(conn, payer); return; }
+    if (cmd==="deposit"){
+      const solAmt = parseFloat(rest[0]||"0");
+      if (!(solAmt > 0)){ console.error("Missing/invalid SOL amount"); process.exit(1); }
+      const lamports = Math.floor(solAmt * 1e9);
+      await ixDeposit(conn, payer, null, lamports);
+      return;
+    }
     if (cmd==="stop"){ await ixStop(conn, payer); return; }
     if (cmd==="settle"){ const w=(rest[0]||"").toLowerCase()==="yes"?1:2; await ixSettle(conn, payer, w); return; }
     if (cmd==="settle-by-oracle"){

@@ -34,7 +34,7 @@ pub struct Triplet {
 // ===========================
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq)]
-pub enum MarketStatus { Open = 0, Stopped = 1, Settled = 2 }
+pub enum MarketStatus { Premarket = 0, Open = 1, Stopped = 2 }
 
 #[account]
 pub struct Amm {
@@ -73,14 +73,22 @@ pub struct Amm {
     pub start_ts: i64,        // oracle ts used for start snapshot
     pub settle_price_e6: i64, // 0 until settled-by-oracle
     pub settle_ts: i64,       // oracle ts used for settlement
+
+    // Market timing
+    pub market_end_slot: u64,   // Slot when market ends (0 = not set) - DEPRECATED, use market_end_time
+    pub market_end_time: i64,   // Unix timestamp when market ends (0 = not set)
 }
 impl Amm {
-    pub const SEED: &'static [u8] = b"amm_btc_v3";
+    pub const SEED: &'static [u8] = b"amm_btc_v6";  // v6: added market_end_time for time-based trading lockout
     pub const VAULT_SOL_SEED: &'static [u8] = b"vault_sol";
     pub const SPACE: usize = core::mem::size_of::<Amm>();
 
     #[inline] pub fn status(&self) -> MarketStatus {
-        match self.status { 0 => MarketStatus::Open, 1 => MarketStatus::Stopped, _ => MarketStatus::Settled }
+        match self.status {
+            0 => MarketStatus::Premarket,
+            1 => MarketStatus::Open,
+            _ => MarketStatus::Stopped,
+        }
     }
 }
 
@@ -105,6 +113,10 @@ const MIN_BUY_E6: i64   = 100_000;         // $0.10 min
 const MIN_SELL_E6: i64  = 100_000;         // 0.100000 share min
 const SPEND_MAX_E6: i64 = 50_000_000_000;  // $50,000 per trade
 const DQ_MAX_E6: i64    = 50_000_000_000;  // 50,000,000 shares per trade
+
+// ---- Market timing ----
+const TRADING_LOCKOUT_SLOTS: u64 = 90;      // Lock trading 90 slots (~45 seconds) before market end - DEPRECATED
+const TRADING_LOCKOUT_SECONDS: i64 = 30;    // Lock trading 30 seconds before market end
 
 // ---- Events ----
 #[event]
@@ -231,6 +243,9 @@ pub struct Trade<'info> {
     )]
     pub vault_sol: UncheckedAccount<'info>,
 
+    /// CHECK: Oracle state account for reading BTC price and timestamp
+    pub oracle_state: UncheckedAccount<'info>,
+
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
@@ -259,6 +274,38 @@ pub struct UserVault<'info> {
     pub user: Signer<'info>,
 
     /// Master wallet (Backpack) that funds the deposit
+    #[account(mut)]
+    pub master_wallet: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UserVaultTopup<'info> {
+    #[account(seeds = [Amm::SEED], bump = amm.bump)]
+    pub amm: Account<'info, Amm>,
+
+    #[account(
+        mut,
+        seeds = [Position::SEED, amm.key().as_ref(), user.key().as_ref()],
+        bump,
+        constraint = pos.owner == user.key() @ ReaderError::NotOwner
+    )]
+    pub pos: Account<'info, Position>,
+
+    /// CHECK: User vault PDA (system-owned, holds user's SOL)
+    #[account(
+        mut,
+        seeds = [Position::USER_VAULT_SEED, pos.key().as_ref()],
+        bump = pos.vault_bump
+    )]
+    pub user_vault: AccountInfo<'info>,
+
+    /// CHECK: Session wallet that receives the topup (verified by PDA derivation)
+    #[account(mut)]
+    pub user: UncheckedAccount<'info>,
+
+    /// Master wallet (Backpack) that authorizes the topup
     #[account(mut)]
     pub master_wallet: Signer<'info>,
 
@@ -330,6 +377,14 @@ pub struct Redeem<'info> {
     )]
     pub vault_sol: UncheckedAccount<'info>,
 
+    /// CHECK: User's vault PDA that receives the payout
+    #[account(
+        mut,
+        seeds = [Position::USER_VAULT_SEED, pos.key().as_ref()],
+        bump = pos.vault_bump
+    )]
+    pub user_vault: UncheckedAccount<'info>,
+
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
@@ -367,6 +422,14 @@ pub struct AdminRedeem<'info> {
         bump = amm.vault_sol_bump
     )]
     pub vault_sol: UncheckedAccount<'info>,
+
+    /// CHECK: User's vault PDA that receives the payout
+    #[account(
+        mut,
+        seeds = [Position::USER_VAULT_SEED, pos.key().as_ref()],
+        bump = pos.vault_bump
+    )]
+    pub user_vault: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -471,7 +534,7 @@ pub mod cpi_oracle {
         let vault_lamports = vault_ai.lamports();
         amm.vault_e6 = lamports_to_e6(vault_lamports);
 
-        amm.status = MarketStatus::Open as u8;
+        amm.status = MarketStatus::Premarket as u8;
         amm.winner = 0;
         amm.w_total_e6 = 0;
         amm.pps_e6 = 0;
@@ -483,6 +546,9 @@ pub mod cpi_oracle {
         amm.start_ts = 0;
         amm.settle_price_e6 = 0;
         amm.settle_ts = 0;
+
+        // Init market timing (0 = not set, to be set by external bot)
+        amm.market_end_slot = 0;
 
         msg!("✅ INIT: b={} (1e-6), fee_bps={}, status=Open, fee_dest={}, vault_e6={} ({} lamports carried over)",
              b, fee_bps, amm.fee_dest, amm.vault_e6, vault_lamports);
@@ -534,6 +600,62 @@ pub mod cpi_oracle {
 
         msg!("✅ Deposited {} lamports ({} e6) from master wallet to vault. New balance: {} e6",
              amount_lamports, amount_e6, pos.vault_balance_e6);
+
+        Ok(())
+    }
+
+    // ---------- TOPUP SESSION WALLET (move SOL from user vault to session wallet for gas fees) ----------
+    pub fn topup_session_wallet(ctx: Context<UserVaultTopup>, amount_lamports: u64) -> Result<()> {
+        let pos = &mut ctx.accounts.pos;
+
+        // SECURITY: Verify the master_wallet matches the stored one
+        require_keys_eq!(
+            ctx.accounts.master_wallet.key(),
+            pos.master_wallet,
+            ReaderError::Unauthorized
+        );
+
+        // Check vault balance
+        let amount_e6 = lamports_to_e6(amount_lamports);
+        require!(
+            pos.vault_balance_e6 >= amount_e6,
+            ReaderError::InsufficientBalance
+        );
+
+        let session_balance_before = ctx.accounts.user.lamports();
+        msg!("💰 Session wallet balance before: {} lamports ({:.4} XNT)",
+             session_balance_before, session_balance_before as f64 / 1e9);
+
+        // Transfer SOL from user_vault PDA to session wallet using signed PDA
+        let pos_key = pos.key();
+        let seeds = &[
+            Position::USER_VAULT_SEED,
+            pos_key.as_ref(),
+            &[pos.vault_bump],
+        ];
+        let signer_seeds = &[&seeds[..]];
+
+        invoke_signed(
+            &system_instruction::transfer(
+                ctx.accounts.user_vault.key,
+                ctx.accounts.user.key,
+                amount_lamports,
+            ),
+            &[
+                ctx.accounts.user_vault.to_account_info(),
+                ctx.accounts.user.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+            signer_seeds,
+        )?;
+
+        // Update vault balance
+        pos.vault_balance_e6 -= amount_e6;
+
+        let session_balance_after = ctx.accounts.user.lamports();
+        msg!("✅ Topped up {} lamports ({:.4} XNT) to session wallet. New balance: {} lamports ({:.4} XNT). Vault remaining: {} e6",
+             amount_lamports, amount_lamports as f64 / 1e9, session_balance_after, session_balance_after as f64 / 1e9, pos.vault_balance_e6);
+
         Ok(())
     }
 
@@ -612,21 +734,49 @@ pub mod cpi_oracle {
         let sys  = &ctx.accounts.system_program;
 
         require!(amount > 0, ReaderError::BadParam);
-        require!(amm.status() == MarketStatus::Open, ReaderError::MarketClosed);
+        let status = amm.status();
+        require!(status == MarketStatus::Premarket || status == MarketStatus::Open, ReaderError::MarketClosed);
+
+        // Check trading lockout using oracle timestamp (30 seconds before market end)
+        if amm.market_end_time > 0 {
+            // Read current time from oracle via CPI (returns milliseconds)
+            let (_, oracle_ts_ms) = read_btc_price_e6(&ctx.accounts.oracle_state)?;
+            let oracle_ts = oracle_ts_ms / 1000; // Convert milliseconds to seconds
+            let lockout_start_time = amm.market_end_time - TRADING_LOCKOUT_SECONDS;
+            let time_until_lockout = lockout_start_time.saturating_sub(oracle_ts);
+            let time_until_end = amm.market_end_time.saturating_sub(oracle_ts);
+
+            if oracle_ts >= lockout_start_time {
+                msg!("🚫 TRADING LOCKED: Oracle time {} >= lockout start {} (market ends at {})",
+                     oracle_ts, lockout_start_time, amm.market_end_time);
+                msg!("   Time until market end: {} seconds", time_until_end);
+                return err!(ReaderError::TradingLocked);
+            } else {
+                msg!("✅ Lockout Check PASSED: Oracle time {} < lockout start {} (OK to trade)",
+                     oracle_ts, lockout_start_time);
+                msg!("   Time until lockout: {} seconds | Time until market end: {} seconds",
+                     time_until_lockout, time_until_end);
+            }
+        }
 
         match (side, action) {
-            (1, 1) => { // BUY YES
-                require!(amount >= MIN_BUY_E6 && amount <= SPEND_MAX_E6, ReaderError::BadParam);
+            (1, 1) => { // BUY YES - amount is SHARES to buy (not spend)
+                require!(amount >= MIN_SELL_E6 && amount <= DQ_MAX_E6, ReaderError::BadParam);
 
-                // Check user vault balance
-                require!(pos.vault_balance_e6 >= amount, ReaderError::InsufficientBalance);
+                // Calculate required spend for desired shares using binary search
+                let desired_shares_e6 = amount;
+                let spend_e6 = lmsr_buy_yes_for_shares(amm, desired_shares_e6)?;
 
-                let (dq_e6, avg_h) = lmsr_buy_yes(amm, amount)?;
-                pos.yes_shares_e6 = pos.yes_shares_e6.saturating_add(dq_e6.round() as i64);
+                // Check user vault balance (needs spend_e6, not shares)
+                require!(pos.vault_balance_e6 >= spend_e6, ReaderError::InsufficientBalance);
 
-                // Calculate fee and net
-                let fee_e6 = ((amount as i128) * (amm.fee_bps as i128) / 10_000) as i64;
-                let net_e6 = amount.saturating_sub(fee_e6);
+                // Execute the buy with calculated spend (this will give us exactly the shares we want)
+                let (actual_shares_e6, avg_h) = lmsr_buy_yes(amm, spend_e6)?;
+                pos.yes_shares_e6 = pos.yes_shares_e6.saturating_add(actual_shares_e6.round() as i64);
+
+                // Calculate fee and net from spend
+                let fee_e6 = ((spend_e6 as i128) * (amm.fee_bps as i128) / 10_000) as i64;
+                let net_e6 = spend_e6.saturating_sub(fee_e6);
 
                 // Transfer from user_vault PDA (using signed transfer)
                 let pos_key = pos.key();
@@ -638,23 +788,29 @@ pub mod cpi_oracle {
                 transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.vault_sol.to_account_info(), e6_to_lamports(net_e6), &[seeds])?;
                 transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.fee_dest.to_account_info(), e6_to_lamports(fee_e6), &[seeds])?;
 
-                // Update vault balance
-                pos.vault_balance_e6 -= amount;
+                // Update vault balance with actual spend
+                pos.vault_balance_e6 -= spend_e6;
 
-                emit_trade(amm, 1, 1, amount, dq_e6.round() as i64, avg_h);
-                log_trade_buy("BUY YES", amount, dq_e6, avg_h, lmsr_p_yes(amm), amm);
+                emit_trade(amm, 1, 1, spend_e6, actual_shares_e6.round() as i64, avg_h);
+                log_trade_buy("BUY YES", spend_e6, actual_shares_e6, avg_h, lmsr_p_yes(amm), amm);
             }
-            (2, 1) => { // BUY NO
-                require!(amount >= MIN_BUY_E6 && amount <= SPEND_MAX_E6, ReaderError::BadParam);
+            (2, 1) => { // BUY NO - amount is SHARES to buy (not spend)
+                require!(amount >= MIN_SELL_E6 && amount <= DQ_MAX_E6, ReaderError::BadParam);
 
-                // Check user vault balance
-                require!(pos.vault_balance_e6 >= amount, ReaderError::InsufficientBalance);
+                // Calculate required spend for desired shares using binary search
+                let desired_shares_e6 = amount;
+                let spend_e6 = lmsr_buy_no_for_shares(amm, desired_shares_e6)?;
 
-                let (dq_e6, avg_h) = lmsr_buy_no(amm, amount)?;
-                pos.no_shares_e6 = pos.no_shares_e6.saturating_add(dq_e6.round() as i64);
+                // Check user vault balance (needs spend_e6, not shares)
+                require!(pos.vault_balance_e6 >= spend_e6, ReaderError::InsufficientBalance);
 
-                let fee_e6 = ((amount as i128) * (amm.fee_bps as i128) / 10_000) as i64;
-                let net_e6 = amount.saturating_sub(fee_e6);
+                // Execute the buy with calculated spend (this will give us exactly the shares we want)
+                let (actual_shares_e6, avg_h) = lmsr_buy_no(amm, spend_e6)?;
+                pos.no_shares_e6 = pos.no_shares_e6.saturating_add(actual_shares_e6.round() as i64);
+
+                // Calculate fee and net from spend
+                let fee_e6 = ((spend_e6 as i128) * (amm.fee_bps as i128) / 10_000) as i64;
+                let net_e6 = spend_e6.saturating_sub(fee_e6);
 
                 // Transfer from user_vault PDA (using signed transfer)
                 let pos_key = pos.key();
@@ -666,11 +822,11 @@ pub mod cpi_oracle {
                 transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.vault_sol.to_account_info(), e6_to_lamports(net_e6), &[seeds])?;
                 transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.fee_dest.to_account_info(), e6_to_lamports(fee_e6), &[seeds])?;
 
-                // Update vault balance
-                pos.vault_balance_e6 -= amount;
+                // Update vault balance with actual spend
+                pos.vault_balance_e6 -= spend_e6;
 
-                emit_trade(amm, 2, 1, amount, dq_e6.round() as i64, avg_h);
-                log_trade_buy("BUY NO ", amount, dq_e6, avg_h, lmsr_p_yes(amm), amm);
+                emit_trade(amm, 2, 1, spend_e6, actual_shares_e6.round() as i64, avg_h);
+                log_trade_buy("BUY NO ", spend_e6, actual_shares_e6, avg_h, lmsr_p_yes(amm), amm);
             }
             (1, 2) => { // SELL YES → pay proceeds to user_vault
                 require!(amount >= MIN_SELL_E6 && amount <= DQ_MAX_E6, ReaderError::BadParam);
@@ -678,7 +834,15 @@ pub mod cpi_oracle {
                 require!(sell_e6 > 0, ReaderError::InsufficientShares);
 
                 let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_yes(amm, sell_e6)?;
-                require!(amm.vault_e6 >= proceeds_e6, ReaderError::NoCoverage);
+
+                // Check actual vault_sol PDA balance (not the accounting mirror which can drift)
+                let vault_sol_actual_lamports = ctx.accounts.vault_sol.lamports();
+                let vault_sol_actual_e6 = lamports_to_e6(vault_sol_actual_lamports);
+                msg!("SELL YES COVERAGE CHECK: vault_sol_ACTUAL={:.6} XNT, AMM_vault_e6_accounting={:.6} XNT (drift={:.6}), proceeds_needed={:.6} XNT",
+                     usd(vault_sol_actual_e6), usd(amm.vault_e6), usd(vault_sol_actual_e6 - amm.vault_e6), usd(proceeds_e6));
+
+                // Use ACTUAL vault balance for coverage check, not the drifted accounting mirror
+                require!(vault_sol_actual_e6 >= proceeds_e6, ReaderError::NoCoverage);
 
                 // Transfer from vault_sol to user_vault
                 let amm_key = amm.key();
@@ -702,7 +866,15 @@ pub mod cpi_oracle {
                 require!(sell_e6 > 0, ReaderError::InsufficientShares);
 
                 let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_no(amm, sell_e6)?;
-                require!(amm.vault_e6 >= proceeds_e6, ReaderError::NoCoverage);
+
+                // Check actual vault_sol PDA balance (not the accounting mirror which can drift)
+                let vault_sol_actual_lamports = ctx.accounts.vault_sol.lamports();
+                let vault_sol_actual_e6 = lamports_to_e6(vault_sol_actual_lamports);
+                msg!("SELL NO COVERAGE CHECK: vault_sol_ACTUAL={:.6} XNT, AMM_vault_e6_accounting={:.6} XNT (drift={:.6}), proceeds_needed={:.6} XNT",
+                     usd(vault_sol_actual_e6), usd(amm.vault_e6), usd(vault_sol_actual_e6 - amm.vault_e6), usd(proceeds_e6));
+
+                // Use ACTUAL vault balance for coverage check, not the drifted accounting mirror
+                require!(vault_sol_actual_e6 >= proceeds_e6, ReaderError::NoCoverage);
 
                 // Transfer from vault_sol to user_vault
                 let amm_key = amm.key();
@@ -725,10 +897,125 @@ pub mod cpi_oracle {
         Ok(())
     }
 
+    // ---------- CLOSE POSITION (sell all YES and NO shares) ----------
+    pub fn close_position(ctx: Context<Trade>) -> Result<()> {
+        let amm = &mut ctx.accounts.amm;
+        let pos = &mut ctx.accounts.pos;
+        let sys = &ctx.accounts.system_program;
+
+        let status = amm.status();
+        require!(status == MarketStatus::Premarket || status == MarketStatus::Open, ReaderError::MarketClosed);
+
+        // Check trading lockout using oracle timestamp (30 seconds before market end)
+        if amm.market_end_time > 0 {
+            // Read current time from oracle via CPI (returns milliseconds)
+            let (_, oracle_ts_ms) = read_btc_price_e6(&ctx.accounts.oracle_state)?;
+            let oracle_ts = oracle_ts_ms / 1000; // Convert milliseconds to seconds
+            let lockout_start_time = amm.market_end_time - TRADING_LOCKOUT_SECONDS;
+            let time_until_lockout = lockout_start_time.saturating_sub(oracle_ts);
+            let time_until_end = amm.market_end_time.saturating_sub(oracle_ts);
+
+            if oracle_ts >= lockout_start_time {
+                msg!("🚫 CLOSE POSITION LOCKED: Oracle time {} >= lockout start {} (market ends at {})",
+                     oracle_ts, lockout_start_time, amm.market_end_time);
+                msg!("   Time until market end: {} seconds", time_until_end);
+                return err!(ReaderError::TradingLocked);
+            } else {
+                msg!("✅ Close Position Lockout Check PASSED: Oracle time {} < lockout start {}",
+                     oracle_ts, lockout_start_time);
+                msg!("   Time until lockout: {} seconds | Time until market end: {} seconds",
+                     time_until_lockout, time_until_end);
+            }
+        }
+
+        msg!("🔒 [CLOSE POSITION] Starting position closure");
+        msg!("   YES shares: {:.6} ({} e6)", pos.yes_shares_e6 as f64 / 1e6, pos.yes_shares_e6);
+        msg!("   NO shares: {:.6} ({} e6)", pos.no_shares_e6 as f64 / 1e6, pos.no_shares_e6);
+        msg!("   Vault balance before: {:.6} XNT", pos.vault_balance_e6 as f64 / 1e7);
+
+        let mut total_proceeds_e6 = 0i64;
+
+        // Sell all YES shares if any
+        if pos.yes_shares_e6 > 0 {
+            let sell_yes_e6 = pos.yes_shares_e6;
+            msg!("💰 Selling {} YES shares ({:.6})", sell_yes_e6, sell_yes_e6 as f64 / 1e6);
+
+            let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_yes(amm, sell_yes_e6)?;
+
+            // Check actual vault_sol PDA balance
+            let vault_sol_actual_lamports = ctx.accounts.vault_sol.lamports();
+            let vault_sol_actual_e6 = lamports_to_e6(vault_sol_actual_lamports);
+            msg!("   Coverage check: vault={:.6} XNT, needed={:.6} XNT",
+                 usd(vault_sol_actual_e6), usd(proceeds_e6));
+
+            require!(vault_sol_actual_e6 >= proceeds_e6, ReaderError::NoCoverage);
+
+            // Transfer from vault_sol to user_vault
+            let amm_key = amm.key();
+            let seeds: &[&[u8]] = &[
+                Amm::VAULT_SOL_SEED,
+                amm_key.as_ref(),
+                core::slice::from_ref(&amm.vault_sol_bump),
+            ];
+            transfer_sol_signed(sys, &ctx.accounts.vault_sol.to_account_info(), &ctx.accounts.user_vault.to_account_info(), e6_to_lamports(proceeds_e6), &[seeds])?;
+
+            pos.yes_shares_e6 = pos.yes_shares_e6.saturating_sub(sold_e6.round() as i64);
+            total_proceeds_e6 += proceeds_e6;
+
+            msg!("✅ Sold {:.6} YES shares for {:.6} XNT (avg price: {:.6})",
+                 sold_e6, usd(proceeds_e6), avg_h);
+            emit_trade(amm, 1, 2, proceeds_e6, sold_e6.round() as i64, avg_h);
+        }
+
+        // Sell all NO shares if any
+        if pos.no_shares_e6 > 0 {
+            let sell_no_e6 = pos.no_shares_e6;
+            msg!("💰 Selling {} NO shares ({:.6})", sell_no_e6, sell_no_e6 as f64 / 1e6);
+
+            let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_no(amm, sell_no_e6)?;
+
+            // Check actual vault_sol PDA balance
+            let vault_sol_actual_lamports = ctx.accounts.vault_sol.lamports();
+            let vault_sol_actual_e6 = lamports_to_e6(vault_sol_actual_lamports);
+            msg!("   Coverage check: vault={:.6} XNT, needed={:.6} XNT",
+                 usd(vault_sol_actual_e6), usd(proceeds_e6));
+
+            require!(vault_sol_actual_e6 >= proceeds_e6, ReaderError::NoCoverage);
+
+            // Transfer from vault_sol to user_vault
+            let amm_key = amm.key();
+            let seeds: &[&[u8]] = &[
+                Amm::VAULT_SOL_SEED,
+                amm_key.as_ref(),
+                core::slice::from_ref(&amm.vault_sol_bump),
+            ];
+            transfer_sol_signed(sys, &ctx.accounts.vault_sol.to_account_info(), &ctx.accounts.user_vault.to_account_info(), e6_to_lamports(proceeds_e6), &[seeds])?;
+
+            pos.no_shares_e6 = pos.no_shares_e6.saturating_sub(sold_e6.round() as i64);
+            total_proceeds_e6 += proceeds_e6;
+
+            msg!("✅ Sold {:.6} NO shares for {:.6} XNT (avg price: {:.6})",
+                 sold_e6, usd(proceeds_e6), avg_h);
+            emit_trade(amm, 2, 2, proceeds_e6, sold_e6.round() as i64, avg_h);
+        }
+
+        // Update vault balance
+        pos.vault_balance_e6 += total_proceeds_e6;
+
+        msg!("✅ [CLOSE POSITION] Position closed successfully");
+        msg!("   Total proceeds: {:.6} XNT ({} e6)", total_proceeds_e6 as f64 / 1e7, total_proceeds_e6);
+        msg!("   Vault balance after: {:.6} XNT ({} e6)", pos.vault_balance_e6 as f64 / 1e7, pos.vault_balance_e6);
+        msg!("   Remaining YES shares: {}", pos.yes_shares_e6);
+        msg!("   Remaining NO shares: {}", pos.no_shares_e6);
+
+        Ok(())
+    }
+
     // ---------- STOP ----------
     pub fn stop_market(ctx: Context<AdminOnly>) -> Result<()> {
         let amm = &mut ctx.accounts.amm;
-        require!(amm.status() == MarketStatus::Open, ReaderError::WrongState);
+        let status = amm.status();
+        require!(status == MarketStatus::Premarket || status == MarketStatus::Open, ReaderError::WrongState);
         amm.status = MarketStatus::Stopped as u8;
         msg!("⏹️  Market STOPPED");
         Ok(())
@@ -770,9 +1057,9 @@ pub mod cpi_oracle {
             floored.min(1_000_000)
         };
         amm.pps_e6 = pps_e6;
-        amm.status = MarketStatus::Settled as u8;
+        // Market stays in STOPPED state - users can redeem, then admin can reinit to PREMARKET
 
-        msg!("✅ SETTLED winner={}  W={}  vault=${:.6}  pps={:.6}",
+        msg!("✅ SETTLED winner={}  W={}  vault=${:.6}  pps={:.6} - Market stays STOPPED for redemptions",
              winner, amm.w_total_e6, usd(amm.vault_e6), (pps_e6 as f64)/1_000_000.0);
         Ok(())
     }
@@ -784,8 +1071,10 @@ const WIPE_ON_PAY_ZERO: bool = true;
 pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
     let sys  = &ctx.accounts.system_program;
 
-    // Must be settled
-    require!(ctx.accounts.amm.status() == MarketStatus::Settled, ReaderError::WrongState);
+    // Must be stopped (settlement values calculated)
+    require!(ctx.accounts.amm.status() == MarketStatus::Stopped, ReaderError::WrongState);
+    // And winner must be determined
+    require!(ctx.accounts.amm.winner != 0, ReaderError::WrongState);
 
     // ---- read-only views
     let pos_ro = &ctx.accounts.pos;
@@ -842,7 +1131,7 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
     // Convert actual lamports paid back to e6 for mirror accounting
     let pay_e6_effective = lamports_to_e6(pay_lamports);
 
-    // Pay user from vault (PDA signed)
+    // Pay to user_vault PDA (not session wallet)
     let amm_key = ctx.accounts.amm.key();
     let seeds: &[&[u8]] = &[
         Amm::VAULT_SOL_SEED,
@@ -852,7 +1141,7 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
     transfer_sol_signed(
         sys,
         &ctx.accounts.vault_sol.to_account_info(),
-        &ctx.accounts.user.to_account_info(),
+        &ctx.accounts.user_vault.to_account_info(),
         pay_lamports,
         &[seeds],
     )?;
@@ -864,15 +1153,18 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
     let pos_mut = &mut ctx.accounts.pos;
     pos_mut.yes_shares_e6 = 0;
     pos_mut.no_shares_e6  = 0;
+    // Update user vault balance tracking
+    pos_mut.vault_balance_e6 = pos_mut.vault_balance_e6.saturating_add(pay_e6_effective);
 
     let kept = vault_ai.lamports(); // after transfer
     msg!(
-        "💸 REDEEM pay={} lamports ({:.9} SOL); kept_reserve={} lamports; pps={:.6}, winner={}",
+        "💸 REDEEM pay={} lamports ({:.9} SOL) to user_vault; kept_reserve={} lamports; pps={:.6}, winner={}; vault_balance={} e6",
         pay_lamports,
         (pay_lamports as f64)/1e9,
         kept.min(MIN_VAULT_LAMPORTS),
         (amm_mut.pps_e6 as f64)/1_000_000.0,
-        amm_mut.winner
+        amm_mut.winner,
+        pos_mut.vault_balance_e6
     );
     Ok(())
 }
@@ -884,8 +1176,10 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
         // Only fee_dest can call this
         require_keys_eq!(ctx.accounts.admin.key(), ctx.accounts.amm.fee_dest, ReaderError::NotOwner);
 
-        // Must be settled
-        require!(ctx.accounts.amm.status() == MarketStatus::Settled, ReaderError::WrongState);
+        // Must be stopped (settlement values calculated)
+        require!(ctx.accounts.amm.status() == MarketStatus::Stopped, ReaderError::WrongState);
+        // And winner must be determined
+        require!(ctx.accounts.amm.winner != 0, ReaderError::WrongState);
 
         // ---- read-only views
         let pos_ro = &ctx.accounts.pos;
@@ -939,7 +1233,7 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
         // Convert actual lamports paid back to e6 for mirror accounting
         let pay_e6_effective = lamports_to_e6(pay_lamports);
 
-        // Pay user from vault (PDA signed) - NOTE: funds go to USER, not admin
+        // Pay to user_vault PDA (not session wallet)
         let amm_key = ctx.accounts.amm.key();
         let seeds: &[&[u8]] = &[
             Amm::VAULT_SOL_SEED,
@@ -949,7 +1243,7 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
         transfer_sol_signed(
             sys,
             &ctx.accounts.vault_sol.to_account_info(),
-            &ctx.accounts.user.to_account_info(),
+            &ctx.accounts.user_vault.to_account_info(),
             pay_lamports,
             &[seeds],
         )?;
@@ -961,14 +1255,17 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
         let pos_mut = &mut ctx.accounts.pos;
         pos_mut.yes_shares_e6 = 0;
         pos_mut.no_shares_e6  = 0;
+        // Update user vault balance tracking
+        pos_mut.vault_balance_e6 = pos_mut.vault_balance_e6.saturating_add(pay_e6_effective);
 
         let kept = vault_ai.lamports();
         msg!(
-            "💸 ADMIN_REDEEM user={} pay={} lamports ({:.9} SOL); kept_reserve={} lamports",
+            "💸 ADMIN_REDEEM user={} pay={} lamports ({:.9} SOL) to user_vault; kept_reserve={} lamports; vault_balance={} e6",
             ctx.accounts.user.key(),
             pay_lamports,
             (pay_lamports as f64)/1e9,
-            kept.min(MIN_VAULT_LAMPORTS)
+            kept.min(MIN_VAULT_LAMPORTS),
+            pos_mut.vault_balance_e6
         );
         Ok(())
     }
@@ -983,7 +1280,7 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
     // ---------- NEW: SNAPSHOT the start BTC price ----------
     pub fn snapshot_start(ctx: Context<SnapshotStart>) -> Result<()> {
         let amm = &mut ctx.accounts.amm;
-        require!(amm.status() == MarketStatus::Open, ReaderError::WrongState);
+        require!(amm.status() == MarketStatus::Premarket, ReaderError::WrongState);
         require!(amm.start_price_e6 == 0, ReaderError::AlreadySnapshotted);
 
         let (price_e6, ts) = read_btc_price_e6(&ctx.accounts.oracle_state)?;
@@ -992,7 +1289,24 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
         amm.start_price_e6 = price_e6;
         amm.start_ts = ts;
 
-        msg!("📸 SNAPSHOT start BTC=${:.6} (ts={})", (price_e6 as f64)/1e6, ts);
+        // Transition from PREMARKET to OPEN
+        amm.status = MarketStatus::Open as u8;
+
+        msg!("📸 SNAPSHOT start BTC=${:.6} (ts={}) - Market now OPEN", (price_e6 as f64)/1e6, ts);
+        Ok(())
+    }
+
+    // ---------- SET MARKET END TIME (for trading lockout) ----------
+    pub fn set_market_end_slot(ctx: Context<AdminOnly>, market_end_slot: u64, market_end_time: i64) -> Result<()> {
+        let amm = &mut ctx.accounts.amm;
+        require!(market_end_time > 0, ReaderError::BadParam);
+
+        amm.market_end_slot = market_end_slot;  // Keep for backwards compatibility
+        amm.market_end_time = market_end_time;
+
+        msg!("⏰ Market end time set to: {} (unix timestamp)", market_end_time);
+        msg!("   Trading locks at: {} (30 seconds before close)", market_end_time - TRADING_LOCKOUT_SECONDS);
+        msg!("   Market end slot (legacy): {}", market_end_slot);
         Ok(())
     }
 
@@ -1032,10 +1346,10 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
             floored.min(1_000_000)
         };
         amm.pps_e6 = pps_e6;
-        amm.status = MarketStatus::Settled as u8;
+        // Market stays in STOPPED state - users can redeem, then admin can reinit to PREMARKET
 
         msg!(
-          "✅ SETTLED_BY_ORACLE winner={} start=${:.6}@{} curr=${:.6}@{}  W={}  vault=${:.6}  pps={:.6}",
+          "✅ SETTLED_BY_ORACLE winner={} start=${:.6}@{} curr=${:.6}@{}  W={}  vault=${:.6}  pps={:.6} - Market stays STOPPED for redemptions",
           winner,
           (start as f64)/1e6, amm.start_ts,
           (curr_e6 as f64)/1e6, ts,
@@ -1219,6 +1533,38 @@ fn lmsr_sell_no(amm: &mut Amm, shares_e6: i64) -> Result<(i64, f64, f64)> {
     Ok((net_e6, avg_h, sell_e6 as f64))
 }
 
+// ---- BUY YES FOR SHARES (inverse calculation) ----
+// Given desired shares, calculate required spend
+fn lmsr_buy_yes_for_shares(amm: &Amm, desired_shares_e6: i64) -> Result<i64> {
+    if desired_shares_e6 <= 0 { return Ok(0); }
+
+    let base = lmsr_cost(amm, sh(amm.q_yes), sh(amm.q_no));
+    let target_cost = lmsr_cost(amm, sh(amm.q_yes + desired_shares_e6), sh(amm.q_no));
+    let net_h = (target_cost - base).max(0.0);
+
+    // Gross spend before fees
+    let gross_h = net_h / (1.0 - (amm.fee_bps as f64) / 10_000.0);
+    let spend_e6 = (gross_h * 1_000_000.0).round() as i64;
+
+    Ok(spend_e6)
+}
+
+// ---- BUY NO FOR SHARES (inverse calculation) ----
+// Given desired shares, calculate required spend
+fn lmsr_buy_no_for_shares(amm: &Amm, desired_shares_e6: i64) -> Result<i64> {
+    if desired_shares_e6 <= 0 { return Ok(0); }
+
+    let base = lmsr_cost(amm, sh(amm.q_yes), sh(amm.q_no));
+    let target_cost = lmsr_cost(amm, sh(amm.q_yes), sh(amm.q_no + desired_shares_e6));
+    let net_h = (target_cost - base).max(0.0);
+
+    // Gross spend before fees
+    let gross_h = net_h / (1.0 - (amm.fee_bps as f64) / 10_000.0);
+    let spend_e6 = (gross_h * 1_000_000.0).round() as i64;
+
+    Ok(spend_e6)
+}
+
 // ============================== ORACLE helpers ==============================
 
 const ORACLE_MAX_AGE_SECS: i64 = 90; // adjust to your feed cadence
@@ -1367,5 +1713,6 @@ pub enum ReaderError {
     #[msg("stale oracle data")]                   StaleOracle,
     #[msg("unauthorized access")]                 Unauthorized,
     #[msg("insufficient vault balance")]          InsufficientBalance,
+    #[msg("trading locked before market close")]  TradingLocked,
 }
 

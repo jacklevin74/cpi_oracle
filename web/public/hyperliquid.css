@@ -79,6 +79,71 @@ body {
     letter-spacing: 0;
 }
 
+/* Debug toggle in header */
+.debug-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.debug-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.debug-toggle-track {
+    position: relative;
+    width: 28px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.debug-toggle-thumb {
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transition: left 0.2s ease, background 0.2s ease;
+}
+
+.debug-toggle input[type="checkbox"]:checked + .debug-toggle-track {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.debug-toggle input[type="checkbox"]:checked + .debug-toggle-track .debug-toggle-thumb {
+    left: 14px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.debug-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Hide slot items when debug is off */
+.debug-slot-item {
+    display: flex;
+    transition: opacity 0.2s ease;
+}
+
+body:not(.debug-mode) .debug-slot-item {
+    display: none;
+}
+
 .market-info {
     display: flex;
     align-items: center;
@@ -334,7 +399,7 @@ body {
 
 .market-stats {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1px;
     background: var(--border-color);
     border-top: 1px solid var(--border-color);
@@ -344,6 +409,18 @@ body {
     background: var(--bg-secondary);
     padding: 12px;
     text-align: center;
+    min-width: 0;
+}
+
+.stat-item .stat-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stat-item .stat-value {
+    word-break: break-all;
+    overflow-wrap: break-word;
 }
 
 .stat-label {
@@ -359,6 +436,243 @@ body {
     font-size: 12px;
     font-weight: 600;
     color: var(--text-primary);
+}
+
+/* Slot info styling - light grey text */
+.stat-value.slot-info {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+}
+
+/* Make debug slot items more compact - horizontal layout */
+.debug-slot-item {
+    min-width: 100px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.debug-slot-item .stat-label {
+    font-size: 9px;
+    margin-bottom: 0;
+}
+
+.debug-slot-item .stat-value {
+    margin-bottom: 0;
+}
+
+/* Countdown timer styling */
+.countdown-value {
+    color: #ffa500;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+.countdown-value.urgent {
+    color: var(--red);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Stat label with toggle layout */
+.stat-label-with-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+    margin-bottom: 6px;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.stat-label-with-toggle .stat-label {
+    line-height: 16px; /* Match toggle height for perfect alignment */
+}
+
+/* Inline alarm toggle - minimalist design */
+.alarm-toggle-inline {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    will-change: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    margin-top: -6px;
+}
+
+.alarm-toggle-inline input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-track {
+    position: relative;
+    width: 31px;        /* 24px * 1.3 = 31.2px */
+    height: 16px;       /* 12px * 1.3 = 15.6px */
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;  /* 8px * 1.3 = 10.4px */
+    transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.toggle-thumb {
+    position: absolute;
+    left: 2px;          /* 1px * 1.3 = 1.3px, rounded to 2px */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 13px;        /* 10px * 1.3 = 13px */
+    height: 13px;       /* 10px * 1.3 = 13px */
+    background: var(--bg-secondary);
+    border: 1px solid var(--text-dim);
+    border-radius: 50%;
+    transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 6px rgba(63, 182, 139, 0), 0 0 12px rgba(63, 182, 139, 0);
+}
+
+.toggle-icon {
+    width: 8px;         /* 6px * 1.3 = 7.8px, rounded to 8px */
+    height: 8px;        /* 6px * 1.3 = 7.8px, rounded to 8px */
+    color: var(--text-dim);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.7;
+}
+
+/* Checked state - green and active */
+.alarm-toggle-inline input[type="checkbox"]:checked + .toggle-track {
+    background: rgba(63, 182, 139, 0.2);
+    border-color: var(--green);
+}
+
+.alarm-toggle-inline input[type="checkbox"]:checked + .toggle-track .toggle-thumb {
+    left: 16px;         /* 12px * 1.3 = 15.6px, rounded to 16px */
+    background: var(--green);
+    border-color: var(--green);
+    box-shadow: 0 0 6px rgba(63, 182, 139, 0.8), 0 0 12px rgba(63, 182, 139, 0.4);
+}
+
+.alarm-toggle-inline input[type="checkbox"]:checked + .toggle-track .toggle-icon {
+    color: #ffffff;
+    opacity: 1;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.8));
+}
+
+/* Hover effects */
+.alarm-toggle-inline:hover .toggle-track {
+    border-color: var(--green);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.alarm-toggle-inline input[type="checkbox"]:checked:hover + .toggle-track {
+    background: rgba(63, 182, 139, 0.3);
+}
+
+/* Active/click feedback - completely removed to prevent any position shift */
+.alarm-toggle-inline:active .toggle-track {
+    /* No visual changes on active - prevents any layout shift */
+}
+
+/* Old alarm toggle styling (for nav toggle) */
+.alarm-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s ease;
+}
+
+.alarm-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.alarm-slider {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 16px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.alarm-icon {
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    transition: all 0.3s ease;
+    opacity: 0.5;
+}
+
+/* Checked state */
+.alarm-toggle input[type="checkbox"]:checked + .alarm-slider {
+    background: var(--green);
+    border-color: var(--green);
+}
+
+.alarm-toggle input[type="checkbox"]:checked + .alarm-slider .alarm-icon {
+    left: 18px;
+    opacity: 1;
+    filter: brightness(1.2);
+}
+
+/* Hover effect */
+.alarm-toggle:hover .alarm-slider {
+    border-color: var(--green);
+}
+
+.alarm-toggle input[type="checkbox"]:not(:checked):hover + .alarm-slider {
+    background: var(--bg-tertiary);
+}
+
+/* Disabled/muted state */
+.alarm-toggle input[type="checkbox"]:not(:checked) + .alarm-slider .alarm-icon {
+    filter: grayscale(1);
+}
+
+/* Top nav alarm toggle styling */
+.alarm-toggle-nav {
+    margin-left: 0;
+    margin-right: 12px;
+    vertical-align: middle;
+}
+
+.alarm-toggle-nav .alarm-slider {
+    width: 36px;
+    height: 18px;
+}
+
+.alarm-toggle-nav .alarm-icon {
+    font-size: 11px;
+    left: 3px;
+}
+
+.alarm-toggle-nav input[type="checkbox"]:checked + .alarm-slider .alarm-icon {
+    left: 20px;
 }
 
 /* ===== ORDER BOOK ===== */
@@ -582,6 +896,72 @@ body {
 
 .btn-execute.sell:hover {
     background: var(--red-hover);
+}
+
+/* Close Position Button */
+.btn-close-position {
+    width: 100%;
+    background: var(--bg-secondary);
+    color: #ff9500;
+    border: 1px solid #ff9500;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+}
+.btn-close-position:hover {
+    background: #ff9500;
+    color: #000;
+}
+.btn-close-position:disabled {
+    opacity: 0.4;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
+/* Close Position Confirm Button (in modal) */
+.btn-close-position-confirm {
+    flex: 1;
+    background: #ff9500;
+    color: #000;
+    border: none;
+    padding: 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+}
+.btn-close-position-confirm:hover {
+    background: #ffaa33;
+}
+.btn-close-position-confirm:disabled {
+    opacity: 0.4;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
+/* Highlight balance row (for estimated proceeds) */
+.balance-row.highlight {
+    background: rgba(255, 149, 0, 0.08);
+    border: 1px solid rgba(255, 149, 0, 0.2);
+    border-radius: 4px;
+    margin-top: 8px;
+}
+.balance-row.highlight:hover {
+    background: rgba(255, 149, 0, 0.12);
+}
+.balance-row.highlight .balance-label {
+    color: #ff9500;
+    font-weight: 600;
+}
+.balance-row.highlight .balance-value {
+    color: #ff9500;
+    font-weight: 700;
 }
 
 /* Disabled button states */
@@ -1405,7 +1785,7 @@ button.disabled {
 
 .tab-btn {
     padding: 10px;
-    background: var(--bg-tertiary);
+    background: transparent;
     border: 1px solid var(--border-color);
     border-radius: 2px;
     color: var(--text-secondary);
@@ -1419,12 +1799,13 @@ button.disabled {
 .tab-btn:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
+    border-color: var(--text-dim);
 }
 
 .tab-btn.active {
-    background: var(--green);
+    background: transparent;
     border-color: var(--green);
-    color: #000;
+    color: var(--green);
 }
 
 /* ===== INPUT MODE TOGGLE ===== */
@@ -1720,22 +2101,30 @@ button.disabled {
 /* ===== DEPOSIT BUTTON ===== */
 
 .btn-deposit {
-    background: transparent;
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 204, 106, 0.1) 100%);
+    color: #00ff88;
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
     margin-right: 16px;
     white-space: nowrap;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 255, 136, 0.1);
 }
 
 .btn-deposit:hover {
-    background: var(--bg-hover);
-    border-color: var(--border-light);
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.2) 0%, rgba(0, 204, 106, 0.2) 100%);
+    border-color: rgba(0, 255, 136, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.2);
+}
+
+.btn-deposit:active {
+    transform: translateY(0);
 }
 
 /* ===== DEPOSIT MODAL ===== */
@@ -1762,60 +2151,77 @@ button.disabled {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
 }
 
 .modal-content {
     position: relative;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    max-width: 500px;
+    border-radius: 4px;
+    max-width: 480px;
     width: 90%;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.1);
     z-index: 1001;
+    overflow: hidden;
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 24px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.modal-title-section {
+    flex: 1;
 }
 
 .modal-title {
-    font-size: 18px;
+    font-size: 11px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--text-dim);
     margin: 0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.modal-subtitle {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin: 2px 0 0 0;
+    font-weight: 400;
+    opacity: 0.6;
 }
 
 .modal-close {
     background: transparent;
     border: none;
     color: var(--text-dim);
-    font-size: 32px;
+    font-size: 20px;
     line-height: 1;
     cursor: pointer;
     padding: 0;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
+    border-radius: 2px;
+    flex-shrink: 0;
 }
 
 .modal-close:hover {
     color: var(--text-primary);
     background: var(--bg-hover);
-    border-radius: 6px;
 }
 
 .modal-body {
-    padding: 24px;
+    padding: 16px;
 }
 
 .deposit-instructions {
@@ -1895,6 +2301,388 @@ button.disabled {
 .deposit-note strong {
     color: #ff9500;
     font-weight: 700;
+}
+
+/* Balance Info Display */
+.balance-info {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 0;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.balance-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    transition: background 0.15s;
+}
+
+.balance-row:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.balance-row:hover {
+    background: var(--bg-hover);
+}
+
+.balance-label-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.balance-label {
+    font-size: 12px;
+    color: var(--text-primary);
+    font-weight: 600;
+    letter-spacing: 0px;
+}
+
+.balance-sublabel {
+    font-size: 9px;
+    color: var(--text-dim);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.balance-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    letter-spacing: 0px;
+}
+
+/* Input Group */
+.input-group {
+    margin-bottom: 16px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-group input[type="number"] {
+    flex: 1;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    padding: 10px 12px;
+    padding-right: 110px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    transition: all 0.2s;
+}
+
+.input-group input[type="number"]:hover {
+    border-color: var(--border-color);
+    background: var(--bg-primary);
+}
+
+.input-group input[type="number"]:focus {
+    outline: none;
+    border-color: var(--green);
+    background: var(--bg-primary);
+    box-shadow: none;
+}
+
+.input-group input[type="number"]::placeholder {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+/* Remove spinner buttons */
+.input-group input[type="number"]::-webkit-inner-spin-button,
+.input-group input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input-group input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.input-currency {
+    position: absolute;
+    right: 65px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 600;
+    letter-spacing: 0px;
+    pointer-events: none;
+}
+
+.btn-max-deposit {
+    position: absolute;
+    right: 6px;
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid rgba(0, 255, 136, 0.2);
+    color: var(--green);
+    padding: 5px 12px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+}
+
+.btn-max-deposit:hover {
+    background: rgba(0, 255, 136, 0.15);
+    border-color: var(--green);
+}
+
+.btn-max-deposit:active {
+    transform: none;
+}
+
+/* Modal Actions */
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.modal-actions button {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    letter-spacing: 0px;
+}
+
+.btn-primary {
+    background: var(--green);
+    color: var(--bg-primary);
+    box-shadow: none;
+}
+
+.btn-primary:hover {
+    background: var(--green-hover);
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-primary:active {
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-secondary {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-dim);
+}
+
+.btn-secondary:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-secondary:active {
+    background: var(--bg-primary);
+}
+
+.btn-withdraw {
+    background: var(--bg-primary);
+    border: 2px solid transparent;
+    background-image:
+        linear-gradient(var(--bg-primary), var(--bg-primary)),
+        linear-gradient(135deg, var(--blue), var(--green));
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    color: var(--text-dim);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.btn-withdraw:hover {
+    background-image:
+        linear-gradient(var(--bg-hover), var(--bg-hover)),
+        linear-gradient(135deg, var(--blue), var(--green));
+    color: var(--text-primary);
+    box-shadow: 0 0 15px rgba(91, 158, 255, 0.2);
+}
+
+.btn-withdraw:active {
+    background-image:
+        linear-gradient(var(--bg-primary), var(--bg-primary)),
+        linear-gradient(135deg, var(--blue), var(--green));
+    transform: translateY(1px);
+}
+
+/* Secondary Modal Actions */
+.modal-actions-secondary {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.modal-actions-secondary button {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0px;
+}
+
+/* Fund Session Button - simple gray border */
+.btn-fund-session {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-dim);
+    transition: all 0.15s;
+}
+
+.btn-fund-session:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-fund-session:active {
+    background: var(--bg-primary);
+    transform: none;
+}
+
+/* Deposit Info Section */
+.deposit-info-section {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.deposit-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.info-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 2px;
+}
+
+.info-text {
+    flex: 1;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-dim);
+}
+
+.info-text strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Deposit Address Container */
+.deposit-address-container {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.deposit-address-small {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    word-break: break-all;
+    text-align: center;
+}
+
+.btn-copy-small {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-dim);
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+}
+
+.btn-copy-small:hover {
+    background: var(--bg-hover);
+    color: #00ff88;
+    border-color: rgba(0, 255, 136, 0.3);
+}
+
+.btn-copy-small svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Improved Modal Content */
+.modal-content {
+    animation: modalSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
@@ -2734,9 +3522,9 @@ button.disabled {
 
 .settlement-table-header {
     display: grid;
-    grid-template-columns: 110px 80px 80px 80px 100px;
+    grid-template-columns: 105px 70px 160px 80px 90px;
     gap: 8px;
-    padding: 8px 12px;
+    padding: 8px 10px;
     background: var(--bg-tertiary);
     border-bottom: 2px solid var(--border-color);
     font-weight: 700;
@@ -2751,6 +3539,7 @@ button.disabled {
     align-items: center;
 }
 
+.settlement-table-header .col-diff,
 .settlement-table-header .col-payout {
     justify-content: flex-end;
 }
@@ -2762,9 +3551,9 @@ button.disabled {
 
 .settlement-table-row {
     display: grid;
-    grid-template-columns: 110px 80px 80px 80px 100px;
+    grid-template-columns: 105px 70px 160px 80px 90px;
     gap: 8px;
-    padding: 8px 12px;
+    padding: 7px 10px;
     border-bottom: 1px solid var(--border-color);
     transition: background 0.2s;
     font-family: 'SF Mono', Monaco, Consolas, monospace;
@@ -2777,35 +3566,55 @@ button.disabled {
 
 .settlement-table-row .col-time,
 .settlement-table-row .col-user {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-secondary);
     white-space: nowrap;
 }
 
-.settlement-table-row .col-side {
-    font-weight: 700;
-    font-size: 12px;
+.settlement-table-row .col-btcmove {
+    font-weight: 600;
+    font-size: 10px;
+    text-align: left;
+    white-space: nowrap;
 }
 
-.settlement-table-row .col-side.side-up {
+.settlement-table-row .col-btcmove.btc-up {
     color: #00ff88;
 }
 
-.settlement-table-row .col-side.side-down {
+.settlement-table-row .col-btcmove.btc-down {
     color: #ff4444;
 }
 
-.settlement-table-row .col-result {
+.settlement-table-row .col-btcmove.btc-flat {
+    color: #888888;
+}
+
+.settlement-table-row .col-btcmove.btc-unknown {
+    color: #555555;
+}
+
+.settlement-table-row .col-diff {
     font-weight: 700;
     font-size: 12px;
+    text-align: right;
+    padding: 3px 8px;
+    border-radius: 4px;
 }
 
-.settlement-table-row .col-result.result-win {
+.settlement-table-row .col-diff.diff-positive {
     color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
 }
 
-.settlement-table-row .col-result.result-lose {
+.settlement-table-row .col-diff.diff-negative {
     color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+}
+
+.settlement-table-row .col-diff.diff-neutral {
+    color: #888888;
+    background: rgba(136, 136, 136, 0.1);
 }
 
 .settlement-table-row .col-payout {

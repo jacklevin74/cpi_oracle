@@ -189,7 +189,7 @@ Access at: http://localhost:3434
 
 - **Program**: `EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF`
 - **Oracle Program**: `7ARBeYF5rGCanAGiRaxhVpiuZZpGXazo5UJqHMoJgkuE`
-- **AMM Seed**: `b"amm_btc_v3"` (bump seed version to reset market)
+- **AMM Seed**: `b"amm_btc_v6"` (v6: time-based trading lockout with market_end_time)
 - **Position Seed**: `b"pos"` + amm_key + user_key
 - **Vault Seed**: `b"vault_sol"` + amm_key
 

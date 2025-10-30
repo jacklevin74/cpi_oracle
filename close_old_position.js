@@ -9,7 +9,7 @@ const web3 = require('@solana/web3.js');
 const fs = require('fs');
 
 const PROGRAM_ID = new web3.PublicKey('EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF');
-const AMM_SEED = Buffer.from('amm_btc_v3');
+const AMM_SEED = Buffer.from('amm_btc_v6');  // v6: time-based trading lockout
 const POS_SEED = Buffer.from('pos');
 
 async function main() {

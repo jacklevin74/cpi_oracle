@@ -17,7 +17,7 @@ const WALLET = process.env.ANCHOR_WALLET || `${process.env.HOME}/.config/solana/
 
 // === PROGRAM IDs / SEEDS ===
 const PID = new PublicKey("EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF");
-const AMM_SEED = Buffer.from("amm_btc_v3");
+const AMM_SEED = Buffer.from("amm_btc_v6");  // v6: time-based trading lockout
 const VAULT_SOL_SEED = Buffer.from("vault_sol");
 
 // Oracle STATE account
