@@ -8,6 +8,7 @@ test-ledger
 
 # Wallet keypairs (private keys - DO NOT COMMIT)
 user*.json
+operator*.json
 *.keypair
 
 # Logs and temporary files
