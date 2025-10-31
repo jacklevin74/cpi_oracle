@@ -6168,9 +6168,8 @@ function openTradeConfirmModal(tradeData) {
 
     // Set total cost/proceeds
     const costLabel = tradeData.action === 'buy' ? 'Total Cost' : 'Expected Proceeds';
-    // Try to update the label (hyperliquid.html uses ID, index.html uses class selector)
-    const costLabelEl = document.getElementById('confirmCostLabel') ||
-                        document.querySelector('.confirm-total-row .confirm-label');
+    // Update the label using ID (hyperliquid.html structure)
+    const costLabelEl = document.getElementById('confirmCostLabel');
     if (costLabelEl) {
         costLabelEl.textContent = costLabel;
     }
