@@ -6167,8 +6167,13 @@ function openTradeConfirmModal(tradeData) {
     document.getElementById('confirmPrice').textContent = tradeData.pricePerShare.toFixed(4) + ' XNT';
 
     // Set total cost/proceeds
-    const costLabel = tradeData.action === 'buy' ? 'Total Cost:' : 'Expected Proceeds:';
-    document.querySelector('.confirm-total-row .confirm-label').textContent = costLabel;
+    const costLabel = tradeData.action === 'buy' ? 'Total Cost' : 'Expected Proceeds';
+    // Try to update the label (hyperliquid.html uses ID, index.html uses class selector)
+    const costLabelEl = document.getElementById('confirmCostLabel') ||
+                        document.querySelector('.confirm-total-row .confirm-label');
+    if (costLabelEl) {
+        costLabelEl.textContent = costLabel;
+    }
     document.getElementById('confirmCost').textContent = '~' + tradeData.totalCost.toFixed(4) + ' XNT';
 
     // Update modal title based on action
