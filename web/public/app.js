@@ -68,8 +68,20 @@ function getOptimalSamplingRate(timeRangeSeconds) {
         timeRangeSeconds = estimatedSeconds;
     }
 
+    // Apply point reduction based on time range
+    let maxPoints = MAX_CHART_POINTS;
+
+    if (timeRangeSeconds >= 1800) {
+        // 30m, 1h, 6h, 24h: Reduce by 10x (200 points)
+        maxPoints = MAX_CHART_POINTS / 10;
+    } else if (timeRangeSeconds === 900) {
+        // 15m: Allow 1000 points
+        maxPoints = 1000;
+    }
+    // 1m (60s) and 5m (300s): No restriction, use MAX_CHART_POINTS (2000)
+
     const totalPoints = timeRangeSeconds * BASE_POINTS_PER_SECOND;
-    const samplingRate = Math.max(1, Math.ceil(totalPoints / MAX_CHART_POINTS));
+    const samplingRate = Math.max(1, Math.ceil(totalPoints / maxPoints));
     return samplingRate;
 }
 
@@ -1341,6 +1353,7 @@ async function savePriceToServer(price) {
 // Load price history from server
 async function loadPriceHistory(seconds = null) {
     try {
+        console.log(`📊 LOAD HISTORY - Requesting ${seconds || 'all'} seconds of data`);
         // Build URL with optional time range parameter
         const url = seconds ? `/api/price-history?seconds=${seconds}` : '/api/price-history';
         const response = await fetch(url);
@@ -1356,13 +1369,16 @@ async function loadPriceHistory(seconds = null) {
                 return typeof item === 'number' ? item : item.price;
             });
 
-            console.log('Loaded', rawPrices.length, 'price points from server (total available:', data.totalPoints || rawPrices.length, ')');
+            console.log(`📊 LOAD HISTORY - Loaded ${rawPrices.length} price points from server (total available: ${data.totalPoints || rawPrices.length})`);
 
             // Remove outliers to prevent chart rendering issues
+            const beforeOutliers = rawPrices.length;
             priceHistory = removeOutliers(rawPrices, 3);
+            console.log(`📊 LOAD HISTORY - After outlier removal: ${priceHistory.length} points (removed ${beforeOutliers - priceHistory.length} outliers)`);
 
             // Update chart if already initialized
             if (btcChart && priceHistory.length > 0) {
+                console.log(`📊 LOAD HISTORY - Rebuilding chart from ${priceHistory.length} history points`);
                 // Rebuild high-resolution chart data from price history
                 rebuildChartFromHistory();
             }
@@ -1375,6 +1391,7 @@ async function loadPriceHistory(seconds = null) {
 // Available time ranges (in order for cycling)
 const TIME_RANGES = [60, 300, 900, 1800, 3600, 21600, 86400];
 let currentTimeRangeIndex = 0; // Start at 1m (60 seconds)
+let isChangingTimeRange = false; // Lock to prevent overlapping time range changes
 
 // Toggle time range dropdown menu
 function toggleTimeRangeDropdown() {
@@ -1408,20 +1425,36 @@ document.addEventListener('click', (e) => {
 
 // Select a specific time range
 async function selectTimeRange(seconds) {
-    // Update active option in dropdown
-    document.querySelectorAll('.timerange-option').forEach(opt => {
-        opt.classList.remove('active');
-    });
-    const activeOpt = document.querySelector(`.timerange-option[data-seconds="${seconds}"]`);
-    if (activeOpt) {
-        activeOpt.classList.add('active');
+    // Prevent overlapping time range changes
+    if (isChangingTimeRange) {
+        console.log(`⚠️ SELECT TIME RANGE - Already changing, ignoring request for ${seconds}s`);
+        return;
     }
 
-    // Update displayed value in trigger
-    const selectedDisplay = document.getElementById('selectedTimeRange');
-    if (selectedDisplay) {
-        selectedDisplay.textContent = activeOpt ? activeOpt.textContent : seconds;
-    }
+    isChangingTimeRange = true;
+    console.log(`📊 SELECT TIME RANGE - Switching to ${seconds}s`);
+
+    try {
+        // Update active option in dropdown
+        document.querySelectorAll('.timerange-option').forEach(opt => {
+            opt.classList.remove('active');
+        });
+        const activeOpt = document.querySelector(`.timerange-option[data-seconds="${seconds}"]`);
+        console.log(`📊 SELECT TIME RANGE - Found option element:`, activeOpt ? `"${activeOpt.textContent}"` : 'NOT FOUND');
+
+        if (activeOpt) {
+            activeOpt.classList.add('active');
+        }
+
+        // Update displayed value in trigger
+        const selectedDisplay = document.getElementById('selectedTimeRange');
+        if (selectedDisplay) {
+            const newText = activeOpt ? activeOpt.textContent : seconds;
+            console.log(`📊 SELECT TIME RANGE - Updating label from "${selectedDisplay.textContent}" to "${newText}"`);
+            selectedDisplay.textContent = newText;
+        } else {
+            console.warn('📊 SELECT TIME RANGE - selectedTimeRange element NOT FOUND');
+        }
 
     // Close dropdown
     const menu = document.getElementById('timeRangeMenu');
@@ -1443,20 +1476,34 @@ async function selectTimeRange(seconds) {
     const effectivePointsPerSecond = getEffectivePointsPerSecond(currentTimeRange);
     console.log(`Time range changed to ${seconds}s - Sampling rate: ${currentSamplingRate} (${effectivePointsPerSecond.toFixed(2)} points/sec)`);
 
-    // Restart chart update loop to reset counter
-    if (chartUpdateTimer) {
-        if (typeof startChartUpdateLoopLightweight === 'function') {
-            startChartUpdateLoopLightweight();
-        } else {
-            startChartUpdateLoop();
+        // Restart chart update loop to reset counter
+        if (chartUpdateTimer) {
+            if (typeof startChartUpdateLoopLightweight === 'function') {
+                startChartUpdateLoopLightweight();
+            } else {
+                startChartUpdateLoop();
+            }
         }
+    } finally {
+        // Always release the lock
+        isChangingTimeRange = false;
+        console.log(`✅ SELECT TIME RANGE - Completed, lock released`);
     }
 }
 
 // Cycle to next time range (for chart click)
 async function cycleTimeRange() {
+    // Don't increment index if already changing (will be ignored anyway)
+    if (isChangingTimeRange) {
+        console.log(`⚠️ CYCLE - Already changing, skipping cycle`);
+        return;
+    }
+
+    const prevIndex = currentTimeRangeIndex;
     currentTimeRangeIndex = (currentTimeRangeIndex + 1) % TIME_RANGES.length;
     const nextRange = TIME_RANGES[currentTimeRangeIndex];
+    console.log(`🔄 CYCLE - From index ${prevIndex} (${TIME_RANGES[prevIndex]}s) → ${currentTimeRangeIndex} (${nextRange}s)`);
+    console.log(`🔄 CYCLE - All ranges: ${TIME_RANGES.join(', ')}`);
     await selectTimeRange(nextRange);
 }
 
@@ -1616,42 +1663,80 @@ function rebuildChartFromHistory() {
     console.log(`Rebuilding chart with sampling rate: ${currentSamplingRate} (${effectivePointsPerSecond.toFixed(2)} points/sec)`);
 
     chartDataPoints = [];
-    let sampleCounter = 0;
+
+    console.log(`📊 REBUILD DEBUG - Starting with ${priceHistory.length} history points`);
+    console.log(`📊 REBUILD DEBUG - Time range: ${currentTimeRange}s, Sampling rate: ${currentSamplingRate}`);
+
+    // Calculate total raw points we would have without sampling
+    const totalRawPoints = priceHistory.length * BASE_POINTS_PER_SECOND;
+    console.log(`📊 REBUILD DEBUG - Total raw points (before sampling): ${Math.floor(totalRawPoints)}`);
 
     // Interpolate between historical prices to create smooth chart
-    for (let i = 0; i < priceHistory.length; i++) {
-        const currentPrice = priceHistory[i];
-        const nextPrice = i < priceHistory.length - 1 ? priceHistory[i + 1] : currentPrice;
+    // Apply sampling by only creating every Nth point
+    let totalPointsCreated = 0;
 
-        // Add interpolated points for this second (with sampling)
-        for (let j = 0; j < BASE_POINTS_PER_SECOND; j++) {
-            // Only add point if it passes sampling filter
-            if (sampleCounter % currentSamplingRate === 0) {
-                const t = j / BASE_POINTS_PER_SECOND;
-                const interpolatedPrice = currentPrice + (nextPrice - currentPrice) * t;
-                chartDataPoints.push(interpolatedPrice);
-            }
-            sampleCounter++;
-        }
+    // Optimized: Calculate which points to create without iterating through skipped ones
+    const targetPoints = Math.floor(totalRawPoints / currentSamplingRate);
+    console.log(`📊 REBUILD DEBUG - Target points after sampling: ${targetPoints}`);
+
+    for (let sampledIdx = 0; sampledIdx < targetPoints; sampledIdx++) {
+        // Calculate the global point index this sampled point represents
+        const globalPointIndex = sampledIdx * currentSamplingRate;
+
+        // Convert global point index to history index and sub-point index
+        const historyIndex = Math.floor(globalPointIndex / BASE_POINTS_PER_SECOND);
+        const subPointIndex = globalPointIndex % BASE_POINTS_PER_SECOND;
+
+        // Don't exceed history bounds
+        if (historyIndex >= priceHistory.length) break;
+
+        const currentPrice = priceHistory[historyIndex];
+        const nextPrice = historyIndex < priceHistory.length - 1 ? priceHistory[historyIndex + 1] : currentPrice;
+
+        // Interpolate between current and next price
+        const t = subPointIndex / BASE_POINTS_PER_SECOND;
+        const interpolatedPrice = currentPrice + (nextPrice - currentPrice) * t;
+        chartDataPoints.push(interpolatedPrice);
+        totalPointsCreated++;
     }
+
+    console.log(`📊 REBUILD DEBUG - Created ${totalPointsCreated} interpolated points from ${priceHistory.length} history points`);
+    console.log(`📊 REBUILD DEBUG - Points per history item: ${(totalPointsCreated / priceHistory.length).toFixed(2)}`);
+    console.log(`📊 REBUILD DEBUG - Reduction factor: ${(totalRawPoints / totalPointsCreated).toFixed(2)}x`)
 
     // Calculate max points based on current time range with effective rate
     const maxPoints = currentTimeRange
         ? Math.floor(currentTimeRange * effectivePointsPerSecond)
         : Math.min(chartDataPoints.length, MAX_CHART_POINTS);
 
+    console.log(`📊 REBUILD DEBUG - Max points allowed: ${maxPoints}`);
+    console.log(`📊 REBUILD DEBUG - Chart data points before trim: ${chartDataPoints.length}`);
+
     // Keep only last maxPoints
     if (chartDataPoints.length > maxPoints) {
+        const beforeTrim = chartDataPoints.length;
         chartDataPoints = chartDataPoints.slice(-maxPoints);
+        console.log(`📊 REBUILD DEBUG - Trimmed ${beforeTrim - chartDataPoints.length} points (${beforeTrim} → ${chartDataPoints.length})`);
     }
+
+    console.log(`📊 REBUILD DEBUG - Final chart data points: ${chartDataPoints.length}`);
 
     // Update chart
     if (btcChart) {
-        // Resize chart data arrays to match new time range
-        const timeRange = currentTimeRange || (chartDataPoints.length / effectivePointsPerSecond);
-        btcChart.data.labels = generateTimeLabels(maxPoints, timeRange);
-        const chartData = [...Array(maxPoints - chartDataPoints.length).fill(null), ...chartDataPoints];
-        btcChart.data.datasets[0].data = chartData;
+        // Use actual data size if we don't have enough data to fill the time range
+        const actualPoints = chartDataPoints.length;
+        const displayPoints = actualPoints < maxPoints ? actualPoints : maxPoints;
+
+        // Calculate time range based on actual data
+        const actualTimeRange = actualPoints < maxPoints
+            ? (actualPoints / effectivePointsPerSecond)
+            : currentTimeRange;
+
+        console.log(`📊 REBUILD DEBUG - Display points: ${displayPoints} (max: ${maxPoints}, actual: ${actualPoints})`);
+
+        btcChart.data.labels = generateTimeLabels(displayPoints, actualTimeRange);
+        btcChart.data.datasets[0].data = chartDataPoints;
+        console.log(`📊 REBUILD DEBUG - Final array sent to chart: ${chartDataPoints.length} points (all non-null)`);
         btcChart.update('none');
     }
 }
@@ -1955,7 +2040,8 @@ function initBTCChart() {
     // Add click handler to chart canvas for cycling time ranges
     const canvas = document.getElementById('btcChart');
     if (canvas) {
-        canvas.addEventListener('click', async () => {
+        canvas.addEventListener('click', async (e) => {
+            console.log('🖱️ Chart canvas clicked at:', e.offsetX, e.offsetY);
             await cycleTimeRange();
         });
     }
@@ -1999,19 +2085,29 @@ function startChartUpdateLoop() {
                 chartDataPoints.shift(); // Remove oldest point - this creates the scrolling effect!
             }
 
-            // Pad with nulls if we don't have enough data yet
-            const chartData = [...Array(maxPoints - chartDataPoints.length).fill(null), ...chartDataPoints];
+            // Use actual data size if we don't have enough data to fill the time range
+            const actualPoints = chartDataPoints.length;
+            const displayPoints = actualPoints < maxPoints ? actualPoints : maxPoints;
+
+            // Calculate time range based on actual data
+            const actualTimeRange = actualPoints < maxPoints
+                ? (actualPoints / effectivePointsPerSecond)
+                : currentTimeRange;
+
+            // Debug log every 100 updates to avoid spam
+            if (updateCounter % 100 === 0) {
+                console.log(`📊 LIVE UPDATE - chartDataPoints: ${chartDataPoints.length}, maxPoints: ${maxPoints}, displayPoints: ${displayPoints}, sampling: ${currentSamplingRate}`);
+            }
 
             // Update time labels (regenerate every second to keep them fresh)
             const now = Date.now();
             if (!this.lastLabelUpdate || now - this.lastLabelUpdate > 1000) {
-                const timeRange = currentTimeRange || (chartDataPoints.length / effectivePointsPerSecond);
-                btcChart.data.labels = generateTimeLabels(maxPoints, timeRange);
+                btcChart.data.labels = generateTimeLabels(displayPoints, actualTimeRange);
                 this.lastLabelUpdate = now;
             }
 
-            // Update chart
-            btcChart.data.datasets[0].data = chartData;
+            // Update chart - use actual data without padding
+            btcChart.data.datasets[0].data = chartDataPoints;
             btcChart.update('none'); // No animation - we handle smoothness manually
         }
 
