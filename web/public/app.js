@@ -33,12 +33,17 @@ let lastMarketState = null; // Track market state transitions
 let countdownEndTime = null; // Cached end time for smooth countdown
 let countdownUpdateInterval = null; // Interval for countdown updates
 
-// BTC Price Chart
+// BTC Price Chart (Chart.js)
 let btcChart = null;
 let priceHistory = []; // Stores actual BTC prices (one per second)
 let currentTimeRange = 60; // Current time range in seconds (default 1 minute for display)
 const PRICE_HISTORY_KEY = 'btc_price_history';
 const PRICE_HISTORY_MAX_AGE_MS = 60000; // Keep data for 60 seconds
+
+// Chart style (line, line-colored)
+let chartStyle = 'line-colored'; // Default to colored line chart style
+const CHART_STYLE_KEY = 'btc_chart_style';
+const CHART_STYLES = ['line', 'line-colored']; // Toggle between these modes
 
 // Throttle price logging to once per second
 let lastPriceLogTime = 0;
@@ -50,6 +55,10 @@ const MAX_CHART_POINTS = 2000; // Maximum points to display to prevent memory is
 let chartDataPoints = []; // High-resolution data for smooth scrolling
 let chartUpdateTimer = null;
 let currentSamplingRate = 1; // How many data points to skip (1 = no skip, 2 = every other, etc.)
+
+// Interpolation for smooth animation
+let currentTargetPrice = null;
+let lastActualPrice = null;
 
 // Calculate optimal sampling rate based on time range to stay under MAX_CHART_POINTS
 function getOptimalSamplingRate(timeRangeSeconds) {
@@ -69,10 +78,6 @@ function getEffectivePointsPerSecond(timeRangeSeconds) {
     const samplingRate = getOptimalSamplingRate(timeRangeSeconds);
     return BASE_POINTS_PER_SECOND / samplingRate;
 }
-
-// Price interpolation
-let lastActualPrice = null;
-let currentTargetPrice = null;
 
 // Market start price (for arrow indicator)
 let marketStartPrice = null;
@@ -345,7 +350,7 @@ window.addEventListener('load', async () => {
     // Set display time range to 1 minute (but we have 1h of data loaded)
     currentTimeRange = 60;
 
-    // Initialize BTC chart
+    // Initialize BTC chart with Chart.js
     initBTCChart();
 
     // Immediately populate chart with last 1 minute of historical data
@@ -1368,7 +1373,7 @@ async function loadPriceHistory(seconds = null) {
 }
 
 // Available time ranges (in order for cycling)
-const TIME_RANGES = [60, 300, 900, 1800, 3600, 86400];
+const TIME_RANGES = [60, 300, 900, 1800, 3600, 21600, 86400];
 let currentTimeRangeIndex = 0; // Start at 1m (60 seconds)
 
 // Toggle time range dropdown menu
@@ -1440,7 +1445,11 @@ async function selectTimeRange(seconds) {
 
     // Restart chart update loop to reset counter
     if (chartUpdateTimer) {
-        startChartUpdateLoop();
+        if (typeof startChartUpdateLoopLightweight === 'function') {
+            startChartUpdateLoopLightweight();
+        } else {
+            startChartUpdateLoop();
+        }
     }
 }
 
@@ -1449,6 +1458,119 @@ async function cycleTimeRange() {
     currentTimeRangeIndex = (currentTimeRangeIndex + 1) % TIME_RANGES.length;
     const nextRange = TIME_RANGES[currentTimeRangeIndex];
     await selectTimeRange(nextRange);
+}
+
+// Toggle chart style - toggles between: area ↔ candlestick
+function toggleChartStyle() {
+    // Toggle between line and line-colored
+    chartStyle = chartStyle === 'line' ? 'line-colored' : 'line';
+
+    // Save preference to localStorage
+    try {
+        localStorage.setItem(CHART_STYLE_KEY, chartStyle);
+    } catch (err) {
+        console.warn('Failed to save chart style preference:', err);
+    }
+
+    // Update button visual state
+    const toggleBtn = document.querySelector('.chart-style-toggle');
+    if (toggleBtn) {
+        if (chartStyle === 'line-colored') {
+            toggleBtn.classList.add('active');
+            toggleBtn.title = 'Colored Line (Click for Solid)';
+        } else {
+            toggleBtn.classList.remove('active');
+            toggleBtn.title = 'Solid Line (Click for Colored)';
+        }
+    }
+
+    // Rebuild chart with new style
+    if (btcChart) {
+        rebuildChartWithNewStyle();
+    }
+
+    console.log('Chart style:', chartStyle);
+}
+
+// Rebuild chart when switching between area and candlestick
+function rebuildChartWithNewStyle() {
+    if (!btcChart) return;
+
+    // Remove existing chart
+    if (btcChart) {
+        btcChart.destroy();
+        btcChart = null;
+    }
+
+    // Reinitialize with Chart.js
+    initBTCChart();
+
+    // Rebuild with existing data
+    if (priceHistory.length > 0) {
+        rebuildChartFromHistory();
+    }
+}
+
+// Update chart segment styles based on current style preference
+function updateChartStyle() {
+    if (!btcChart) return;
+
+    const dataset = btcChart.data.datasets[0];
+
+    if (chartStyle === 'line-colored') {
+        // Colored line: dynamic colors based on price movement
+        dataset.segment = {
+            borderColor: ctx => {
+                const chart = ctx.chart;
+                const dataset = chart.data.datasets[0];
+                const p0 = dataset.data[ctx.p0DataIndex];
+                const p1 = dataset.data[ctx.p1DataIndex];
+                if (p0 === null || p1 === null) return '#00c896';
+                return p1 >= p0 ? '#00c896' : '#ff5353';
+            },
+            backgroundColor: ctx => {
+                const chart = ctx.chart;
+                const dataset = chart.data.datasets[0];
+                const p0 = dataset.data[ctx.p0DataIndex];
+                const p1 = dataset.data[ctx.p1DataIndex];
+                if (p0 === null || p1 === null) return 'rgba(0, 200, 150, 0.1)';
+                return p1 >= p0 ? 'rgba(0, 200, 150, 0.1)' : 'rgba(255, 83, 83, 0.1)';
+            }
+        };
+    } else {
+        // Solid line: single color
+        dataset.segment = {
+            borderColor: '#00c896',
+            backgroundColor: 'rgba(0, 200, 150, 0.1)'
+        };
+    }
+
+    btcChart.update('none');
+}
+
+// Load chart style preference from localStorage
+function loadChartStylePreference() {
+    try {
+        const saved = localStorage.getItem(CHART_STYLE_KEY);
+        if (saved && CHART_STYLES.includes(saved)) {
+            chartStyle = saved;
+            console.log('Loaded chart style preference:', saved);
+        }
+
+        // Update button state
+        const toggleBtn = document.querySelector('.chart-style-toggle');
+        if (toggleBtn) {
+            if (chartStyle === 'line-colored') {
+                toggleBtn.classList.add('active');
+                toggleBtn.title = 'Colored Line (Click for Solid)';
+            } else {
+                toggleBtn.classList.remove('active');
+                toggleBtn.title = 'Solid Line (Click for Colored)';
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to load chart style preference:', err);
+    }
 }
 
 // Generate time labels for chart X-axis
@@ -1562,6 +1684,131 @@ function initBTCChart() {
 
     console.log(`Chart initialized: ${initialPoints} points, ${effectivePointsPerSecond.toFixed(2)} points/sec, sampling rate: ${currentSamplingRate}`);
 
+    // Custom plugin to draw min/max labels on the chart
+    const minMaxPlugin = {
+        id: 'minMaxLabels',
+        afterDatasetsDraw(chart) {
+            // Only show on 15m and longer time scales
+            if (currentTimeRange < 900) return; // 900 seconds = 15 minutes
+
+            const ctx = chart.ctx;
+            const dataset = chart.data.datasets[0];
+            const dataValues = dataset.data;
+
+            // Filter out null values and find min/max
+            const validData = dataValues.map((val, idx) => ({ val, idx })).filter(item => item.val !== null && item.val !== undefined);
+            if (validData.length === 0) return;
+
+            const minItem = validData.reduce((min, item) => item.val < min.val ? item : min);
+            const maxItem = validData.reduce((max, item) => item.val > max.val ? item : max);
+
+            const meta = chart.getDatasetMeta(0);
+            const yScale = chart.scales.y;
+
+            // Draw max label (green)
+            if (meta.data[maxItem.idx]) {
+                const point = meta.data[maxItem.idx];
+                const x = point.x;
+                const y = point.y;
+
+                ctx.save();
+                ctx.font = 'bold 11px "SF Mono", Monaco, monospace';
+                ctx.fillStyle = '#00ff00';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'bottom';
+
+                const maxText = '$' + maxItem.val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const textWidth = ctx.measureText(maxText).width;
+                const padding = 6;
+
+                // Background for better readability
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(x + 4, y - 18, textWidth + padding * 2, 16);
+
+                // Text
+                ctx.fillStyle = '#00ff00';
+                ctx.fillText(maxText, x + 4 + padding, y - 4);
+
+                ctx.restore();
+            }
+
+            // Draw min label (red)
+            if (meta.data[minItem.idx]) {
+                const point = meta.data[minItem.idx];
+                const x = point.x;
+                const y = point.y;
+
+                ctx.save();
+                ctx.font = 'bold 11px "SF Mono", Monaco, monospace';
+                ctx.fillStyle = '#ff5353';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+
+                const minText = '$' + minItem.val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const textWidth = ctx.measureText(minText).width;
+                const padding = 6;
+
+                // Background for better readability
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(x + 4, y + 2, textWidth + padding * 2, 16);
+
+                // Text
+                ctx.fillStyle = '#ff5353';
+                ctx.fillText(minText, x + 4 + padding, y + 4);
+
+                ctx.restore();
+            }
+        }
+    };
+
+    // Custom plugin to draw glowing green dot on the last price
+    const lastPriceGlowPlugin = {
+        id: 'lastPriceGlow',
+        afterDatasetsDraw(chart) {
+            const ctx = chart.ctx;
+            const dataset = chart.data.datasets[0];
+            const dataValues = dataset.data;
+
+            // Find the last non-null data point
+            let lastIndex = -1;
+            for (let i = dataValues.length - 1; i >= 0; i--) {
+                if (dataValues[i] !== null && dataValues[i] !== undefined) {
+                    lastIndex = i;
+                    break;
+                }
+            }
+
+            if (lastIndex === -1) return; // No valid data points
+
+            const meta = chart.getDatasetMeta(0);
+            if (!meta.data[lastIndex]) return;
+
+            const point = meta.data[lastIndex];
+            const x = point.x;
+            const y = point.y;
+
+            ctx.save();
+
+            // Draw multiple circles for glow effect (from outer to inner)
+            const glowLayers = [
+                { radius: 8, alpha: 0.15 },
+                { radius: 6, alpha: 0.25 },
+                { radius: 4, alpha: 0.35 },
+                { radius: 2.5, alpha: 0.5 }
+            ];
+
+            // Draw glow layers only
+            glowLayers.forEach(layer => {
+                ctx.beginPath();
+                ctx.arc(x, y, layer.radius, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(0, 255, 0, ${layer.alpha})`;
+                ctx.fill();
+            });
+
+            ctx.restore();
+        }
+    };
+
     btcChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -1578,7 +1825,36 @@ function initBTCChart() {
                 pointHoverRadius: 0,
                 pointHitRadius: 0,
                 pointBorderWidth: 0,
-                pointHoverBorderWidth: 0
+                pointHoverBorderWidth: 0,
+                segment: chartStyle === 'line-colored' ? {
+                    borderColor: ctx => {
+                        // Color each segment based on price movement
+                        const chart = ctx.chart;
+                        const dataset = chart.data.datasets[0];
+                        const p0 = dataset.data[ctx.p0DataIndex];
+                        const p1 = dataset.data[ctx.p1DataIndex];
+
+                        // Skip if either point is null
+                        if (p0 === null || p1 === null) return '#00c896';
+
+                        // Green if price going up, red if going down
+                        return p1 >= p0 ? '#00c896' : '#ff5353';
+                    },
+                    backgroundColor: ctx => {
+                        // Match background gradient to segment color
+                        const chart = ctx.chart;
+                        const dataset = chart.data.datasets[0];
+                        const p0 = dataset.data[ctx.p0DataIndex];
+                        const p1 = dataset.data[ctx.p1DataIndex];
+
+                        if (p0 === null || p1 === null) return 'rgba(0, 200, 150, 0.1)';
+
+                        return p1 >= p0 ? 'rgba(0, 200, 150, 0.1)' : 'rgba(255, 83, 83, 0.1)';
+                    }
+                } : {
+                    borderColor: '#00c896',
+                    backgroundColor: 'rgba(0, 200, 150, 0.1)'
+                }
             }]
         },
         options: {
@@ -1670,7 +1946,8 @@ function initBTCChart() {
                 duration: 300, // Smooth animation for Y-axis scale changes
                 easing: 'easeInOutQuart' // Smooth easing function
             }
-        }
+        },
+        plugins: [minMaxPlugin, lastPriceGlowPlugin]
     });
 
     console.log('BTC Chart initialized successfully!');
@@ -1806,11 +2083,6 @@ function updatePriceDisplay(price) {
 
 // Called when we get a new actual BTC price from the oracle
 function updateBTCChart(price) {
-    if (!btcChart) {
-        console.log('BTC Chart not initialized yet');
-        return;
-    }
-
     // Validate price
     if (!price || isNaN(price) || price <= 0) {
         console.warn('Invalid price for chart:', price);
@@ -1840,6 +2112,11 @@ function updateBTCChart(price) {
     // Update interpolation targets
     lastActualPrice = currentTargetPrice || price;
     currentTargetPrice = price;
+
+    // Log if chart isn't ready yet (but don't block price updates)
+    if (!btcChart) {
+        console.log('BTC Chart not initialized yet, but price data is being stored');
+    }
 }
 
 // ============= ORACLE DATA =============
@@ -2673,9 +2950,9 @@ let currentMarketEndSlot = 0; // Slot when market ends (0 = not set) - DEPRECATE
 let currentMarketEndTime = 0; // Unix timestamp in milliseconds when market ends (0 = not set)
 let lastCalculatedMarketEndTime = 0; // Track when we last calculated end slot
 const TRADING_LOCKOUT_SLOTS = 90; // Must match Rust program constant - DEPRECATED
-const TRADING_LOCKOUT_SECONDS = 30; // Must match Rust program constant (30 seconds)
+const TRADING_LOCKOUT_SECONDS = 45; // Must match Rust program constant (45 seconds)
 
-// Check if trading is locked (30 seconds before market end using time-based check)
+// Check if trading is locked (45 seconds before market end using time-based check)
 async function isTradingLocked() {
     if (currentMarketEndTime === 0) {
         console.log('[isTradingLocked] Market end time not set, allowing trade');
@@ -2684,7 +2961,7 @@ async function isTradingLocked() {
 
     try {
         const now = Date.now(); // Current time in milliseconds
-        const lockoutStartTime = currentMarketEndTime - (TRADING_LOCKOUT_SECONDS * 1000); // 30 seconds before end
+        const lockoutStartTime = currentMarketEndTime - (TRADING_LOCKOUT_SECONDS * 1000); // 45 seconds before end
         const timeUntilEnd = Math.max(0, currentMarketEndTime - now) / 1000; // seconds
         const timeUntilLockout = Math.max(0, lockoutStartTime - now) / 1000; // seconds
         const isLocked = now >= lockoutStartTime;
@@ -3129,7 +3406,7 @@ async function executeTrade() {
 }
 
 // Internal function that performs the actual trade execution
-// Expose to window for hyperliquid.html inline script
+// Expose to window for index.html inline script
 async function executeTradeInternal(tradeData) {
     const { action, side, numShares, pricePerShare, totalCost, amount_e6 } = tradeData;
     const sharePrice = pricePerShare;
@@ -3320,7 +3597,7 @@ async function executeTradeInternal(tradeData) {
     }
 }
 
-// Expose executeTradeInternal to window for hyperliquid.html inline script
+// Expose executeTradeInternal to window for index.html inline script
 if (typeof window !== 'undefined') {
     window.executeTradeInternal = executeTradeInternal;
 }
@@ -4585,15 +4862,15 @@ function updateCountdownDisplay() {
             countdownTimer.classList.remove('urgent');
         }
 
-        // Play alarm at 15 seconds remaining (only once per market, if enabled)
-        // Widen window to 13-16 seconds to ensure it triggers
-        if (remainingMs <= 16000 && remainingMs > 13000 && !alarmPlayed && alarmEnabled) {
+        // Play alarm at 60 seconds remaining (only once per market, if enabled)
+        // Widen window to 58-61 seconds to ensure it triggers
+        if (remainingMs <= 61000 && remainingMs > 58000 && !alarmPlayed && alarmEnabled) {
             const secondsRemaining = Math.floor(remainingMs / 1000);
             console.log(`🔔 Triggering alarm at ${secondsRemaining}s remaining (enabled: ${alarmEnabled})`);
             playAlarmSound();
             showMarketCloseNotification(secondsRemaining);
             alarmPlayed = true;
-            console.log('⏰ 15 seconds to market close! Alarm and notification sent.');
+            console.log('⏰ 60 seconds to market close! Alarm and notification sent.');
         }
     } else {
         // Countdown expired
@@ -5073,6 +5350,34 @@ function selectOutcome(side) {
 
 function setShares(shares) {
     document.getElementById('tradeAmountShares').value = shares;
+    validateSellButtons();
+    updateTradeButton();
+}
+
+function addShares(amount) {
+    const currentShares = parseFloat(document.getElementById('tradeAmountShares').value) || 0;
+    const newShares = currentShares + amount;
+    document.getElementById('tradeAmountShares').value = newShares;
+
+    // Update slider if it exists
+    const sharesSlider = document.getElementById('sharesSlider');
+    if (sharesSlider) {
+        sharesSlider.value = Math.min(Math.max(newShares, 1), 500);
+    }
+
+    validateSellButtons();
+    updateTradeButton();
+}
+
+function resetShares() {
+    document.getElementById('tradeAmountShares').value = 0;
+
+    // Reset slider if it exists
+    const sharesSlider = document.getElementById('sharesSlider');
+    if (sharesSlider) {
+        sharesSlider.value = 0;
+    }
+
     validateSellButtons();
     updateTradeButton();
 }
@@ -6182,7 +6487,7 @@ function openTradeConfirmModal(tradeData) {
 
     // Set total cost/proceeds
     const costLabel = tradeData.action === 'buy' ? 'Total Cost' : 'Expected Proceeds';
-    // Update the label using ID (hyperliquid.html structure)
+    // Update the label using ID (index.html structure)
     const costLabelEl = document.getElementById('confirmCostLabel');
     if (costLabelEl) {
         costLabelEl.textContent = costLabel;
@@ -6233,7 +6538,7 @@ async function confirmTradeExecution() {
     await executeTradeInternal(tradeData);
 }
 
-// Expose modal functions to window for hyperliquid.html
+// Expose modal functions to window for index.html
 if (typeof window !== 'undefined') {
     window.openTradeConfirmModal = openTradeConfirmModal;
     window.closeTradeConfirmModal = closeTradeConfirmModal;
@@ -6249,7 +6554,7 @@ function toggleRapidFire() {
     if (!toggle) return;
 
     rapidFireMode = toggle.checked;
-    // Sync with window.rapidFireMode for hyperliquid.html
+    // Sync with window.rapidFireMode for index.html
     if (typeof window !== 'undefined') {
         window.rapidFireMode = rapidFireMode;
     }
@@ -6289,7 +6594,7 @@ function initToggles() {
     if (rapidFireToggle) {
         const savedRapidFire = localStorage.getItem('rapidFireMode');
         rapidFireMode = savedRapidFire === 'true';
-        // Also sync with window.rapidFireMode for hyperliquid.html
+        // Also sync with window.rapidFireMode for index.html
         if (typeof window !== 'undefined') {
             window.rapidFireMode = rapidFireMode;
         }
@@ -6307,7 +6612,7 @@ function initToggles() {
     }
 }
 
-// Expose toggle functions to window for hyperliquid.html
+// Expose toggle functions to window for index.html
 if (typeof window !== 'undefined') {
     window.toggleRapidFire = toggleRapidFire;
     window.toggleDebug = toggleDebug;
