@@ -1543,19 +1543,11 @@ function toggleChartStyle() {
 function rebuildChartWithNewStyle() {
     if (!btcChart) return;
 
-    // Remove existing chart
-    if (btcChart) {
-        btcChart.destroy();
-        btcChart = null;
-    }
+    console.log(`🎨 Updating chart style to: ${chartStyle}`);
 
-    // Reinitialize with Chart.js
-    initBTCChart();
-
-    // Rebuild with existing data
-    if (priceHistory.length > 0) {
-        rebuildChartFromHistory();
-    }
+    // Just update the style without destroying the chart
+    // This preserves all the high-resolution chartDataPoints
+    updateChartStyle();
 }
 
 // Update chart segment styles based on current style preference
