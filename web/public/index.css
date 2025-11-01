@@ -1697,6 +1697,61 @@ button.disabled {
     background: rgba(255, 0, 0, 0.1);
 }
 
+/* ===== QUOTE HISTORY SECTION ===== */
+
+.quote-history-section {
+    margin-top: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.quote-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.quote-history-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+}
+
+.cycle-selector {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 9px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.cycle-selector:hover {
+    border-color: var(--primary-color);
+    background: var(--bg-secondary);
+}
+
+.cycle-selector:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 200, 150, 0.1);
+}
+
+.quote-chart-container {
+    padding: 12px;
+    height: 200px;
+    background: var(--bg-primary);
+}
+
 /* ===== TROLLBOX SECTION ===== */
 
 .trollbox-section {

@@ -72,13 +72,10 @@ function getOptimalSamplingRate(timeRangeSeconds) {
     let maxPoints = MAX_CHART_POINTS;
 
     if (timeRangeSeconds >= 1800) {
-        // 30m, 1h, 6h, 24h: Reduce by 10x (200 points)
-        maxPoints = MAX_CHART_POINTS / 10;
-    } else if (timeRangeSeconds === 900) {
-        // 15m: Allow 1000 points
+        // 30m, 1h, 6h, 24h: Use 1000 points
         maxPoints = 1000;
     }
-    // 1m (60s) and 5m (300s): No restriction, use MAX_CHART_POINTS (2000)
+    // 1m (60s), 5m (300s), and 15m (900s): No restriction, use MAX_CHART_POINTS (2000) for smooth updates
 
     const totalPoints = timeRangeSeconds * BASE_POINTS_PER_SECOND;
     const samplingRate = Math.max(1, Math.ceil(totalPoints / maxPoints));
@@ -1478,11 +1475,7 @@ async function selectTimeRange(seconds) {
 
         // Restart chart update loop to reset counter
         if (chartUpdateTimer) {
-            if (typeof startChartUpdateLoopLightweight === 'function') {
-                startChartUpdateLoopLightweight();
-            } else {
-                startChartUpdateLoop();
-            }
+            startChartUpdateLoop();
         }
     } finally {
         // Always release the lock
@@ -1577,10 +1570,30 @@ function updateChartStyle() {
             }
         };
     } else {
-        // Solid line: single color
+        // Solid line: use red if below price to beat, green otherwise
         dataset.segment = {
-            borderColor: '#00c896',
-            backgroundColor: 'rgba(0, 200, 150, 0.1)'
+            borderColor: ctx => {
+                const chart = ctx.chart;
+                const dataset = chart.data.datasets[0];
+                const p1 = dataset.data[ctx.p1DataIndex];
+
+                // If we have a market start price (price to beat) and current price is below it, use red
+                if (marketStartPrice && p1 !== null && p1 < marketStartPrice) {
+                    return '#ff5353';
+                }
+                return '#00c896';
+            },
+            backgroundColor: ctx => {
+                const chart = ctx.chart;
+                const dataset = chart.data.datasets[0];
+                const p1 = dataset.data[ctx.p1DataIndex];
+
+                // Match background to border color
+                if (marketStartPrice && p1 !== null && p1 < marketStartPrice) {
+                    return 'rgba(255, 83, 83, 0.1)';
+                }
+                return 'rgba(0, 200, 150, 0.1)';
+            }
         };
     }
 
@@ -1843,26 +1856,16 @@ function initBTCChart() {
         id: 'lastPriceGlow',
         afterDatasetsDraw(chart) {
             const ctx = chart.ctx;
-            const dataset = chart.data.datasets[0];
-            const dataValues = dataset.data;
-
-            // Find the last non-null data point
-            let lastIndex = -1;
-            for (let i = dataValues.length - 1; i >= 0; i--) {
-                if (dataValues[i] !== null && dataValues[i] !== undefined) {
-                    lastIndex = i;
-                    break;
-                }
-            }
-
-            if (lastIndex === -1) return; // No valid data points
-
             const meta = chart.getDatasetMeta(0);
-            if (!meta.data[lastIndex]) return;
 
-            const point = meta.data[lastIndex];
-            const x = point.x;
-            const y = point.y;
+            // Always use the very last point in the dataset (regardless of interpolation)
+            if (!meta.data || meta.data.length === 0) return;
+
+            const lastPoint = meta.data[meta.data.length - 1];
+            if (!lastPoint) return;
+
+            const x = lastPoint.x;
+            const y = lastPoint.y;
 
             ctx.save();
 
@@ -1929,8 +1932,28 @@ function initBTCChart() {
                         return p1 >= p0 ? 'rgba(0, 200, 150, 0.1)' : 'rgba(255, 83, 83, 0.1)';
                     }
                 } : {
-                    borderColor: '#00c896',
-                    backgroundColor: 'rgba(0, 200, 150, 0.1)'
+                    borderColor: ctx => {
+                        const chart = ctx.chart;
+                        const dataset = chart.data.datasets[0];
+                        const p1 = dataset.data[ctx.p1DataIndex];
+
+                        // If we have a market start price (price to beat) and current price is below it, use red
+                        if (marketStartPrice && p1 !== null && p1 < marketStartPrice) {
+                            return '#ff5353';
+                        }
+                        return '#00c896';
+                    },
+                    backgroundColor: ctx => {
+                        const chart = ctx.chart;
+                        const dataset = chart.data.datasets[0];
+                        const p1 = dataset.data[ctx.p1DataIndex];
+
+                        // Match background to border color
+                        if (marketStartPrice && p1 !== null && p1 < marketStartPrice) {
+                            return 'rgba(255, 83, 83, 0.1)';
+                        }
+                        return 'rgba(0, 200, 150, 0.1)';
+                    }
                 }
             }]
         },
@@ -2062,7 +2085,7 @@ function startChartUpdateLoop() {
             lastActualPrice = displayPrice;
         }
 
-        // Only add point if it passes sampling filter
+        // Only add point if it passes sampling filter (preserves accuracy)
         if (updateCounter % currentSamplingRate === 0) {
             chartDataPoints.push(displayPrice);
 
@@ -2318,6 +2341,16 @@ function updateMarketDisplay(marketData) {
 
     // Store start price for arrow indicator
     marketStartPrice = marketData.startPrice > 0 ? marketData.startPrice : null;
+
+    // Update current cycle ID for quote history tracking
+    if (marketData.cycleId && window.currentCycleId !== marketData.cycleId) {
+        window.currentCycleId = marketData.cycleId;
+        // Auto-load quote history for current cycle if viewing current market
+        const selector = document.getElementById('cycleSelector');
+        if (selector && selector.value === '' && typeof window.fetchQuoteHistory === 'function') {
+            window.fetchQuoteHistory(marketData.cycleId);
+        }
+    }
 
     // Update "Price to Beat" display
     const beatPriceEl = document.getElementById('chartBeatPrice');

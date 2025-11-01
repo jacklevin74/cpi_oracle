@@ -98,6 +98,16 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_volume_cycle ON volume_history(cycle_id);
     CREATE INDEX IF NOT EXISTS idx_volume_start_time ON volume_history(cycle_start_time DESC);
+
+    CREATE TABLE IF NOT EXISTS quote_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cycle_id TEXT NOT NULL,
+        up_price REAL NOT NULL,
+        down_price REAL NOT NULL,
+        timestamp INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_quote_cycle_time ON quote_history(cycle_id, timestamp);
+    CREATE INDEX IF NOT EXISTS idx_quote_timestamp ON quote_history(timestamp DESC);
 `);
 
 const MAX_PRICE_HISTORY_HOURS = 24; // Keep up to 24 hours of price data
@@ -502,6 +512,53 @@ function cleanupOldTradingHistory() {
     }
 }
 
+// Quote history functions
+function addQuoteSnapshot(cycleId, upPrice, downPrice) {
+    try {
+        const stmt = db.prepare('INSERT INTO quote_history (cycle_id, up_price, down_price, timestamp) VALUES (?, ?, ?, ?)');
+        stmt.run(cycleId, upPrice, downPrice, Date.now());
+        return true;
+    } catch (err) {
+        console.error('Failed to add quote snapshot:', err.message);
+        return false;
+    }
+}
+
+function getQuoteHistory(cycleId) {
+    try {
+        const stmt = db.prepare('SELECT up_price, down_price, timestamp FROM quote_history WHERE cycle_id = ? ORDER BY timestamp ASC');
+        return stmt.all(cycleId);
+    } catch (err) {
+        console.error('Failed to get quote history:', err.message);
+        return [];
+    }
+}
+
+function getRecentCycles(limit = 10) {
+    try {
+        const stmt = db.prepare('SELECT DISTINCT cycle_id, cycle_start_time FROM volume_history ORDER BY cycle_start_time DESC LIMIT ?');
+        return stmt.all(limit);
+    } catch (err) {
+        console.error('Failed to get recent cycles:', err.message);
+        return [];
+    }
+}
+
+function cleanupOldQuoteHistory() {
+    try {
+        const cutoffTime = Date.now() - (MAX_TRADING_HISTORY_HOURS * 60 * 60 * 1000);
+        const stmt = db.prepare('DELETE FROM quote_history WHERE timestamp < ?');
+        const result = stmt.run(cutoffTime);
+        if (result.changes > 0) {
+            console.log(`Cleaned up ${result.changes} old quote history records`);
+        }
+        return result.changes;
+    } catch (err) {
+        console.error('Failed to cleanup old quote history:', err.message);
+        return 0;
+    }
+}
+
 // Initialize volume and show DB stats
 loadCumulativeVolume();
 
@@ -515,12 +572,14 @@ console.log(`SQLite database loaded with ${priceCount} price records, ${settleme
 cleanupOldPrices();
 cleanupOldSettlements();
 cleanupOldTradingHistory();
+cleanupOldQuoteHistory();
 
 // Schedule periodic cleanup (every hour)
 setInterval(() => {
     cleanupOldPrices();
     cleanupOldSettlements();
     cleanupOldTradingHistory();
+    cleanupOldQuoteHistory();
 }, 60 * 60 * 1000);
 
 // Security headers
@@ -986,6 +1045,84 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // API: Get quote history for a cycle
+    if (req.url.startsWith('/api/quote-history/') && req.method === 'GET') {
+        const cycleId = req.url.split('/api/quote-history/')[1];
+        if (cycleId) {
+            const history = getQuoteHistory(cycleId);
+            res.writeHead(200, {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                ...SECURITY_HEADERS
+            });
+            res.end(JSON.stringify({ cycleId, history }));
+        } else {
+            res.writeHead(400, {
+                'Content-Type': 'application/json',
+                ...SECURITY_HEADERS
+            });
+            res.end(JSON.stringify({ error: 'Invalid cycle ID' }));
+        }
+        return;
+    }
+
+    // API: Get recent cycles list
+    if (req.url === '/api/recent-cycles' && req.method === 'GET') {
+        const cycles = getRecentCycles(20);
+        res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            ...SECURITY_HEADERS
+        });
+        res.end(JSON.stringify({ cycles }));
+        return;
+    }
+
+    // API: Add quote snapshot (called by market poller)
+    if (req.url === '/api/quote-snapshot' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+            if (body.length > 1000) {
+                req.connection.destroy();
+            }
+        });
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                if (data.cycleId && typeof data.upPrice === 'number' && typeof data.downPrice === 'number') {
+                    const success = addQuoteSnapshot(data.cycleId, data.upPrice, data.downPrice);
+                    if (success) {
+                        res.writeHead(200, {
+                            'Content-Type': 'application/json',
+                            ...SECURITY_HEADERS
+                        });
+                        res.end(JSON.stringify({ success: true }));
+                    } else {
+                        res.writeHead(500, {
+                            'Content-Type': 'application/json',
+                            ...SECURITY_HEADERS
+                        });
+                        res.end(JSON.stringify({ error: 'Failed to save quote snapshot' }));
+                    }
+                } else {
+                    res.writeHead(400, {
+                        'Content-Type': 'application/json',
+                        ...SECURITY_HEADERS
+                    });
+                    res.end(JSON.stringify({ error: 'Invalid quote data' }));
+                }
+            } catch (err) {
+                res.writeHead(400, {
+                    'Content-Type': 'application/json',
+                    ...SECURITY_HEADERS
+                });
+                res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            }
+        });
+        return;
+    }
+
     // Handle market_status.json specially (serve from project root)
     if (req.url.startsWith('/market_status.json')) {
         fs.readFile(STATUS_FILE, (err, content) => {
@@ -1121,7 +1258,12 @@ function broadcastPrice(priceData) {
 
 // Broadcast market data to all connected SSE clients
 function broadcastMarket(marketData) {
-    const sseData = JSON.stringify(marketData);
+    // Include current cycle ID in market data
+    const dataWithCycle = {
+        ...marketData,
+        cycleId: cumulativeVolume ? cumulativeVolume.cycleId : null
+    };
+    const sseData = JSON.stringify(dataWithCycle);
 
     marketStreamClients.forEach((client) => {
         try {
@@ -1201,6 +1343,23 @@ startOraclePolling().catch(err => {
     console.error('Failed to start oracle polling:', err);
 });
 
+// Calculate LMSR prices for UP/DOWN
+function calculateLMSRPrices(qYes, qNo, b) {
+    try {
+        const expQY = Math.exp(qYes / b);
+        const expQN = Math.exp(qNo / b);
+        const sum = expQY + expQN;
+
+        const yesPrice = expQY / sum;
+        const noPrice = expQN / sum;
+
+        return { yesPrice, noPrice };
+    } catch (err) {
+        console.error('Failed to calculate LMSR prices:', err);
+        return { yesPrice: 0.5, noPrice: 0.5 };
+    }
+}
+
 // Market polling loop - fetch market data every MARKET_POLL_INTERVAL
 async function startMarketPolling() {
     console.log(`🔄 Starting market polling (every ${MARKET_POLL_INTERVAL/1000}s)...`);
@@ -1214,6 +1373,12 @@ async function startMarketPolling() {
 
             // Broadcast to SSE clients
             broadcastMarket(marketData);
+
+            // Track quote history for current cycle (only if market is open or stopped)
+            if (cumulativeVolume && cumulativeVolume.cycleId && marketData.status <= 1) {
+                const prices = calculateLMSRPrices(marketData.qYes, marketData.qNo, marketData.bScaled);
+                addQuoteSnapshot(cumulativeVolume.cycleId, prices.yesPrice, prices.noPrice);
+            }
         }
     };
 

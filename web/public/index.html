@@ -443,6 +443,19 @@
                     </div>
                 </div>
 
+                <!-- Probability Chart -->
+                <div class="quote-history-section">
+                    <div class="quote-history-header">
+                        <span class="quote-history-title">PROBABILITY</span>
+                        <select id="cycleSelector" class="cycle-selector" onchange="loadQuoteHistory()">
+                            <option value="">Current Market</option>
+                        </select>
+                    </div>
+                    <div class="quote-chart-container">
+                        <canvas id="quoteChart"></canvas>
+                    </div>
+                </div>
+
                 <!-- Trollbox -->
                 <div class="trollbox-section">
                     <div class="trollbox-header">
@@ -1645,6 +1658,310 @@
 
         // Note: toggleRapidFire, openTradeConfirmModal, closeTradeConfirmModal, confirmTradeExecution,
         // and executeTradeInternal are all provided by app.js and exposed to window
+
+        // ============================================================================
+        // Quote History Chart
+        // ============================================================================
+
+        let quoteChart = null;
+        let currentCycleId = null;
+        let quoteDataPoints = []; // High-resolution data for smooth scrolling
+        let currentTargetProbability = null;
+        let lastActualProbability = null;
+        let quoteUpdateTimer = null;
+
+        // Initialize quote history chart
+        function initQuoteHistoryChart() {
+            const ctx = document.getElementById('quoteChart');
+            if (!ctx) return;
+
+            quoteChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Probability',
+                            data: [],
+                            borderColor: '#00c896',
+                            backgroundColor: 'rgba(0, 200, 150, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            borderDash: []
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#8b92a8',
+                                font: {
+                                    family: "'SF Mono', Monaco, monospace",
+                                    size: 11
+                                },
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#8b92a8',
+                            borderColor: '#00c896',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                title: (context) => {
+                                    return context[0].label;
+                                },
+                                label: (context) => {
+                                    const value = context.parsed.y;
+                                    return `Probability: ${(value * 100).toFixed(2)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: {
+                                color: 'rgba(139, 146, 168, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#5a6178',
+                                font: {
+                                    family: "'SF Mono', Monaco, monospace",
+                                    size: 10
+                                },
+                                maxTicksLimit: 8,
+                                autoSkip: true
+                            }
+                        },
+                        y: {
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            max: 1,
+                            grid: {
+                                color: function(context) {
+                                    // Highlight the 0.5 line
+                                    if (context.tick.value === 0.5) {
+                                        return 'rgba(139, 146, 168, 0.3)';
+                                    }
+                                    return 'rgba(139, 146, 168, 0.1)';
+                                },
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: function(context) {
+                                    // Highlight the 0.5 tick (50%)
+                                    if (context.tick.value === 0.5) {
+                                        return '#8b92a8';
+                                    }
+                                    return '#5a6178';
+                                },
+                                font: {
+                                    family: "'SF Mono', Monaco, monospace",
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return (value * 100).toFixed(0) + '%';
+                                },
+                                stepSize: 0.1,
+                                maxTicksLimit: 11
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 300
+                    }
+                }
+            });
+        }
+
+        // Load recent cycles into dropdown
+        async function loadRecentCycles() {
+            try {
+                const response = await fetch('/api/recent-cycles');
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const selector = document.getElementById('cycleSelector');
+                if (!selector) return;
+
+                // Clear existing options except current
+                selector.innerHTML = '<option value="">Current Market</option>';
+
+                // Add recent cycles
+                data.cycles.forEach(cycle => {
+                    const option = document.createElement('option');
+                    option.value = cycle.cycle_id;
+                    const date = new Date(cycle.cycle_start_time);
+                    option.textContent = `${date.toLocaleString()} (${cycle.cycle_id.substring(6, 16)})`;
+                    selector.appendChild(option);
+                });
+            } catch (err) {
+                console.error('Failed to load recent cycles:', err);
+            }
+        }
+
+        // Load quote history for selected cycle
+        async function loadQuoteHistory() {
+            const selector = document.getElementById('cycleSelector');
+            if (!selector) return;
+
+            const cycleId = selector.value;
+            if (!cycleId) {
+                // Load current market (we'll need to track current cycle ID)
+                if (!window.currentCycleId) return;
+                await fetchQuoteHistory(window.currentCycleId);
+            } else {
+                await fetchQuoteHistory(cycleId);
+            }
+        }
+
+        // Fetch and display quote history
+        async function fetchQuoteHistory(cycleId) {
+            try {
+                const response = await fetch(`/api/quote-history/${cycleId}`);
+                if (!response.ok) {
+                    console.error('Failed to fetch quote history');
+                    return;
+                }
+
+                const data = await response.json();
+                updateQuoteChart(data.history);
+            } catch (err) {
+                console.error('Error fetching quote history:', err);
+            }
+        }
+
+        // Expose to window for access from app.js
+        window.fetchQuoteHistory = fetchQuoteHistory;
+
+        // Start smooth update loop for probability chart
+        function startQuoteUpdateLoop() {
+            if (quoteUpdateTimer) {
+                clearInterval(quoteUpdateTimer);
+            }
+
+            const QUOTE_UPDATE_INTERVAL_MS = 55; // Same as BTC chart for smooth updates
+            const QUOTE_POINTS_PER_SECOND = 1000 / QUOTE_UPDATE_INTERVAL_MS;
+
+            quoteUpdateTimer = setInterval(() => {
+                if (!quoteChart || currentTargetProbability === null) return;
+
+                // Interpolate for smooth transitions
+                let displayProbability = currentTargetProbability;
+                if (lastActualProbability !== null && currentTargetProbability !== lastActualProbability) {
+                    const diff = currentTargetProbability - lastActualProbability;
+                    const step = diff * 0.15; // Smooth interpolation
+                    displayProbability = lastActualProbability + step;
+
+                    // Snap to target if very close
+                    if (Math.abs(displayProbability - currentTargetProbability) < 0.0001) {
+                        displayProbability = currentTargetProbability;
+                        lastActualProbability = currentTargetProbability;
+                    } else {
+                        lastActualProbability = displayProbability;
+                    }
+                }
+
+                // Add to data points
+                quoteDataPoints.push(displayProbability);
+
+                // Keep last 15 minutes of data (at ~18 points/sec)
+                const maxPoints = 15 * 60 * QUOTE_POINTS_PER_SECOND;
+                if (quoteDataPoints.length > maxPoints) {
+                    quoteDataPoints.shift();
+                }
+
+                // Update chart
+                const displayPoints = quoteDataPoints.slice(-900); // Show last 900 points
+                const labels = [];
+                const now = Date.now();
+                const msPerPoint = QUOTE_UPDATE_INTERVAL_MS;
+
+                for (let i = 0; i < displayPoints.length; i++) {
+                    const timestamp = now - (displayPoints.length - i) * msPerPoint;
+                    const date = new Date(timestamp);
+                    const timeStr = date.toLocaleTimeString('en-US', {
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    labels.push(timeStr);
+                }
+
+                quoteChart.data.labels = labels;
+                quoteChart.data.datasets[0].data = displayPoints;
+                quoteChart.update('none');
+            }, QUOTE_UPDATE_INTERVAL_MS);
+        }
+
+        // Update quote chart with history data
+        function updateQuoteChart(history) {
+            if (!quoteChart || !history || history.length === 0) {
+                if (quoteChart) {
+                    quoteChart.data.labels = [];
+                    quoteChart.data.datasets[0].data = [];
+                    quoteChart.update('none');
+                }
+                return;
+            }
+
+            // Get the latest probability and set as target for interpolation
+            const latestEntry = history[history.length - 1];
+            if (latestEntry && latestEntry.up_price !== undefined) {
+                currentTargetProbability = latestEntry.up_price;
+
+                // Initialize if first time
+                if (lastActualProbability === null) {
+                    lastActualProbability = currentTargetProbability;
+
+                    // Rebuild data points from history
+                    quoteDataPoints = [];
+                    history.forEach(entry => {
+                        quoteDataPoints.push(entry.up_price);
+                    });
+                }
+            }
+        }
+
+        // Initialize quote chart on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                initQuoteHistoryChart();
+                loadRecentCycles();
+                // Reload cycles every 30 seconds
+                setInterval(loadRecentCycles, 30000);
+
+                // Auto-refresh current market quote history every 5 seconds
+                setInterval(() => {
+                    const selector = document.getElementById('cycleSelector');
+                    if (selector && selector.value === '' && window.currentCycleId) {
+                        fetchQuoteHistory(window.currentCycleId);
+                    }
+                }, 5000);
+
+                // Start smooth interpolation loop for probability chart
+                startQuoteUpdateLoop();
+            }, 1000);
+        });
     </script>
 </body>
 </html>
