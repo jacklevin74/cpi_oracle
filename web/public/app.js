@@ -69,7 +69,6 @@ let currentSamplingRate = 1; // How many data points to skip (1 = no skip, 2 = e
 // See CHART_SMOOTHNESS_FIX.md for why overwriting this causes 8-second delays
 let currentTargetPrice = null; // Latest real-time BTC price (DO NOT overwrite with historical data)
 let lastActualPrice = null;    // Last interpolated display price (sync to currentTargetPrice on rebuild)
-let lastAddedTargetPrice = null; // Track the last target price we added to prevent duplicate points
 
 // Calculate optimal sampling rate based on time range to stay under MAX_CHART_POINTS
 function getOptimalSamplingRate(timeRangeSeconds) {
@@ -1785,7 +1784,6 @@ function rebuildChartFromHistory() {
         // Reset update counter to align live sampling with rebuilt chart
         // This ensures smooth updates immediately after time range change
         chartUpdateCounter = 0;
-        lastAddedTargetPrice = null; // Reset so next price update triggers a new point
         console.log(`📊 UPDATE COUNTER RESET - Aligned live sampling to rebuilt chart`);
     }
 }
@@ -2124,7 +2122,6 @@ function startChartUpdateLoop() {
     }
 
     chartUpdateCounter = 0; // Reset global counter for sampling
-    lastAddedTargetPrice = null; // Reset price tracker for clean state
 
     chartUpdateTimer = setInterval(() => {
         if (!btcChart || !currentTargetPrice) return;
@@ -2138,20 +2135,14 @@ function startChartUpdateLoop() {
             lastActualPrice = displayPrice;
         }
 
-        // Update the last point with interpolated price for smooth animation
-        // This ensures visual smoothness even with low sampling rates (15m = 2 updates/sec)
-        if (chartDataPoints.length > 0) {
-            chartDataPoints[chartDataPoints.length - 1] = displayPrice;
-        }
-
-        // Only add NEW point when target price actually changes (not every frame)
-        // This prevents replacing all historical data with duplicate live points
-        const priceHasChanged = lastAddedTargetPrice === null || currentTargetPrice !== lastAddedTargetPrice;
-
-        // Only add point if price changed AND it passes sampling filter (preserves accuracy)
-        if (priceHasChanged && chartUpdateCounter % currentSamplingRate === 0) {
-            chartDataPoints.push(displayPrice);
-            lastAddedTargetPrice = currentTargetPrice;
+        // TIME-BASED SCROLLING: Add point based on sampling rate (time), not data arrival
+        // This decouples horizontal scrolling (time-based) from vertical updates (data-based)
+        // - For 1m: sampling rate 1 → add point every 55ms → chart scrolls at real-time speed
+        // - For 15m: sampling rate 9 → add point every 495ms → chart scrolls 9× slower
+        // - Data arrival only updates currentTargetPrice, interpolation handles smooth transition
+        // - Result: constant smooth scrolling speed, independent of oracle update frequency
+        if (chartUpdateCounter % currentSamplingRate === 0) {
+            chartDataPoints.push(displayPrice); // Always add for time-based scrolling
 
             // Calculate effective points per second and max points
             const effectivePointsPerSecond = getEffectivePointsPerSecond(currentTimeRange);

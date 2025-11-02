@@ -409,7 +409,67 @@ The current implementation performs excellently:
 
 ---
 
+---
+
+## Update 2025-11-02 (Part 3): Time-Based Scrolling
+
+### Issue Discovered
+After the previous fixes, the chart scrolling speed was tied to oracle data arrival rate (~1/sec). This meant the chart would pause/jump when data arrived instead of scrolling smoothly at a constant time-based rate.
+
+### Root Cause
+The fix in Part 2 only added points when `currentTargetPrice` changed (data-based scrolling):
+
+```javascript
+// WRONG: Data-based scrolling
+const priceHasChanged = lastAddedTargetPrice === null || currentTargetPrice !== lastAddedTargetPrice;
+if (priceHasChanged && chartUpdateCounter % currentSamplingRate === 0) {
+    chartDataPoints.push(displayPrice); // Only when data changes!
+}
+```
+
+**Problem**: Horizontal scrolling coupled to data arrival
+- Chart scrolls when oracle updates (~1/sec)
+- Pause between updates creates jerky horizontal movement
+- Scrolling speed varies with data arrival rate
+
+### The Fix: Decouple Horizontal from Vertical
+
+**Horizontal Movement (Time-Based):**
+- Add point based on `samplingRate` (time), NOT data arrival
+- For 1m: add point every 55ms (sampling rate 1)
+- For 15m: add point every 495ms (sampling rate 9)
+- Result: Constant smooth scrolling speed
+
+**Vertical Movement (Data-Based):**
+- When oracle updates, only update `currentTargetPrice`
+- Interpolation smoothly transitions to new target
+- Line height updates, but scrolling speed unchanged
+
+```javascript
+// CORRECT: Time-based scrolling
+if (chartUpdateCounter % currentSamplingRate === 0) {
+    chartDataPoints.push(displayPrice); // Always add for time-based scrolling
+    // Point removal keeps array at constant size → scrolling effect
+}
+```
+
+**Key Insight**: Decoupling horizontal (time) from vertical (price)
+
+- **Horizontal axis**: Controlled by time (sampling rate)
+- **Vertical axis**: Controlled by data (oracle updates + interpolation)
+- **Result**: Smooth constant scrolling, regardless of data arrival pattern
+
+### Behavior by Time Range
+
+- **1m (60s)**: Sampling rate 1 → point every 55ms → scrolls 60s in real-time
+- **5m (300s)**: Sampling rate 3 → point every 165ms → scrolls 300s in 5 min
+- **15m (900s)**: Sampling rate 9 → point every 495ms → scrolls 900s in 15 min
+
+Chart always scrolls at the **exact speed of the time range**, independent of when data arrives.
+
+---
+
 **Status**: ✅ COMPLETE AND PRODUCTION-READY
 **Tested**: November 2, 2025
 **Performance**: Excellent
-**User Experience**: Smooth and responsive on all time ranges
+**User Experience**: Smooth constant-speed scrolling on all time ranges
