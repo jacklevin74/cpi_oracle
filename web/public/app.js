@@ -2135,14 +2135,20 @@ function startChartUpdateLoop() {
             lastActualPrice = displayPrice;
         }
 
-        // TIME-BASED SCROLLING: Add point based on sampling rate (time), not data arrival
+        // SMOOTH ANIMATION: Update last point every frame (18.18 FPS) for butter-smooth rendering
+        // This prevents visible "jumps" on longer time ranges (15m, 30m) that have lower sampling rates
+        if (chartDataPoints.length > 0) {
+            chartDataPoints[chartDataPoints.length - 1] = displayPrice;
+        }
+
+        // TIME-BASED SCROLLING: Add NEW point based on sampling rate (time), not data arrival
         // This decouples horizontal scrolling (time-based) from vertical updates (data-based)
-        // - For 1m: sampling rate 1 → add point every 55ms → chart scrolls at real-time speed
-        // - For 15m: sampling rate 9 → add point every 495ms → chart scrolls 9× slower
-        // - Data arrival only updates currentTargetPrice, interpolation handles smooth transition
-        // - Result: constant smooth scrolling speed, independent of oracle update frequency
+        // - For 1m: sampling rate 1 → add NEW point every 55ms → chart scrolls at real-time speed
+        // - For 15m: sampling rate 9 → add NEW point every 495ms → chart scrolls 9× slower
+        // - Between new points, we continuously update the LAST point above for smooth animation
+        // - Result: smooth 18.18 FPS animation on ALL time ranges, with time-based scrolling
         if (chartUpdateCounter % currentSamplingRate === 0) {
-            chartDataPoints.push(displayPrice); // Always add for time-based scrolling
+            chartDataPoints.push(displayPrice); // Add NEW point for time-based scrolling
 
             // Calculate effective points per second and max points
             const effectivePointsPerSecond = getEffectivePointsPerSecond(currentTimeRange);
