@@ -809,9 +809,10 @@
             }
         }
 
-        // Update volume on page load and periodically
+        // Update volume on page load (SSE stream in app.js handles updates)
         updateCumulativeVolume();
-        setInterval(updateCumulativeVolume, 10000); // Sync with server every 10 seconds
+        // REMOVED: Polling replaced by SSE volume-stream in app.js
+        // setInterval(updateCumulativeVolume, 10000);
 
         // TypeScript Services Integration - Fetch from compiled TypeScript backend
         async function fetchTypeScriptServices() {
@@ -834,9 +835,10 @@
             }
         }
 
-        // Fetch TypeScript data periodically (every 5 seconds)
+        // Fetch TypeScript data on load (SSE stream in app.js handles updates)
         fetchTypeScriptServices();
-        setInterval(fetchTypeScriptServices, 5000);
+        // REMOVED: Polling replaced by SSE market-stream in app.js
+        // setInterval(fetchTypeScriptServices, 5000);
 
         // DEPRECATED: Old function that used market state (qY/qN)
         // Keeping for backward compatibility but no longer used

@@ -5958,13 +5958,14 @@ function switchFeedTab(tab) {
 }
 
 // Auto-refresh settlement history if tab is active
-// Market status is now handled via SSE stream (initStatusStream)
-
-setInterval(() => {
-    if (currentFeedTab === 'settlement') {
-        loadSettlementHistory();
-    }
-}, 10000); // Refresh every 10 seconds
+// Only poll when using JavaScript API (/api) - TypeScript API uses SSE streams
+if (CONFIG.API_PREFIX === '/api') {
+    setInterval(() => {
+        if (currentFeedTab === 'settlement') {
+            loadSettlementHistory();
+        }
+    }, 10000); // Refresh every 10 seconds for JavaScript API only
+}
 
 // ============= INITIALIZATION =============
 
