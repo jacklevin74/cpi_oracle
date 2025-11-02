@@ -3,7 +3,7 @@
  * Database module - central export point
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.QuoteHistoryRepository = exports.HistoryRepository = exports.VolumeRepository = exports.PriceHistoryRepository = exports.DatabaseService = void 0;
+exports.TradingRepository = exports.QuoteHistoryRepository = exports.HistoryRepository = exports.VolumeRepository = exports.PriceHistoryRepository = exports.DatabaseService = void 0;
 var database_service_1 = require("./database.service");
 Object.defineProperty(exports, "DatabaseService", { enumerable: true, get: function () { return database_service_1.DatabaseService; } });
 var price_history_repository_1 = require("./price-history.repository");
@@ -14,4 +14,6 @@ var history_repository_1 = require("./history.repository");
 Object.defineProperty(exports, "HistoryRepository", { enumerable: true, get: function () { return history_repository_1.HistoryRepository; } });
 var quote_history_repository_1 = require("./quote-history.repository");
 Object.defineProperty(exports, "QuoteHistoryRepository", { enumerable: true, get: function () { return quote_history_repository_1.QuoteHistoryRepository; } });
+var trading_repository_1 = require("./trading.repository");
+Object.defineProperty(exports, "TradingRepository", { enumerable: true, get: function () { return trading_repository_1.TradingRepository; } });
 //# sourceMappingURL=index.js.map

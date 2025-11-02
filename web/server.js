@@ -886,6 +886,27 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // TypeScript: Trading history endpoint
+    if (req.url.startsWith('/api/ts/trading-history/') && req.method === 'GET') {
+        const userPrefix = req.url.split('/api/ts/trading-history/')[1];
+        if (userPrefix && userPrefix.length >= 6) {
+            const result = tsApiController.getTradingHistory(userPrefix, 100);
+            res.writeHead(200, {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                ...SECURITY_HEADERS
+            });
+            res.end(JSON.stringify(result));
+        } else {
+            res.writeHead(400, {
+                'Content-Type': 'application/json',
+                ...SECURITY_HEADERS
+            });
+            res.end(JSON.stringify({ error: 'Invalid user prefix' }));
+        }
+        return;
+    }
+
     // ========== End TypeScript API Endpoints ==========
 
     // API: Get cumulative volume

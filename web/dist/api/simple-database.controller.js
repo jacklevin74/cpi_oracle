@@ -12,6 +12,7 @@ const price_history_repository_1 = require("../database/price-history.repository
 const volume_repository_1 = require("../database/volume.repository");
 const history_repository_1 = require("../database/history.repository");
 const quote_history_repository_1 = require("../database/quote-history.repository");
+const trading_repository_1 = require("../database/trading.repository");
 /**
  * Simplified Database Controller
  *
@@ -30,6 +31,13 @@ class SimpleDatabaseController {
         this.volumeRepo = new volume_repository_1.VolumeRepository(this.db.getDatabase());
         this.historyRepo = new history_repository_1.HistoryRepository(this.db.getDatabase());
         this.quoteRepo = new quote_history_repository_1.QuoteHistoryRepository(this.db.getDatabase());
+        this.tradingRepo = new trading_repository_1.TradingRepository({ db: this.db.getDatabase() });
+    }
+    /**
+     * Get trading history for a user
+     */
+    getTradingHistory(userPrefix, limit = 100) {
+        return this.tradingRepo.findByUserPrefix(userPrefix, limit);
     }
     /**
      * Get database statistics

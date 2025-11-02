@@ -6,4 +6,5 @@ export { PriceHistoryRepository } from './price-history.repository';
 export { VolumeRepository } from './volume.repository';
 export { HistoryRepository } from './history.repository';
 export { QuoteHistoryRepository } from './quote-history.repository';
+export { TradingRepository } from './trading.repository';
 //# sourceMappingURL=index.d.ts.map

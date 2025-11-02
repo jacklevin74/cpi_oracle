@@ -13,7 +13,7 @@ import { Connection } from '@solana/web3.js';
 import { OracleService } from '../solana/oracle.service';
 import { MarketService } from '../solana/market.service';
 import { SimpleDatabaseController } from './simple-database.controller';
-import type { CumulativeVolume, CycleInfo, SettlementHistoryRow } from '../types';
+import type { CumulativeVolume, CycleInfo, SettlementHistoryRow, TradingHistoryRow } from '../types';
 
 export interface ApiControllerConfig {
   rpcUrl: string;
@@ -28,6 +28,7 @@ export interface ApiControllerConfig {
 export type VolumeResponse = CumulativeVolume;
 export type RecentCyclesResponse = { cycles: CycleInfo[] };
 export type SettlementHistoryResponse = { history: SettlementHistoryRow[] };
+export type TradingHistoryResponse = { history: TradingHistoryRow[] };
 
 export class ApiController {
   private connection: Connection;
@@ -153,6 +154,21 @@ export class ApiController {
         console.error('[ApiController] getMarketData error:', err);
       }
       return null;
+    }
+  }
+
+  /**
+   * Get trading history for a user
+   */
+  getTradingHistory(userPrefix: string, limit: number = 100): TradingHistoryResponse {
+    try {
+      const history = this.db.getTradingHistory(userPrefix, limit);
+      return { history };
+    } catch (err) {
+      if (this.enableLogging) {
+        console.error('[ApiController] getTradingHistory error:', err);
+      }
+      return { history: [] };
     }
   }
 

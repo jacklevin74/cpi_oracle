@@ -8,7 +8,7 @@
  * - Settlement history
  * - Market data
  */
-import type { CumulativeVolume, CycleInfo, SettlementHistoryRow } from '../types';
+import type { CumulativeVolume, CycleInfo, SettlementHistoryRow, TradingHistoryRow } from '../types';
 export interface ApiControllerConfig {
     rpcUrl: string;
     oracleStateKey: string;
@@ -23,6 +23,9 @@ export type RecentCyclesResponse = {
 };
 export type SettlementHistoryResponse = {
     history: SettlementHistoryRow[];
+};
+export type TradingHistoryResponse = {
+    history: TradingHistoryRow[];
 };
 export declare class ApiController {
     private connection;
@@ -60,6 +63,10 @@ export declare class ApiController {
         lmsr: import("../types").LMSRPrices;
         timestamp: number;
     } | null>;
+    /**
+     * Get trading history for a user
+     */
+    getTradingHistory(userPrefix: string, limit?: number): TradingHistoryResponse;
     /**
      * Get database statistics
      */

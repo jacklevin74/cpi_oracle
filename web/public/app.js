@@ -4711,7 +4711,7 @@ async function displaySettledMarketWinner(winner, startPriceE6) {
 
     try {
         // Fetch current oracle price as settle price
-        const response = await fetch(CONFIG.ORACLE_URL + '?t=' + Date.now());
+        const response = await fetch(`${CONFIG.API_PREFIX}/current-price?t=${Date.now()}`);
         if (!response.ok) return;
 
         const oracle = await response.json();
@@ -5759,7 +5759,7 @@ async function loadTradingHistory() {
     const userPrefix = wallet.publicKey.toString().slice(0, 6);
 
     try {
-        const response = await fetch(`/api/trading-history/${userPrefix}`);
+        const response = await fetch(`${CONFIG.API_PREFIX}/trading-history/${userPrefix}`);
         if (!response.ok) {
             console.warn('Failed to load trading history:', response.status);
             return;

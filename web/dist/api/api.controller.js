@@ -122,6 +122,21 @@ class ApiController {
         }
     }
     /**
+     * Get trading history for a user
+     */
+    getTradingHistory(userPrefix, limit = 100) {
+        try {
+            const history = this.db.getTradingHistory(userPrefix, limit);
+            return { history };
+        }
+        catch (err) {
+            if (this.enableLogging) {
+                console.error('[ApiController] getTradingHistory error:', err);
+            }
+            return { history: [] };
+        }
+    }
+    /**
      * Get database statistics
      */
     getStats() {

@@ -9,6 +9,7 @@ import { PriceHistoryRepository } from '../database/price-history.repository';
 import { VolumeRepository } from '../database/volume.repository';
 import { HistoryRepository } from '../database/history.repository';
 import { QuoteHistoryRepository } from '../database/quote-history.repository';
+import { TradingRepository } from '../database/trading.repository';
 export interface SimpleDatabaseControllerConfig {
     dbPath: string;
 }
@@ -23,7 +24,12 @@ export declare class SimpleDatabaseController {
     readonly volumeRepo: VolumeRepository;
     readonly historyRepo: HistoryRepository;
     readonly quoteRepo: QuoteHistoryRepository;
+    readonly tradingRepo: TradingRepository;
     constructor(config: SimpleDatabaseControllerConfig);
+    /**
+     * Get trading history for a user
+     */
+    getTradingHistory(userPrefix: string, limit?: number): import("../types").TradingHistoryRow[];
     /**
      * Get database statistics
      */

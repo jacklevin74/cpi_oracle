@@ -11,6 +11,7 @@ import { PriceHistoryRepository } from '../database/price-history.repository';
 import { VolumeRepository } from '../database/volume.repository';
 import { HistoryRepository } from '../database/history.repository';
 import { QuoteHistoryRepository } from '../database/quote-history.repository';
+import { TradingRepository } from '../database/trading.repository';
 
 export interface SimpleDatabaseControllerConfig {
   dbPath: string;
@@ -27,6 +28,7 @@ export class SimpleDatabaseController {
   public readonly volumeRepo: VolumeRepository;
   public readonly historyRepo: HistoryRepository;
   public readonly quoteRepo: QuoteHistoryRepository;
+  public readonly tradingRepo: TradingRepository;
 
   constructor(config: SimpleDatabaseControllerConfig) {
     this.db = new DatabaseService({
@@ -41,6 +43,14 @@ export class SimpleDatabaseController {
     this.volumeRepo = new VolumeRepository(this.db.getDatabase());
     this.historyRepo = new HistoryRepository(this.db.getDatabase());
     this.quoteRepo = new QuoteHistoryRepository(this.db.getDatabase());
+    this.tradingRepo = new TradingRepository({ db: this.db.getDatabase() });
+  }
+
+  /**
+   * Get trading history for a user
+   */
+  getTradingHistory(userPrefix: string, limit: number = 100) {
+    return this.tradingRepo.findByUserPrefix(userPrefix, limit);
   }
 
   /**
