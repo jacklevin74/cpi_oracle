@@ -66,6 +66,59 @@ impl SlippageConfig {
     }
 }
 
+// Advanced Guard Config (comprehensive protection with all features)
+// ===========================
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
+pub struct AdvancedGuardConfig {
+    // Absolute price limits
+    pub price_limit_e6: i64,           // 0 = no limit; max for BUY, min for SELL
+
+    // Slippage protection with quote
+    pub max_slippage_bps: u16,         // 0 = no slippage check
+    pub quote_price_e6: i64,           // Reference price for slippage calc
+    pub quote_timestamp: i64,          // When quote was generated (unix seconds)
+
+    // Max cost enforcement
+    pub max_total_cost_e6: i64,        // 0 = no max cost (only for BUY)
+
+    // Partial fill support
+    pub allow_partial: bool,            // Allow partial execution?
+    pub min_fill_shares_e6: i64,       // Minimum shares to execute (if partial)
+}
+
+impl AdvancedGuardConfig {
+    pub fn none() -> Self {
+        Self {
+            price_limit_e6: 0,
+            max_slippage_bps: 0,
+            quote_price_e6: 0,
+            quote_timestamp: 0,
+            max_total_cost_e6: 0,
+            allow_partial: false,
+            min_fill_shares_e6: 0,
+        }
+    }
+
+    pub fn has_any_guards(&self) -> bool {
+        self.price_limit_e6 > 0 ||
+        self.max_slippage_bps > 0 ||
+        self.max_total_cost_e6 > 0
+    }
+
+    pub fn has_price_limit(&self) -> bool {
+        self.price_limit_e6 > 0
+    }
+
+    pub fn has_slippage_guard(&self) -> bool {
+        self.max_slippage_bps > 0 && self.quote_price_e6 > 0
+    }
+
+    pub fn has_cost_limit(&self) -> bool {
+        self.max_total_cost_e6 > 0
+    }
+}
+
 // ===========================
 // Market (single) with LMSR + coverage + settlement
 // ===========================
@@ -1174,6 +1227,159 @@ pub mod cpi_oracle {
         trade_guarded(ctx, side, action, amount, guard)
     }
 
+    // ---------- TRADE WITH ADVANCED GUARDS (comprehensive protection) ----------
+    pub fn trade_advanced(
+        ctx: Context<Trade>,
+        side: u8,
+        action: u8,
+        amount: i64,
+        guards: AdvancedGuardConfig,
+    ) -> Result<()> {
+        let amm = &mut ctx.accounts.amm;
+        let pos = &mut ctx.accounts.pos;
+        let sys = &ctx.accounts.system_program;
+
+        require!(amount > 0, ReaderError::BadParam);
+        let status = amm.status();
+        require!(status == MarketStatus::Premarket || status == MarketStatus::Open, ReaderError::MarketClosed);
+
+        // Check trading lockout
+        if amm.market_end_time > 0 {
+            let (_, oracle_ts_ms) = read_btc_price_e6(&ctx.accounts.oracle_state)?;
+            let oracle_ts = oracle_ts_ms / 1000;
+            let lockout_start_time = amm.market_end_time - TRADING_LOCKOUT_SECONDS;
+
+            if oracle_ts >= lockout_start_time {
+                msg!("LOCKED: ts={} lockout={} end={}", oracle_ts, lockout_start_time, amm.market_end_time);
+                return err!(ReaderError::TradingLocked);
+            }
+        }
+
+        // Validate guards and get executable shares (may be less than requested if partial fills enabled)
+        let shares_to_execute = validate_advanced_guards(action, side, amount, &guards, amm)?;
+
+        // Execute the trade with validated shares
+        match (side, action) {
+            (1, 1) => { // BUY YES
+                require!(shares_to_execute >= MIN_SELL_E6 && shares_to_execute <= DQ_MAX_E6, ReaderError::BadParam);
+
+                let spend_e6 = lmsr_buy_yes_for_shares(amm, shares_to_execute)?;
+                require!(pos.vault_balance_e6 >= spend_e6, ReaderError::InsufficientBalance);
+
+                let fee_e6 = ((spend_e6 as i128) * (amm.fee_bps as i128) / 10_000) as i64;
+                let net_e6 = spend_e6.saturating_sub(fee_e6);
+
+                amm.fees = amm.fees.saturating_add(fee_e6);
+                amm.q_yes = amm.q_yes.saturating_add(shares_to_execute);
+                amm.vault_e6 = amm.vault_e6.saturating_add(net_e6);
+                pos.yes_shares_e6 = pos.yes_shares_e6.saturating_add(shares_to_execute);
+
+                let avg_h = (net_e6 as f64) / (shares_to_execute as f64);
+
+                let pos_key = pos.key();
+                let seeds: &[&[u8]] = &[
+                    b"user_vault",
+                    pos_key.as_ref(),
+                    core::slice::from_ref(&pos.vault_bump),
+                ];
+                transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.vault_sol.to_account_info(), e6_to_lamports(net_e6), &[seeds])?;
+                transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.fee_dest.to_account_info(), e6_to_lamports(fee_e6), &[seeds])?;
+
+                pos.vault_balance_e6 -= spend_e6;
+
+                msg!("ADV BUY YES: requested={} executed={} spend={} qY={} qN={} vault={}",
+                     amount, shares_to_execute, spend_e6, amm.q_yes, amm.q_no, amm.vault_e6);
+
+                emit_trade(amm, 1, 1, spend_e6, shares_to_execute, avg_h);
+            }
+            (2, 1) => { // BUY NO
+                require!(shares_to_execute >= MIN_SELL_E6 && shares_to_execute <= DQ_MAX_E6, ReaderError::BadParam);
+
+                let spend_e6 = lmsr_buy_no_for_shares(amm, shares_to_execute)?;
+                require!(pos.vault_balance_e6 >= spend_e6, ReaderError::InsufficientBalance);
+
+                let fee_e6 = ((spend_e6 as i128) * (amm.fee_bps as i128) / 10_000) as i64;
+                let net_e6 = spend_e6.saturating_sub(fee_e6);
+
+                amm.fees = amm.fees.saturating_add(fee_e6);
+                amm.q_no = amm.q_no.saturating_add(shares_to_execute);
+                amm.vault_e6 = amm.vault_e6.saturating_add(net_e6);
+                pos.no_shares_e6 = pos.no_shares_e6.saturating_add(shares_to_execute);
+
+                let avg_h = (net_e6 as f64) / (shares_to_execute as f64);
+
+                let pos_key = pos.key();
+                let seeds: &[&[u8]] = &[
+                    b"user_vault",
+                    pos_key.as_ref(),
+                    core::slice::from_ref(&pos.vault_bump),
+                ];
+                transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.vault_sol.to_account_info(), e6_to_lamports(net_e6), &[seeds])?;
+                transfer_sol_signed(sys, &ctx.accounts.user_vault.to_account_info(), &ctx.accounts.fee_dest.to_account_info(), e6_to_lamports(fee_e6), &[seeds])?;
+
+                pos.vault_balance_e6 -= spend_e6;
+
+                msg!("ADV BUY NO: requested={} executed={} spend={} qY={} qN={} vault={}",
+                     amount, shares_to_execute, spend_e6, amm.q_yes, amm.q_no, amm.vault_e6);
+
+                emit_trade(amm, 2, 1, spend_e6, shares_to_execute, avg_h);
+            }
+            (1, 2) => { // SELL YES
+                require!(shares_to_execute >= MIN_SELL_E6 && shares_to_execute <= DQ_MAX_E6, ReaderError::BadParam);
+                let sell_e6 = shares_to_execute.min(pos.yes_shares_e6);
+                require!(sell_e6 > 0, ReaderError::InsufficientShares);
+
+                let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_yes(amm, sell_e6)?;
+
+                let vault_sol_actual_lamports = ctx.accounts.vault_sol.lamports();
+                let vault_sol_actual_e6 = lamports_to_e6(vault_sol_actual_lamports);
+                require!(vault_sol_actual_e6 >= proceeds_e6, ReaderError::NoCoverage);
+
+                let amm_key = amm.key();
+                let seeds: &[&[u8]] = &[
+                    Amm::VAULT_SOL_SEED,
+                    amm_key.as_ref(),
+                    core::slice::from_ref(&amm.vault_sol_bump),
+                ];
+                transfer_sol_signed(sys, &ctx.accounts.vault_sol.to_account_info(), &ctx.accounts.user_vault.to_account_info(), e6_to_lamports(proceeds_e6), &[seeds])?;
+
+                pos.vault_balance_e6 += proceeds_e6;
+                pos.yes_shares_e6 = pos.yes_shares_e6.saturating_sub(sold_e6.round() as i64);
+
+                msg!("ADV SELL YES: requested={} executed={} proceeds={} qY={} qN={} vault={}",
+                     amount, sold_e6.round() as i64, proceeds_e6, amm.q_yes, amm.q_no, amm.vault_e6);
+            }
+            (2, 2) => { // SELL NO
+                require!(shares_to_execute >= MIN_SELL_E6 && shares_to_execute <= DQ_MAX_E6, ReaderError::BadParam);
+                let sell_e6 = shares_to_execute.min(pos.no_shares_e6);
+                require!(sell_e6 > 0, ReaderError::InsufficientShares);
+
+                let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_no(amm, sell_e6)?;
+
+                let vault_sol_actual_lamports = ctx.accounts.vault_sol.lamports();
+                let vault_sol_actual_e6 = lamports_to_e6(vault_sol_actual_lamports);
+                require!(vault_sol_actual_e6 >= proceeds_e6, ReaderError::NoCoverage);
+
+                let amm_key = amm.key();
+                let seeds: &[&[u8]] = &[
+                    Amm::VAULT_SOL_SEED,
+                    amm_key.as_ref(),
+                    core::slice::from_ref(&amm.vault_sol_bump),
+                ];
+                transfer_sol_signed(sys, &ctx.accounts.vault_sol.to_account_info(), &ctx.accounts.user_vault.to_account_info(), e6_to_lamports(proceeds_e6), &[seeds])?;
+
+                pos.vault_balance_e6 += proceeds_e6;
+                pos.no_shares_e6 = pos.no_shares_e6.saturating_sub(sold_e6.round() as i64);
+
+                msg!("ADV SELL NO: requested={} executed={} proceeds={} qY={} qN={} vault={}",
+                     amount, sold_e6.round() as i64, proceeds_e6, amm.q_yes, amm.q_no, amm.vault_e6);
+            }
+            _ => return err!(ReaderError::BadParam),
+        }
+
+        Ok(())
+    }
+
     // ---------- CLOSE POSITION (sell all YES and NO shares) ----------
     pub fn close_position(ctx: Context<Trade>) -> Result<()> {
         let amm = &mut ctx.accounts.amm;
@@ -1684,6 +1890,225 @@ fn calculate_no_price(amm: &Amm) -> i64 {
     (prob * 1e6) as i64
 }
 
+// Helper: Calculate proceeds from selling YES shares (without mutating AMM)
+fn calculate_sell_yes_proceeds(amm: &Amm, shares_e6: i64) -> i64 {
+    let sell_e6 = shares_e6.min(amm.q_yes);
+    if sell_e6 <= 0 {
+        return 0;
+    }
+
+    let pre = lmsr_cost(amm, sh(amm.q_yes), sh(amm.q_no));
+    let post = lmsr_cost(amm, sh(amm.q_yes - sell_e6), sh(amm.q_no));
+    let mut gross_h = pre - post;
+    if !gross_h.is_finite() || gross_h < 0.0 {
+        gross_h = 0.0;
+    }
+
+    let gross_e6_f = gross_h * 1_000_000.0;
+    let fee_e6_f = (gross_e6_f * (amm.fee_bps as f64) / 10_000.0).max(0.0);
+    let net_e6_f = (gross_e6_f - fee_e6_f).max(0.0);
+
+    net_e6_f.round() as i64
+}
+
+// Helper: Calculate proceeds from selling NO shares (without mutating AMM)
+fn calculate_sell_no_proceeds(amm: &Amm, shares_e6: i64) -> i64 {
+    let sell_e6 = shares_e6.min(amm.q_no);
+    if sell_e6 <= 0 {
+        return 0;
+    }
+
+    let pre = lmsr_cost(amm, sh(amm.q_yes), sh(amm.q_no));
+    let post = lmsr_cost(amm, sh(amm.q_yes), sh(amm.q_no - sell_e6));
+    let mut gross_h = pre - post;
+    if !gross_h.is_finite() || gross_h < 0.0 {
+        gross_h = 0.0;
+    }
+
+    let gross_e6_f = gross_h * 1_000_000.0;
+    let fee_e6_f = (gross_e6_f * (amm.fee_bps as f64) / 10_000.0).max(0.0);
+    let net_e6_f = (gross_e6_f - fee_e6_f).max(0.0);
+
+    net_e6_f.round() as i64
+}
+
+// ---- Advanced Guard Validation ----
+
+/// Check if a given number of shares passes all guards
+fn shares_pass_guards(
+    shares_e6: i64,
+    action: u8,
+    side: u8,
+    guards: &AdvancedGuardConfig,
+    amm: &Amm,
+) -> Result<bool> {
+    // Get current market price for slippage check
+    let current_price_e6 = if side == 1 { // YES
+        calculate_yes_price(amm)
+    } else { // NO
+        calculate_no_price(amm)
+    };
+
+    // Calculate execution price and cost for this number of shares
+    let (execution_price_e6, total_cost_e6) = if action == 1 { // BUY
+        let spend_e6 = if side == 1 {
+            lmsr_buy_yes_for_shares(amm, shares_e6)?
+        } else {
+            lmsr_buy_no_for_shares(amm, shares_e6)?
+        };
+        let price_per_share = if shares_e6 > 0 {
+            ((spend_e6 as i128 * 1_000_000) / shares_e6 as i128) as i64
+        } else {
+            0
+        };
+        (price_per_share, spend_e6)
+    } else { // SELL
+        let proceeds_e6 = if side == 1 {
+            calculate_sell_yes_proceeds(amm, shares_e6)
+        } else {
+            calculate_sell_no_proceeds(amm, shares_e6)
+        };
+        let price_per_share = if shares_e6 > 0 {
+            ((proceeds_e6 as i128 * 1_000_000) / shares_e6 as i128) as i64
+        } else {
+            0
+        };
+        (price_per_share, proceeds_e6)
+    };
+
+    // Check absolute price limit
+    if guards.has_price_limit() {
+        if action == 1 { // BUY: execution price must not exceed limit
+            if execution_price_e6 > guards.price_limit_e6 {
+                return Ok(false);
+            }
+        } else { // SELL: execution price must not fall below limit
+            if execution_price_e6 < guards.price_limit_e6 {
+                return Ok(false);
+            }
+        }
+    }
+
+    // Check slippage against quote
+    if guards.has_slippage_guard() {
+        let max_deviation = (guards.quote_price_e6 as i128 * guards.max_slippage_bps as i128) / 10_000;
+
+        if action == 1 { // BUY: price can go up by slippage%
+            let max_price = guards.quote_price_e6 as i128 + max_deviation;
+            if execution_price_e6 as i128 > max_price {
+                return Ok(false);
+            }
+        } else { // SELL: price can go down by slippage%
+            let min_price = (guards.quote_price_e6 as i128 - max_deviation).max(0);
+            if (execution_price_e6 as i128) < min_price {
+                return Ok(false);
+            }
+        }
+    }
+
+    // Check max total cost (only for BUY)
+    if action == 1 && guards.has_cost_limit() {
+        if total_cost_e6 > guards.max_total_cost_e6 {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
+/// Binary search to find maximum executable shares within guard constraints
+fn find_max_executable_shares(
+    action: u8,
+    side: u8,
+    max_shares_e6: i64,
+    guards: &AdvancedGuardConfig,
+    amm: &Amm,
+) -> Result<i64> {
+    // Start with minimum possible trade
+    let min_trade = if action == 2 { MIN_SELL_E6 } else { 100_000 }; // Min 0.1 shares
+    let mut left = guards.min_fill_shares_e6.max(min_trade);
+    let mut right = max_shares_e6;
+    let mut best = 0i64;
+
+    // Binary search (max 16 iterations for compute efficiency)
+    for _ in 0..16 {
+        if left > right {
+            break;
+        }
+
+        let mid = (left + right) / 2;
+
+        if shares_pass_guards(mid, action, side, guards, amm)? {
+            best = mid;
+            left = mid + 1;  // Try larger
+        } else {
+            right = mid - 1; // Try smaller
+        }
+    }
+
+    Ok(best)
+}
+
+/// Validate advanced guards and return shares to execute
+/// Returns the number of shares to execute (may be less than requested if partial fills enabled)
+fn validate_advanced_guards(
+    action: u8,
+    side: u8,
+    amount_e6: i64,
+    guards: &AdvancedGuardConfig,
+    amm: &Amm,
+) -> Result<i64> {
+    // 1. Validate quote staleness if using slippage guard
+    if guards.has_slippage_guard() {
+        let now = Clock::get()?.unix_timestamp;
+        require!(
+            now - guards.quote_timestamp <= 30,
+            ReaderError::StaleQuote
+        );
+    }
+
+    // 2. Validate guard configuration
+    require!(
+        !guards.allow_partial || guards.min_fill_shares_e6 > 0,
+        ReaderError::InvalidGuardConfig
+    );
+
+    // 3. Try full execution first
+    if shares_pass_guards(amount_e6, action, side, guards, amm)? {
+        msg!("✅ ADVANCED GUARDS: Full execution allowed for {} shares", amount_e6);
+        return Ok(amount_e6);
+    }
+
+    // 4. If partial fills not allowed, reject
+    if !guards.allow_partial {
+        msg!("❌ ADVANCED GUARDS: Full execution failed, partial not allowed");
+        if guards.has_price_limit() {
+            return err!(ReaderError::PriceLimitExceeded);
+        } else if guards.has_slippage_guard() {
+            return err!(ReaderError::SlippageExceeded);
+        } else if guards.has_cost_limit() {
+            return err!(ReaderError::CostExceedsLimit);
+        } else {
+            return err!(ReaderError::InvalidGuardConfig);
+        }
+    }
+
+    // 5. Binary search for max executable shares
+    msg!("🔍 ADVANCED GUARDS: Searching for partial fill...");
+    let executable = find_max_executable_shares(action, side, amount_e6, guards, amm)?;
+
+    // 6. Check minimum fill requirement
+    if executable < guards.min_fill_shares_e6 {
+        msg!("❌ ADVANCED GUARDS: Max executable {} below min fill {}",
+             executable, guards.min_fill_shares_e6);
+        return err!(ReaderError::MinFillNotMet);
+    }
+
+    msg!("✅ ADVANCED GUARDS: Partial execution allowed: {}/{} shares",
+         executable, amount_e6);
+    Ok(executable)
+}
+
 // ---- logging helpers ----
 fn emit_trade(amm: &Amm, side: u8, action: u8, net_e6: i64, dq_e6: i64, avg_h: f64) {
     let p_yes_e6 = (lmsr_p_yes(amm) * 1_000_000.0).round() as i64;
@@ -2020,5 +2445,15 @@ pub enum ReaderError {
 
     // Slippage protection
     #[msg("slippage tolerance exceeded")]         SlippageExceeded,
+
+    // Advanced guards
+    #[msg("quote too stale - maximum 30 seconds old")]
+    StaleQuote,
+    #[msg("total cost exceeds maximum allowed")]
+    CostExceedsLimit,
+    #[msg("minimum fill amount not met")]
+    MinFillNotMet,
+    #[msg("invalid guard configuration")]
+    InvalidGuardConfig,
 }
 
