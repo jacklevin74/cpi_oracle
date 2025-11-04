@@ -643,21 +643,36 @@ pub struct ExecuteLimitOrder<'info> {
     )]
     pub position: Account<'info, Position>,
 
+    /// CHECK: User vault PDA (system-owned, holds user's SOL)
+    #[account(
+        mut,
+        seeds = [Position::USER_VAULT_SEED, position.key().as_ref()],
+        bump = position.vault_bump
+    )]
+    pub user_vault: AccountInfo<'info>,
+
+    /// CHECK: writable lamport recipient for fees; address checked against `amm.fee_dest`.
+    #[account(mut, address = amm.fee_dest)]
+    pub fee_dest: UncheckedAccount<'info>,
+
+    /// CHECK: writable SOL vault PDA (system-owned, 0 space) used as lamports pool.
     #[account(
         mut,
         seeds = [Amm::VAULT_SOL_SEED, amm.key().as_ref()],
-        bump
+        bump = amm.vault_sol_bump
     )]
-    /// CHECK: system-owned SOL vault PDA
     pub vault_sol: UncheckedAccount<'info>,
 
-    /// CHECK: User whose order is being executed (order owner)
-    #[account(mut)]
+    /// CHECK: User whose order is being executed (order owner, not a signer, not modified)
     pub user: UncheckedAccount<'info>,
 
     /// Keeper who is executing the order (receives fee)
     #[account(mut)]
     pub keeper: Signer<'info>,
+
+    /// CHECK: Instructions sysvar for Ed25519 signature verification
+    #[account(address = anchor_lang::solana_program::sysvar::instructions::ID)]
+    pub instructions: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -1960,8 +1975,8 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
 
         // === VALIDATION PHASE ===
 
-        // 1. Verify Ed25519 signature
-        verify_ed25519_signature(&order, &signature)?;
+        // 1. Verify Ed25519 signature using instructions sysvar
+        verify_ed25519_signature(&order, &signature, &ctx.accounts.instructions.to_account_info())?;
         msg!("✅ Signature verified");
 
         // 2. Verify order matches this market
@@ -1983,8 +1998,12 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
             ReaderError::NonceAlreadyUsed
         );
 
-        // 6. Check market is open
-        require!(amm.status() == MarketStatus::Open, ReaderError::MarketClosed);
+        // 6. Check market is open (allow both Premarket and Open)
+        let status = amm.status();
+        require!(
+            status == MarketStatus::Premarket || status == MarketStatus::Open,
+            ReaderError::MarketClosed
+        );
 
         // === PRICE CHECK PHASE ===
 
@@ -2031,14 +2050,172 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
 
         msg!("📊 Executing {} of {} shares", executable_shares, order.shares_e6);
 
-        // Execute trade using existing trade logic (simplified - calling internal trade handler)
-        // TODO: Extract the core trade logic into a reusable helper function
-        // For now, we use placeholder values to get the program to compile
-        let net_e6 = executable_shares; // TODO: Calculate actual net amount
-        let _dq_e6 = executable_shares; // TODO: Calculate actual shares
-        let avg_price_e6 = calculate_avg_price(executable_shares, order.action, order.side, amm)?;
+        // === TRADE EXECUTION PHASE ===
 
-        msg!("⚠️  Trade execution not fully implemented - using placeholder values");
+        let (net_e6, dq_e6, avg_price_e6) = match (order.action, order.side) {
+            (1, 1) => {
+                // BUY YES: Calculate spend needed for executable shares
+                let spend_e6 = lmsr_buy_yes_for_shares(&amm, executable_shares)?;
+                let (dq, avg_h) = lmsr_buy_yes(&mut ctx.accounts.amm, spend_e6)?;
+                let avg_price = (spend_e6 as f64 / dq) as i64;
+
+                // Update position
+                position.yes_shares_e6 = position.yes_shares_e6.saturating_add(dq.round() as i64);
+
+                msg!("✅ BUY YES executed: {} shares @ ${:.6}", dq.round() as i64, avg_h);
+                (spend_e6, dq.round() as i64, avg_price)
+            },
+            (1, 2) => {
+                // BUY NO: Calculate spend needed for executable shares
+                let spend_e6 = lmsr_buy_no_for_shares(&amm, executable_shares)?;
+                let (dq, avg_h) = lmsr_buy_no(&mut ctx.accounts.amm, spend_e6)?;
+                let avg_price = (spend_e6 as f64 / dq) as i64;
+
+                // Update position
+                position.no_shares_e6 = position.no_shares_e6.saturating_add(dq.round() as i64);
+
+                msg!("✅ BUY NO executed: {} shares @ ${:.6}", dq.round() as i64, avg_h);
+                (spend_e6, dq.round() as i64, avg_price)
+            },
+            (2, 1) => {
+                // SELL YES: Check user has enough shares
+                require!(position.yes_shares_e6 >= executable_shares, ReaderError::InsufficientShares);
+
+                let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_yes(&mut ctx.accounts.amm, executable_shares)?;
+                let avg_price = (proceeds_e6 as f64 / sold_e6) as i64;
+
+                // Update position
+                position.yes_shares_e6 = position.yes_shares_e6.saturating_sub(sold_e6.round() as i64);
+
+                msg!("✅ SELL YES executed: {} shares @ ${:.6}", sold_e6.round() as i64, avg_h);
+                (proceeds_e6, sold_e6.round() as i64, avg_price)
+            },
+            (2, 2) => {
+                // SELL NO: Check user has enough shares
+                require!(position.no_shares_e6 >= executable_shares, ReaderError::InsufficientShares);
+
+                let (proceeds_e6, avg_h, sold_e6) = lmsr_sell_no(&mut ctx.accounts.amm, executable_shares)?;
+                let avg_price = (proceeds_e6 as f64 / sold_e6) as i64;
+
+                // Update position
+                position.no_shares_e6 = position.no_shares_e6.saturating_sub(sold_e6.round() as i64);
+
+                msg!("✅ SELL NO executed: {} shares @ ${:.6}", sold_e6.round() as i64, avg_h);
+                (proceeds_e6, sold_e6.round() as i64, avg_price)
+            },
+            _ => return err!(ReaderError::InvalidAction),
+        };
+
+        msg!("📊 Trade completed: net={} dq={} avg_price={:.6}", net_e6, dq_e6, avg_price_e6 as f64 / 1e6);
+
+        // === FUND TRANSFER PHASE ===
+
+        let amm = &mut ctx.accounts.amm;
+        let position = &mut ctx.accounts.position;
+
+        // Calculate protocol fee (deducted from gross amount)
+        let protocol_fee_e6 = (net_e6.abs() as i128 * amm.fee_bps as i128 / 10_000) as i64;
+        let net_after_protocol_fee_e6 = if order.action == 1 {
+            net_e6 + protocol_fee_e6  // BUY: add fee to total cost
+        } else {
+            net_e6 - protocol_fee_e6  // SELL: subtract fee from proceeds
+        };
+
+        let net_lamports = (net_after_protocol_fee_e6.abs() as u64) * LAMPORTS_PER_E6;
+        let protocol_fee_lamports = (protocol_fee_e6 as u64) * LAMPORTS_PER_E6;
+
+        if order.action == 1 {
+            // === BUY ORDER: Transfer from user_vault to vault_sol ===
+
+            // Check user has sufficient balance in vault
+            require!(
+                position.vault_balance_e6 >= net_after_protocol_fee_e6,
+                ReaderError::InsufficientBalance
+            );
+
+            // Transfer from user_vault PDA to vault_sol PDA (signed transfer)
+            let pos_key = position.key();
+            let seeds: &[&[u8]] = &[
+                Position::USER_VAULT_SEED,
+                pos_key.as_ref(),
+                &[position.vault_bump],
+            ];
+            let signer_seeds = &[&seeds[..]];
+
+            transfer_sol_signed(
+                &ctx.accounts.system_program,
+                &ctx.accounts.user_vault,
+                &ctx.accounts.vault_sol,
+                net_lamports,
+                signer_seeds,
+            )?;
+
+            // Update accounting
+            position.vault_balance_e6 = position.vault_balance_e6.saturating_sub(net_after_protocol_fee_e6);
+            amm.vault_e6 = amm.vault_e6.saturating_add(net_after_protocol_fee_e6);
+
+            // Transfer protocol fee to fee_dest
+            if protocol_fee_lamports > 0 {
+                transfer_sol_signed(
+                    &ctx.accounts.system_program,
+                    &ctx.accounts.user_vault,
+                    &ctx.accounts.fee_dest.to_account_info(),
+                    protocol_fee_lamports,
+                    signer_seeds,
+                )?;
+
+                position.vault_balance_e6 = position.vault_balance_e6.saturating_sub(protocol_fee_e6);
+            }
+
+            msg!("💰 BUY: Transferred {} lamports from user_vault to vault_sol", net_lamports);
+            msg!("💰 Protocol fee: {} lamports to fee_dest", protocol_fee_lamports);
+        } else {
+            // === SELL ORDER: Transfer from vault_sol to user_vault ===
+
+            // Get actual vault_sol balance
+            let vault_sol_actual = ctx.accounts.vault_sol.lamports();
+            let vault_sol_actual_e6 = (vault_sol_actual / LAMPORTS_PER_E6) as i64;
+
+            // Check vault has sufficient coverage
+            require!(vault_sol_actual_e6 >= net_after_protocol_fee_e6, ReaderError::NoCoverage);
+
+            // Transfer from vault_sol PDA to user_vault PDA (signed transfer)
+            let amm_key = amm.key();
+            let seeds: &[&[u8]] = &[
+                Amm::VAULT_SOL_SEED,
+                amm_key.as_ref(),
+                &[amm.vault_sol_bump],
+            ];
+            let signer_seeds = &[&seeds[..]];
+
+            transfer_sol_signed(
+                &ctx.accounts.system_program,
+                &ctx.accounts.vault_sol,
+                &ctx.accounts.user_vault,
+                net_lamports,
+                signer_seeds,
+            )?;
+
+            // Update accounting
+            position.vault_balance_e6 = position.vault_balance_e6.saturating_add(net_after_protocol_fee_e6);
+            amm.vault_e6 = amm.vault_e6.saturating_sub(net_after_protocol_fee_e6);
+
+            // Transfer protocol fee to fee_dest
+            if protocol_fee_lamports > 0 {
+                transfer_sol_signed(
+                    &ctx.accounts.system_program,
+                    &ctx.accounts.vault_sol,
+                    &ctx.accounts.fee_dest.to_account_info(),
+                    protocol_fee_lamports,
+                    signer_seeds,
+                )?;
+
+                amm.vault_e6 = amm.vault_e6.saturating_sub(protocol_fee_e6);
+            }
+
+            msg!("💰 SELL: Transferred {} lamports from vault_sol to user_vault", net_lamports);
+            msg!("💰 Protocol fee: {} lamports to fee_dest", protocol_fee_lamports);
+        }
 
         // === FEE PAYMENT PHASE ===
 
@@ -2046,22 +2223,27 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
         let keeper_fee_e6 = (net_e6.abs() as i128 * order.keeper_fee_bps as i128 / 10_000) as i64;
         let keeper_fee_lamports = (keeper_fee_e6 as u64) * LAMPORTS_PER_E6;
 
-        // Transfer keeper fee from user to keeper
+        // Transfer keeper fee from user_vault to keeper (using PDA signing)
         if keeper_fee_lamports > 0 {
-            let transfer_ix = anchor_lang::solana_program::system_instruction::transfer(
-                &order.user,
-                ctx.accounts.keeper.key,
-                keeper_fee_lamports,
-            );
+            // Use user_vault PDA (which we control) instead of user's wallet
+            let pos_key = position.key();
+            let seeds: &[&[u8]] = &[
+                Position::USER_VAULT_SEED,
+                pos_key.as_ref(),
+                &[position.vault_bump],
+            ];
+            let signer_seeds = &[&seeds[..]];
 
-            anchor_lang::solana_program::program::invoke(
-                &transfer_ix,
-                &[
-                    ctx.accounts.user.to_account_info(),
-                    ctx.accounts.keeper.to_account_info(),
-                    ctx.accounts.system_program.to_account_info(),
-                ],
+            transfer_sol_signed(
+                &ctx.accounts.system_program,
+                &ctx.accounts.user_vault,
+                &ctx.accounts.keeper.to_account_info(),
+                keeper_fee_lamports,
+                signer_seeds,
             )?;
+
+            // Update vault balance
+            position.vault_balance_e6 = position.vault_balance_e6.saturating_sub(keeper_fee_e6);
 
             msg!("💸 Keeper fee paid: {} lamports to {}", keeper_fee_lamports, ctx.accounts.keeper.key);
         }
@@ -2868,27 +3050,87 @@ fn assert_fresh(ts: i64) -> Result<()> {
 
 // ============================== Limit Order helpers ==============================
 
-/// Verify Ed25519 signature for limit order
-fn verify_ed25519_signature(order: &LimitOrder, signature: &[u8; 64]) -> Result<()> {
-    // Serialize order to bytes using Borsh
-    let _message = order.try_to_vec().map_err(|_| ReaderError::BadParam)?;
+/// Verify Ed25519 signature for limit order using Solana's native Ed25519 sysvar
+///
+/// The signature must be pre-verified using the Ed25519Program instruction before calling this.
+/// This function checks that the verification was done correctly.
+fn verify_ed25519_signature(order: &LimitOrder, signature: &[u8; 64], instructions_sysvar: &AccountInfo) -> Result<()> {
+    // Serialize order to bytes using Borsh (must match client-side encoding)
+    let message = order.try_to_vec().map_err(|_| ReaderError::BadParam)?;
 
     // Get user's public key bytes
-    let _pubkey_bytes = order.user.to_bytes();
+    let pubkey_bytes = order.user.to_bytes();
 
-    // For now, we'll do a simple verification
-    // In production, use Solana's Ed25519 sysvar for cheaper verification
-    // This is a placeholder - actual Ed25519 verification requires the ed25519-dalek crate
-    // or using Solana's Ed25519 instruction sysvar
+    // Load and verify the Ed25519 instruction from sysvar
+    let instruction_sysvar_account_info = instructions_sysvar;
+    let current_index = anchor_lang::solana_program::sysvar::instructions::load_current_index_checked(
+        instruction_sysvar_account_info
+    )?;
 
-    // TODO: Implement proper Ed25519 verification using:
-    // 1. ed25519-dalek crate, OR
-    // 2. Solana's Ed25519 instruction sysvar (more efficient)
+    // The Ed25519 verify instruction should be at current_index - 1
+    let ed25519_ix_index = (current_index as usize).saturating_sub(1);
 
-    // For now, we'll skip actual signature verification and just check format
-    require!(signature.len() == 64, ReaderError::InvalidSignature);
+    let ed25519_ix = anchor_lang::solana_program::sysvar::instructions::load_instruction_at_checked(
+        ed25519_ix_index,
+        instruction_sysvar_account_info
+    )?;
 
-    msg!("⚠️  Signature verification bypassed (implement ed25519-dalek or use Ed25519 sysvar)");
+    // Verify this is an Ed25519 instruction
+    // Ed25519 program ID: Ed25519SigVerify111111111111111111111111111
+    const ED25519_PROGRAM_ID: Pubkey = pubkey!("Ed25519SigVerify111111111111111111111111111");
+    require_keys_eq!(
+        ed25519_ix.program_id,
+        ED25519_PROGRAM_ID,
+        ReaderError::InvalidSignature
+    );
+
+    // Ed25519 instruction data format:
+    // [num_signatures: u8][padding: u8][signature_offset: u16][signature_instruction_index: u16]
+    // [public_key_offset: u16][public_key_instruction_index: u16][message_data_offset: u16]
+    // [message_data_size: u16][message_instruction_index: u16][public_key: 32 bytes][signature: 64 bytes][message: variable]
+
+    // For a single signature verification, we expect:
+    // - num_signatures = 1
+    // - The public key, signature, and message embedded in the instruction data
+
+    require!(
+        ed25519_ix.data.len() >= 114, // minimum: 14 header + 32 pubkey + 64 sig + 4 for offsets
+        ReaderError::InvalidSignature
+    );
+
+    require!(
+        ed25519_ix.data[0] == 1, // num_signatures must be 1
+        ReaderError::InvalidSignature
+    );
+
+    // Read offsets from the instruction header
+    let pubkey_offset = u16::from_le_bytes([ed25519_ix.data[6], ed25519_ix.data[7]]) as usize;
+    let sig_offset = u16::from_le_bytes([ed25519_ix.data[2], ed25519_ix.data[3]]) as usize;
+    let msg_offset = u16::from_le_bytes([ed25519_ix.data[10], ed25519_ix.data[11]]) as usize;
+    let msg_size = u16::from_le_bytes([ed25519_ix.data[12], ed25519_ix.data[13]]) as usize;
+
+    // Extract the public key from the instruction (using offset)
+    let ix_pubkey = &ed25519_ix.data[pubkey_offset..pubkey_offset + 32];
+    require!(
+        ix_pubkey == pubkey_bytes,
+        ReaderError::InvalidSignature
+    );
+
+    // Extract the signature from the instruction (using offset)
+    let ix_signature = &ed25519_ix.data[sig_offset..sig_offset + 64];
+    require!(
+        ix_signature == signature,
+        ReaderError::InvalidSignature
+    );
+
+    // Extract and verify the message from the instruction (using offset)
+    let ix_message = &ed25519_ix.data[msg_offset..msg_offset + msg_size];
+    require!(
+        ix_message == message.as_slice(),
+        ReaderError::InvalidSignature
+    );
+
+    msg!("✅ Ed25519 signature verified via sysvar");
 
     Ok(())
 }

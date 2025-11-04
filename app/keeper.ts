@@ -3,7 +3,7 @@
 
 import * as fs from 'fs';
 import * as anchor from '@coral-xyz/anchor';
-import { Connection, PublicKey, Keypair, SystemProgram, Transaction } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, SystemProgram, Transaction, ComputeBudgetProgram, SYSVAR_INSTRUCTIONS_PUBKEY, TransactionInstruction } from '@solana/web3.js';
 import axios from 'axios';
 import * as borsh from '@coral-xyz/borsh';
 
@@ -19,6 +19,7 @@ const PID = new PublicKey('EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF');
 const AMM_SEED = Buffer.from('amm_btc_v6');
 const POS_SEED = Buffer.from('pos');
 const VAULT_SOL_SEED = Buffer.from('vault_sol');
+const USER_VAULT_SEED = Buffer.from('user_vault');
 
 /* ==================== TYPES ==================== */
 interface LimitOrder {
@@ -96,6 +97,78 @@ function getVaultPda(amm: PublicKey): PublicKey {
     PID
   );
   return pda;
+}
+
+function getUserVaultPda(position: PublicKey): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [USER_VAULT_SEED, position.toBuffer()],
+    PID
+  );
+  return pda;
+}
+
+function serializeOrder(order: any): Buffer {
+  // Serialize LimitOrder struct to match Rust Borsh encoding
+  // Order must match Rust struct field order exactly
+  const buffers: Buffer[] = [];
+
+  // market: Pubkey (32 bytes)
+  buffers.push(order.market.toBuffer());
+
+  // user: Pubkey (32 bytes)
+  buffers.push(order.user.toBuffer());
+
+  // action: u8 (1 byte)
+  const actionBuf = Buffer.alloc(1);
+  actionBuf.writeUInt8(order.action);
+  buffers.push(actionBuf);
+
+  // side: u8 (1 byte)
+  const sideBuf = Buffer.alloc(1);
+  sideBuf.writeUInt8(order.side);
+  buffers.push(sideBuf);
+
+  // shares_e6: i64 (8 bytes, little-endian)
+  const sharesBuf = Buffer.alloc(8);
+  sharesBuf.writeBigInt64LE(BigInt(order.sharesE6.toString()));
+  buffers.push(sharesBuf);
+
+  // limit_price_e6: i64 (8 bytes, little-endian)
+  const limitPriceBuf = Buffer.alloc(8);
+  limitPriceBuf.writeBigInt64LE(BigInt(order.limitPriceE6.toString()));
+  buffers.push(limitPriceBuf);
+
+  // max_cost_e6: i64 (8 bytes, little-endian)
+  const maxCostBuf = Buffer.alloc(8);
+  maxCostBuf.writeBigInt64LE(BigInt(order.maxCostE6.toString()));
+  buffers.push(maxCostBuf);
+
+  // min_proceeds_e6: i64 (8 bytes, little-endian)
+  const minProceedsBuf = Buffer.alloc(8);
+  minProceedsBuf.writeBigInt64LE(BigInt(order.minProceedsE6.toString()));
+  buffers.push(minProceedsBuf);
+
+  // expiry_ts: i64 (8 bytes, little-endian)
+  const expiryBuf = Buffer.alloc(8);
+  expiryBuf.writeBigInt64LE(BigInt(order.expiryTs.toString()));
+  buffers.push(expiryBuf);
+
+  // nonce: u64 (8 bytes, little-endian)
+  const nonceBuf = Buffer.alloc(8);
+  nonceBuf.writeBigUInt64LE(BigInt(order.nonce.toString()));
+  buffers.push(nonceBuf);
+
+  // keeper_fee_bps: u16 (2 bytes, little-endian)
+  const keeperFeeBuf = Buffer.alloc(2);
+  keeperFeeBuf.writeUInt16LE(order.keeperFeeBps);
+  buffers.push(keeperFeeBuf);
+
+  // min_fill_bps: u16 (2 bytes, little-endian)
+  const minFillBuf = Buffer.alloc(2);
+  minFillBuf.writeUInt16LE(order.minFillBps);
+  buffers.push(minFillBuf);
+
+  return Buffer.concat(buffers);
 }
 
 /* ==================== PRICE CALCULATION ==================== */
@@ -202,13 +275,32 @@ async function executeOrder(
     const ammPda = getAmmPda();
     const userPubkey = new PublicKey(order.user);
     const positionPda = getPositionPda(ammPda, userPubkey);
-    const vaultPda = getVaultPda(ammPda);
+    const vaultSolPda = getVaultPda(ammPda);
+    const userVaultPda = getUserVaultPda(positionPda);
 
     console.log(`\n🔧 Building transaction for order ${orderId}...`);
     console.log(`   User: ${order.user}`);
     console.log(`   Action: ${order.action === 1 ? 'BUY' : 'SELL'} ${order.side === 1 ? 'YES' : 'NO'}`);
     console.log(`   Shares: ${order.shares_e6 / 1e6}`);
     console.log(`   Limit Price: $${(order.limit_price_e6 / 1e6).toFixed(6)}`);
+
+    // Load IDL and create program
+    const idl = JSON.parse(fs.readFileSync('target/idl/cpi_oracle.json', 'utf8'));
+    const provider = new anchor.AnchorProvider(
+      connection,
+      new anchor.Wallet(keeper),
+      { commitment: 'confirmed' }
+    );
+    const program = new anchor.Program(idl, provider);
+
+    // Fetch AMM account to get fee_dest
+    const ammAccountInfo = await connection.getAccountInfo(ammPda);
+    if (!ammAccountInfo) {
+      throw new Error('AMM account not found');
+    }
+
+    // Decode AMM account - feeDest is at offset 70 (empirically determined)
+    const feeDest = new PublicKey(ammAccountInfo.data.slice(70, 102));
 
     // Build limit order struct for instruction
     const limitOrderStruct = {
@@ -226,34 +318,100 @@ async function executeOrder(
       minFillBps: order.min_fill_bps,
     };
 
-    // Convert signature from hex to Uint8Array
+    // Convert signature from hex to Uint8Array (64 bytes)
     const signatureBytes = Buffer.from(signature, 'hex');
+    if (signatureBytes.length !== 64) {
+      throw new Error(`Invalid signature length: ${signatureBytes.length} (expected 64)`);
+    }
     const signatureArray = Array.from(signatureBytes);
 
-    // Create instruction data manually (simplified - actual implementation needs proper IDL)
-    // For now, we'll log that we would execute
-    console.log(`⚠️  Skipping actual execution (on-chain instruction not yet implemented in keeper)`);
-    console.log(`   Would call: execute_limit_order with:`);
+    // Serialize the order using Borsh (must match Rust serialization)
+    const messageBytes = serializeOrder(limitOrderStruct);
+
+    // Manually create Ed25519 verification instruction without account metadata
+    // This avoids the "writable privilege escalation" error
+    const ED25519_PROGRAM_ID = new PublicKey('Ed25519SigVerify111111111111111111111111111');
+
+    // Build instruction data according to Ed25519 program format:
+    // [num_signatures: u8][padding: u8][signature_offset: u16][signature_instruction_index: u16]
+    // [public_key_offset: u16][public_key_instruction_index: u16][message_data_offset: u16]
+    // [message_data_size: u16][message_instruction_index: u16][public_key: 32 bytes][signature: 64 bytes][message: variable]
+
+    const publicKeyBytes = userPubkey.toBytes();
+    const numSignatures = 1;
+    const publicKeyOffset = 16;           // Offset to public key data
+    const signatureOffset = 48;            // Offset to signature data (16 + 32)
+    const messageDataOffset = 112;         // Offset to message data (16 + 32 + 64)
+    const messageDataSize = messageBytes.length;
+    const signatureInstructionIndex = 0xffff; // Special value meaning "this instruction"
+    const publicKeyInstructionIndex = 0xffff;
+    const messageInstructionIndex = 0xffff;
+
+    // Create header buffer with proper byte order
+    const headerBuffer = Buffer.alloc(16);
+    headerBuffer.writeUInt8(numSignatures, 0);                   // offset 0: num_signatures
+    headerBuffer.writeUInt8(0, 1);                                // offset 1: padding
+    headerBuffer.writeUInt16LE(signatureOffset, 2);              // offset 2-3: signature_offset
+    headerBuffer.writeUInt16LE(signatureInstructionIndex, 4);    // offset 4-5: signature_instruction_index
+    headerBuffer.writeUInt16LE(publicKeyOffset, 6);              // offset 6-7: public_key_offset
+    headerBuffer.writeUInt16LE(publicKeyInstructionIndex, 8);    // offset 8-9: public_key_instruction_index
+    headerBuffer.writeUInt16LE(messageDataOffset, 10);           // offset 10-11: message_data_offset
+    headerBuffer.writeUInt16LE(messageDataSize, 12);             // offset 12-13: message_data_size
+    headerBuffer.writeUInt16LE(messageInstructionIndex, 14);     // offset 14-15: message_instruction_index
+
+    const ed25519InstructionData = Buffer.concat([
+      headerBuffer,                                                    // 16 bytes: header
+      Buffer.from(publicKeyBytes),                                     // 32 bytes: public key
+      signatureBytes,                                                  // 64 bytes: signature
+      messageBytes,                                                    // variable: message
+    ]);
+
+    // Create the instruction WITHOUT any accounts (no account metadata)
+    const ed25519Ix = new TransactionInstruction({
+      keys: [], // Empty array - no accounts referenced
+      programId: ED25519_PROGRAM_ID,
+      data: ed25519InstructionData,
+    });
+
+    // Create compute budget instruction to increase CU limit
+    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
+      units: 400_000, // Increase from default 200K to 400K
+    });
+
+    console.log(`   Executing on-chain with Anchor...`);
     console.log(`     - AMM: ${ammPda.toString()}`);
     console.log(`     - Position: ${positionPda.toString()}`);
-    console.log(`     - Vault: ${vaultPda.toString()}`);
+    console.log(`     - User Vault: ${userVaultPda.toString()}`);
+    console.log(`     - Fee Dest: ${feeDest.toString()}`);
+    console.log(`     - Vault Sol: ${vaultSolPda.toString()}`);
+    console.log(`     - User: ${userPubkey.toString()}`);
     console.log(`     - Keeper: ${keeper.publicKey.toString()}`);
+    console.log(`     - Instructions Sysvar: ${SYSVAR_INSTRUCTIONS_PUBKEY.toString()}`);
 
-    // TODO: Actually build and send transaction using Anchor IDL
-    // const tx = await program.methods
-    //   .executeLimitOrder(limitOrderStruct, signatureArray)
-    //   .accounts({
-    //     amm: ammPda,
-    //     position: positionPda,
-    //     vaultSol: vaultPda,
-    //     user: userPubkey,
-    //     keeper: keeper.publicKey,
-    //     systemProgram: SystemProgram.programId,
-    //   })
-    //   .rpc();
+    // Execute the limit order instruction with Ed25519 verification
+    const tx = await program.methods
+      .executeLimitOrder(limitOrderStruct, signatureArray)
+      .accountsStrict({
+        amm: ammPda,
+        position: positionPda,
+        userVault: userVaultPda,
+        feeDest: feeDest,
+        vaultSol: vaultSolPda,
+        user: userPubkey,
+        keeper: keeper.publicKey,
+        instructions: SYSVAR_INSTRUCTIONS_PUBKEY,
+        systemProgram: SystemProgram.programId,
+      })
+      .preInstructions([
+        computeBudgetIx, // Increase compute budget first
+        ed25519Ix,  // Ed25519 verification must come before the main instruction
+      ])
+      .rpc();
 
-    // For now, return a fake transaction signature for testing
-    return null; // Would return tx signature
+    console.log(`✅ Transaction sent: ${tx}`);
+    console.log(`   View: https://explorer.solana.com/tx/${tx}?cluster=custom`);
+
+    return tx;
 
   } catch (err: any) {
     console.error(`❌ Error executing order ${orderId}:`, err.message);
