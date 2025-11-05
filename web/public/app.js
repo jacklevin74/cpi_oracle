@@ -6396,14 +6396,14 @@ function displayFilledOrders(orders) {
     // Add header
     table.innerHTML = `
         <div class="trading-table-header">
-            <div class="col-id" style="width: 45px;">#</div>
+            <div class="col-id" style="width: 50px;">#</div>
             <div class="col-type" style="width: 50px;">TYPE</div>
             <div class="col-direction" style="width: 50px;">SIDE</div>
             <div class="col-size" style="width: 60px;">SIZE</div>
             <div class="col-price" style="width: 70px;">EXEC</div>
-            <div class="col-value" style="width: 70px;">COST</div>
+            <div class="col-value" style="width: 80px;">COST</div>
             <div class="col-time" style="width: 70px;">FILLED</div>
-            <div class="col-tx" style="width: 70px;">TX</div>
+            <div class="col-tx" style="flex: 1;">TX</div>
         </div>
     `;
 
@@ -6429,7 +6429,7 @@ function displayFilledOrders(orders) {
             minute: '2-digit',
             hour12: false
         });
-        const txShort = orderData.filled_tx ? orderData.filled_tx.slice(0, 6) + '...' : '-';
+        const txShort = orderData.filled_tx ? orderData.filled_tx.slice(0, 8) + '...' : '-';
         const txLink = orderData.filled_tx
             ? `https://explorer.testnet.x1.xyz/tx/${orderData.filled_tx}`
             : '#';
@@ -6439,16 +6439,16 @@ function displayFilledOrders(orders) {
         row.style.color = isBuy ? '#10b981' : '#ef4444';
 
         row.innerHTML = `
-            <div class="col-id" style="width: 45px; font-weight: 600; font-size: 11px;">#${orderData.order_id}</div>
+            <div class="col-id" style="width: 50px; font-weight: 600; font-size: 11px;">#${orderData.order_id}</div>
             <div class="col-type" style="width: 50px; font-size: 11px;">${isBuy ? 'BUY' : 'SELL'}</div>
             <div class="col-direction" style="width: 50px;">
                 <span class="badge ${order.side === 1 ? 'badge-yes' : 'badge-no'}" style="font-size: 10px; padding: 2px 6px;">${sideText}</span>
             </div>
             <div class="col-size" style="width: 60px; color: #fff; font-size: 11px;">${shares}</div>
             <div class="col-price" style="width: 70px; color: #10b981; font-size: 11px;">$${execPrice}</div>
-            <div class="col-value" style="width: 70px; color: #a855f7; font-weight: 600; font-size: 11px;">$${totalCost}</div>
+            <div class="col-value" style="width: 80px; color: #a855f7; font-weight: 600; font-size: 11px;">$${totalCost}</div>
             <div class="col-time" style="width: 70px; color: #6b7280; font-size: 10px;">${timeStr}</div>
-            <div class="col-tx" style="width: 70px; font-size: 10px;">
+            <div class="col-tx" style="flex: 1; font-size: 10px; text-align: right;">
                 ${orderData.filled_tx ? `<a href="${txLink}" target="_blank" style="color: #5b9eff; text-decoration: none; font-family: monospace;">${txShort}</a>` : '-'}
             </div>
         `;
