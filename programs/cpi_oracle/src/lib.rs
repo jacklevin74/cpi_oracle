@@ -635,6 +635,37 @@ pub struct WipePosition<'info> {
 }
 
 #[derive(Accounts)]
+pub struct MigratePosition<'info> {
+    #[account(seeds = [Amm::SEED], bump = amm.bump)]
+    pub amm: Account<'info, Amm>,
+
+    /// Owner of the position (session wallet) - must sign
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    /// Master wallet (Backpack wallet) - receives vault balance
+    /// CHECK: verified against old_position.master_wallet during migration
+    #[account(mut)]
+    pub master_wallet: UncheckedAccount<'info>,
+
+    /// Old position account (97 bytes) - will be closed
+    /// CHECK: We manually deserialize this account since it uses old layout
+    #[account(
+        mut,
+        seeds = [Position::SEED, amm.key().as_ref(), owner.key().as_ref()],
+        bump
+    )]
+    pub old_position: UncheckedAccount<'info>,
+
+    /// User vault PDA - holds the vault balance
+    /// CHECK: Derived from old_position, used to transfer funds
+    #[account(mut)]
+    pub user_vault: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct ExecuteLimitOrder<'info> {
     #[account(mut, seeds = [Amm::SEED], bump = amm.bump)]
     pub amm: Account<'info, Amm>,
@@ -1632,7 +1663,96 @@ pub mod cpi_oracle {
 
         msg!("🧹 wiped position for {}", ctx.accounts.owner.key());
         Ok(())
-}
+    }
+
+    /// Migrate old position account (97 bytes) to new layout (901 bytes)
+    /// Reads vault balance from old layout, transfers to master wallet, closes old account
+    pub fn migrate_position_v1_to_v2(ctx: Context<MigratePosition>) -> Result<()> {
+        let position_info = ctx.accounts.old_position.to_account_info();
+        let data = position_info.data.borrow();
+
+        // Verify this is the old 97-byte layout
+        require!(data.len() == 97, ReaderError::BadParam);
+
+        // Old Position layout (97 bytes):
+        // discriminator(8) + owner(32) + yes_shares(8) + no_shares(8) + master_wallet(32) + vault_balance_e6(8) + vault_bump(1)
+
+        // Parse fields from old layout
+        let owner_bytes = &data[8..40];
+        let yes_shares_bytes = &data[40..48];
+        let no_shares_bytes = &data[48..56];
+        let master_wallet_bytes = &data[56..88];
+        let vault_balance_bytes = &data[88..96];
+        let vault_bump = data[96]; // Last byte
+
+        let owner = Pubkey::try_from(owner_bytes).map_err(|_| error!(ReaderError::BadParam))?;
+        let yes_shares_e6 = i64::from_le_bytes(yes_shares_bytes.try_into().unwrap());
+        let no_shares_e6 = i64::from_le_bytes(no_shares_bytes.try_into().unwrap());
+        let master_wallet = Pubkey::try_from(master_wallet_bytes).map_err(|_| error!(ReaderError::BadParam))?;
+        let vault_balance_e6 = i64::from_le_bytes(vault_balance_bytes.try_into().unwrap());
+
+        // Verify owner matches
+        require_keys_eq!(owner, ctx.accounts.owner.key(), ReaderError::NotOwner);
+        require_keys_eq!(master_wallet, ctx.accounts.master_wallet.key(), ReaderError::NotOwner);
+
+        msg!("📦 Migrating position for {}", owner);
+        msg!("   Old layout: 97 bytes");
+        msg!("   YES shares: {}", yes_shares_e6);
+        msg!("   NO shares: {}", no_shares_e6);
+        msg!("   Vault balance: {} e6 (${:.6})", vault_balance_e6, vault_balance_e6 as f64 / 1e6);
+        msg!("   Master wallet: {}", master_wallet);
+
+        // Warn if user has shares
+        if yes_shares_e6 != 0 || no_shares_e6 != 0 {
+            msg!("⚠️  WARNING: Position has shares! YES={} NO={}", yes_shares_e6, no_shares_e6);
+            msg!("   These shares will be LOST after migration!");
+        }
+
+        // Transfer vault balance to master wallet if any
+        if vault_balance_e6 > 0 {
+            let vault_lamports = (vault_balance_e6 as u64) * LAMPORTS_PER_E6;
+
+            msg!("💸 Transferring {} lamports ({:.6} XNT) from user_vault to master_wallet",
+                 vault_lamports, vault_balance_e6 as f64 / 1e6);
+
+            // Transfer from user_vault PDA to master_wallet
+            let pos_key = ctx.accounts.old_position.key();
+            let seeds: &[&[u8]] = &[
+                Position::USER_VAULT_SEED,
+                pos_key.as_ref(),
+                &[vault_bump],
+            ];
+            let signer_seeds = &[&seeds[..]];
+
+            let cpi_ctx = CpiContext::new_with_signer(
+                ctx.accounts.system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: ctx.accounts.user_vault.to_account_info(),
+                    to: ctx.accounts.master_wallet.to_account_info(),
+                },
+                signer_seeds,
+            );
+            anchor_lang::system_program::transfer(cpi_ctx, vault_lamports)?;
+
+            msg!("✅ Vault balance transferred to master wallet");
+        } else {
+            msg!("   No vault balance to transfer");
+        }
+
+        // Close the old position account - return rent to owner
+        let position_lamports = position_info.lamports();
+
+        msg!("🗑️  Closing old position account, returning {} lamports rent to {}",
+             position_lamports, owner);
+
+        // Transfer lamports from position to owner
+        **position_info.try_borrow_mut_lamports()? = 0;
+        **ctx.accounts.owner.to_account_info().try_borrow_mut_lamports()? += position_lamports;
+
+        msg!("✅ Migration complete! User can now call init_position to create new 901-byte account");
+
+        Ok(())
+    }
 
 
 
