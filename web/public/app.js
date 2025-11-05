@@ -6314,8 +6314,8 @@ async function cancelOrder(orderId) {
 
     try {
         const API_BASE = `${window.location.protocol}//${window.location.host}/orderbook-api`;
-        const response = await fetch(`${API_BASE}/api/orders/${orderId}`, {
-            method: 'DELETE',
+        const response = await fetch(`${API_BASE}/api/orders/${orderId}/cancel`, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
 
