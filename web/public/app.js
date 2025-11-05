@@ -7035,8 +7035,8 @@ async function loadPositions() {
                         </div>
                         <div class="pos-action">
                             <button class="close-position-btn" data-side="${pos.side}" data-shares="${pos.shares}"
-                                style="font-size: 10px; padding: 3px 8px; background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; border-radius: 4px; cursor: pointer;">
-                                Cancel
+                                style="font-size: 10px; padding: 3px 8px; background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; border-radius: 4px; cursor: pointer; white-space: nowrap;">
+                                Close
                             </button>
                         </div>
                     </div>
@@ -7076,7 +7076,7 @@ async function handleClosePosition(side, shares, buttonElement) {
 
         // Disable button to prevent double-click
         buttonElement.disabled = true;
-        buttonElement.textContent = 'Canceling...';
+        buttonElement.textContent = 'Closing...';
 
         // Convert shares to e6 scale for the trade
         const sharesE6 = Math.round(shares * 10_000_000);
@@ -7108,7 +7108,7 @@ async function handleClosePosition(side, shares, buttonElement) {
         alert(`Failed to close position: ${err.message}`);
         // Re-enable button
         buttonElement.disabled = false;
-        buttonElement.textContent = 'Cancel';
+        buttonElement.textContent = 'Close';
     }
 }
 
