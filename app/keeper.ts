@@ -379,7 +379,7 @@ async function executeOrder(
     const userVaultPda = getUserVaultPda(positionPda);
 
     console.log(`\n🔧 Building transaction for order ${orderId}...`);
-    console.log(`   User: ${order.user}`);
+    console.log(`   User: ${order.user.slice(0, 5)}...`);
     console.log(`   Action: ${order.action === 1 ? 'BUY' : 'SELL'} ${order.side === 1 ? 'YES' : 'NO'}`);
     console.log(`   Shares: ${order.shares_e6 / 10_000_000}`);
     console.log(`   Limit Price: $${(order.limit_price_e6 / 1e6).toFixed(6)}`);
