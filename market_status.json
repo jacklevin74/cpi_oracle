@@ -1,9 +1,9 @@
 {
   "state": "ACTIVE",
-  "cycleStartTime": 1762325259000,
-  "snapshotTime": 1762325319000,
-  "marketEndTime": 1762325919000,
-  "nextCycleStartTime": 1762325919000,
-  "timeRemaining": 59197,
-  "lastUpdate": 1762325859803
+  "cycleStartTime": 1762325923000,
+  "snapshotTime": 1762325983000,
+  "marketEndTime": 1762326583000,
+  "nextCycleStartTime": 1762326583000,
+  "timeRemaining": 429127,
+  "lastUpdate": 1762326153873
 }
