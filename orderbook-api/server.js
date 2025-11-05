@@ -19,6 +19,9 @@ const keeperLogClients = new Set();
 const keeperLogBuffer = [];
 const MAX_LOG_BUFFER = 100;
 
+// SSE clients for order updates
+const orderUpdateClients = new Set();
+
 // Helper function to broadcast keeper logs to all SSE clients
 function broadcastKeeperLog(message, level = 'info') {
   const logEntry = {
@@ -45,8 +48,28 @@ function broadcastKeeperLog(message, level = 'info') {
   });
 }
 
-// Expose broadcastKeeperLog globally so keeper can use it
+// Helper function to broadcast order updates to all SSE clients
+function broadcastOrderUpdate(event, order) {
+  const updateData = {
+    timestamp: new Date().toISOString(),
+    event, // 'order_submitted', 'order_cancelled', 'order_filled', 'order_expired'
+    order
+  };
+
+  const data = JSON.stringify(updateData);
+  orderUpdateClients.forEach(client => {
+    try {
+      client.write(`event: ${event}\ndata: ${data}\n\n`);
+    } catch (err) {
+      console.error('Error broadcasting order update to SSE client:', err);
+      orderUpdateClients.delete(client);
+    }
+  });
+}
+
+// Expose functions globally so keeper can use them
 global.broadcastKeeperLog = broadcastKeeperLog;
+global.broadcastOrderUpdate = broadcastOrderUpdate;
 
 // Database connection
 const db = new sqlite3.Database(DB_PATH, (err) => {
@@ -195,11 +218,19 @@ app.post('/api/orders/submit', (req, res) => {
       return res.status(500).json({ error: 'Database error' });
     }
 
-    console.log(`✅ Order submitted: ${orderHash.slice(0, 16)}... (id=${this.lastID})`);
+    const orderId = this.lastID;
+    console.log(`✅ Order submitted: ${orderHash.slice(0, 16)}... (id=${orderId})`);
+
+    // Broadcast order submission to SSE clients
+    broadcastOrderUpdate('order_submitted', {
+      order_id: orderId,
+      order,
+      order_hash: orderHash
+    });
 
     res.json({
       success: true,
-      order_id: this.lastID,
+      order_id: orderId,
       order_hash: orderHash
     });
   });
@@ -457,6 +488,12 @@ app.post('/api/orders/:order_id/cancel', (req, res) => {
 
     console.log(`🚫 Order ${order_id} cancelled`);
 
+    // Broadcast order cancellation to SSE clients
+    broadcastOrderUpdate('order_cancelled', {
+      order_id: parseInt(order_id),
+      status: 'cancelled'
+    });
+
     res.json({ success: true, order_id: parseInt(order_id) });
   });
 });
@@ -562,6 +599,34 @@ app.get('/api/keeper-logs', (req, res) => {
   req.on('close', () => {
     keeperLogClients.delete(res);
     console.log(`📡 SSE client disconnected. Total clients: ${keeperLogClients.size}`);
+  });
+});
+
+// ===========================
+// Order Updates Streaming (SSE)
+// ===========================
+
+app.get('/api/orders-stream', (req, res) => {
+  // Set headers for SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  // Send initial connection message
+  res.write(`event: connected\ndata: ${JSON.stringify({
+    timestamp: new Date().toISOString(),
+    message: '🔗 Connected to order updates stream'
+  })}\n\n`);
+
+  // Add client to set
+  orderUpdateClients.add(res);
+  console.log(`📊 New order update client connected. Total clients: ${orderUpdateClients.size}`);
+
+  // Remove client on disconnect
+  req.on('close', () => {
+    orderUpdateClients.delete(res);
+    console.log(`📊 Order update client disconnected. Total clients: ${orderUpdateClients.size}`);
   });
 });
 

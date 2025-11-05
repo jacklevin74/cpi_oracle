@@ -1280,9 +1280,79 @@
             });
         }
 
-        // Start trade stream on page load
+        // ============= SSE ORDER UPDATES STREAM =============
+        let orderStream = null;
+
+        function connectOrderStream() {
+            console.log('Connecting to order updates stream via SSE');
+
+            const API_BASE = `${window.location.protocol}//${window.location.host}/orderbook-api`;
+            orderStream = new EventSource(`${API_BASE}/api/orders-stream`);
+
+            orderStream.addEventListener('connected', (event) => {
+                const data = JSON.parse(event.data);
+                console.log('✅ Connected to order updates stream:', data.message);
+            });
+
+            orderStream.addEventListener('order_submitted', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📝 Order submitted:', data.order);
+
+                    // Reload open orders if on that tab
+                    if (currentFeedTab === 'orders' && wallet && wallet.publicKey) {
+                        const userAddress = wallet.publicKey.toString();
+                        if (data.order && data.order.order && data.order.order.user === userAddress) {
+                            loadOpenOrders();
+                        }
+                    }
+                } catch (err) {
+                    console.error('Failed to parse order_submitted event:', err);
+                }
+            });
+
+            orderStream.addEventListener('order_cancelled', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('🚫 Order cancelled:', data.order);
+
+                    // Reload open orders if on that tab
+                    if (currentFeedTab === 'orders') {
+                        loadOpenOrders();
+                    }
+                } catch (err) {
+                    console.error('Failed to parse order_cancelled event:', err);
+                }
+            });
+
+            orderStream.addEventListener('order_filled', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('✅ Order filled:', data.order);
+
+                    // Reload both open and filled orders
+                    if (currentFeedTab === 'orders') {
+                        loadOpenOrders();
+                    } else if (currentFeedTab === 'filled') {
+                        loadFilledOrders();
+                    }
+                } catch (err) {
+                    console.error('Failed to parse order_filled event:', err);
+                }
+            });
+
+            orderStream.addEventListener('error', (error) => {
+                console.error('❌ Order stream error:', error);
+                orderStream.close();
+                // Reconnect after 5 seconds
+                setTimeout(connectOrderStream, 5000);
+            });
+        }
+
+        // Start streams on page load
         window.addEventListener('load', () => {
             connectTradeStream();
+            connectOrderStream();
             setupTrollboxAutoScroll(); // Initialize trollbox auto-scroll
         });
 
