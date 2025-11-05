@@ -6356,7 +6356,8 @@ async function loadFilledOrders() {
 
     try {
         const API_BASE = `${window.location.protocol}//${window.location.host}/orderbook-api`;
-        const response = await fetch(`${API_BASE}/api/orders/user/${userAddress}`);
+        // Use the filled orders endpoint like orderbook.html does
+        const response = await fetch(`${API_BASE}/api/orders/filled?limit=100`);
 
         if (!response.ok) {
             console.warn('Failed to load filled orders:', response.status);
@@ -6366,7 +6367,9 @@ async function loadFilledOrders() {
 
         const data = await response.json();
         if (data.orders && Array.isArray(data.orders)) {
-            displayFilledOrders(data.orders);
+            // Filter for current user's orders
+            const userOrders = data.orders.filter(o => o.order && o.order.user === userAddress);
+            displayFilledOrders(userOrders);
         }
     } catch (err) {
         console.warn('Failed to load filled orders:', err);
@@ -6378,13 +6381,10 @@ function displayFilledOrders(orders) {
     const filledFeed = document.getElementById('filledFeed');
     if (!filledFeed) return;
 
-    // Filter for filled orders only
-    const filledOrders = orders.filter(o => o.status === 'filled');
-
     // Clear existing items
     filledFeed.innerHTML = '';
 
-    if (filledOrders.length === 0) {
+    if (!orders || orders.length === 0) {
         filledFeed.innerHTML = '<div class="trade-feed-empty"><span class="empty-icon">✅</span><span class="empty-text">No filled orders</span></div>';
         return;
     }
@@ -6393,17 +6393,17 @@ function displayFilledOrders(orders) {
     const table = document.createElement('div');
     table.className = 'trading-table';
 
-    // Add header
+    // Add header with increased widths
     table.innerHTML = `
         <div class="trading-table-header">
-            <div class="col-id" style="width: 50px; flex-shrink: 0;">#</div>
-            <div class="col-type" style="width: 50px; flex-shrink: 0;">TYPE</div>
-            <div class="col-direction" style="width: 50px; flex-shrink: 0;">SIDE</div>
-            <div class="col-size" style="width: 60px; flex-shrink: 0;">SIZE</div>
-            <div class="col-price" style="width: 70px; flex-shrink: 0;">EXEC</div>
-            <div class="col-value" style="width: 80px; flex-shrink: 0;">COST</div>
-            <div class="col-time" style="width: 70px; flex-shrink: 0;">FILLED</div>
-            <div class="col-tx" style="flex: 1; text-align: right; min-width: 0;">TX</div>
+            <div class="col-id" style="width: 60px; flex-shrink: 0;">#</div>
+            <div class="col-type" style="width: 60px; flex-shrink: 0;">TYPE</div>
+            <div class="col-direction" style="width: 60px; flex-shrink: 0;">SIDE</div>
+            <div class="col-size" style="width: 80px; flex-shrink: 0;">SIZE</div>
+            <div class="col-price" style="width: 90px; flex-shrink: 0;">EXEC</div>
+            <div class="col-value" style="width: 100px; flex-shrink: 0;">COST</div>
+            <div class="col-time" style="width: 80px; flex-shrink: 0;">FILLED</div>
+            <div class="col-tx" style="flex: 1; text-align: right; min-width: 120px;">TX</div>
         </div>
     `;
 
@@ -6412,7 +6412,7 @@ function displayFilledOrders(orders) {
     tbody.className = 'trading-table-body';
 
     // Sort by filled_at descending (newest first)
-    const sortedOrders = [...filledOrders].sort((a, b) =>
+    const sortedOrders = [...orders].sort((a, b) =>
         new Date(b.filled_at) - new Date(a.filled_at)
     );
 
@@ -6420,9 +6420,10 @@ function displayFilledOrders(orders) {
         const order = orderData.order;
         const isBuy = order.action === 1;
         const sideText = order.side === 1 ? 'YES' : 'NO';
+        // Use 6 decimals like orderbook.html for better precision
         const shares = orderData.filled_shares ? orderData.filled_shares.toFixed(2) : '0.00';
-        const execPrice = orderData.execution_price ? orderData.execution_price.toFixed(4) : '0.0000';
-        const totalCost = orderData.total_cost ? orderData.total_cost.toFixed(4) : '0.0000';
+        const execPrice = orderData.execution_price ? orderData.execution_price.toFixed(6) : '0.000000';
+        const totalCost = orderData.total_cost ? orderData.total_cost.toFixed(6) : '0.000000';
         const time = new Date(orderData.filled_at);
         const timeStr = time.toLocaleTimeString('en-US', {
             hour: '2-digit',
@@ -6439,16 +6440,16 @@ function displayFilledOrders(orders) {
         row.style.color = isBuy ? '#10b981' : '#ef4444';
 
         row.innerHTML = `
-            <div class="col-id" style="width: 50px; flex-shrink: 0; font-weight: 600; font-size: 11px;">#${orderData.order_id}</div>
-            <div class="col-type" style="width: 50px; flex-shrink: 0; font-size: 11px;">${isBuy ? 'BUY' : 'SELL'}</div>
-            <div class="col-direction" style="width: 50px; flex-shrink: 0;">
+            <div class="col-id" style="width: 60px; flex-shrink: 0; font-weight: 600; font-size: 11px;">#${orderData.order_id}</div>
+            <div class="col-type" style="width: 60px; flex-shrink: 0; font-size: 11px;">${isBuy ? 'BUY' : 'SELL'}</div>
+            <div class="col-direction" style="width: 60px; flex-shrink: 0;">
                 <span class="badge ${order.side === 1 ? 'badge-yes' : 'badge-no'}" style="font-size: 10px; padding: 2px 6px;">${sideText}</span>
             </div>
-            <div class="col-size" style="width: 60px; flex-shrink: 0; color: #fff; font-size: 11px;">${shares}</div>
-            <div class="col-price" style="width: 70px; flex-shrink: 0; color: #10b981; font-size: 11px;">$${execPrice}</div>
-            <div class="col-value" style="width: 80px; flex-shrink: 0; color: #a855f7; font-weight: 600; font-size: 11px;">$${totalCost}</div>
-            <div class="col-time" style="width: 70px; flex-shrink: 0; color: #6b7280; font-size: 10px;">${timeStr}</div>
-            <div class="col-tx" style="flex: 1; min-width: 0; font-size: 10px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <div class="col-size" style="width: 80px; flex-shrink: 0; color: #fff; font-size: 11px;">${shares}</div>
+            <div class="col-price" style="width: 90px; flex-shrink: 0; color: #10b981; font-size: 11px;">$${execPrice}</div>
+            <div class="col-value" style="width: 100px; flex-shrink: 0; color: #a855f7; font-weight: 600; font-size: 11px;">$${totalCost}</div>
+            <div class="col-time" style="width: 80px; flex-shrink: 0; color: #6b7280; font-size: 10px;">${timeStr}</div>
+            <div class="col-tx" style="flex: 1; min-width: 120px; font-size: 10px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 ${orderData.filled_tx ? `<a href="${txLink}" target="_blank" style="color: #5b9eff; text-decoration: none; font-family: monospace;">${txShort}</a>` : '-'}
             </div>
         `;
