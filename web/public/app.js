@@ -7012,6 +7012,7 @@ async function loadPositions() {
                     <div class="pos-value">VALUE</div>
                     <div class="pos-cost">COST</div>
                     <div class="pos-pnl">PNL</div>
+                    <div class="pos-action">ACTION</div>
                 </div>
             `;
 
@@ -7032,11 +7033,27 @@ async function loadPositions() {
                             ${pnlSign}${pos.pnl.toFixed(2)}
                             <span class="pnl-percent">(${pnlSign}${pos.pnlPercent.toFixed(1)}%)</span>
                         </div>
+                        <div class="pos-action">
+                            <button class="close-position-btn" data-side="${pos.side}" data-shares="${pos.shares}"
+                                style="font-size: 10px; padding: 3px 8px; background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; border-radius: 4px; cursor: pointer;">
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 `;
             }
 
             positionsFeed.innerHTML = html;
+
+            // Add event listeners to close buttons
+            const closeButtons = positionsFeed.querySelectorAll('.close-position-btn');
+            closeButtons.forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const side = e.target.dataset.side;
+                    const shares = parseFloat(e.target.dataset.shares);
+                    await handleClosePosition(side, shares, e.target);
+                });
+            });
         }
     } catch (err) {
         console.error('Failed to load positions:', err);
@@ -7046,6 +7063,52 @@ async function loadPositions() {
                 <span class="empty-text">Failed to load positions: ${err.message}</span>
             </div>
         `;
+    }
+}
+
+// Handle closing a position (sell all shares)
+async function handleClosePosition(side, shares, buttonElement) {
+    try {
+        console.log(`[CLOSE POSITION] Closing ${side} position: ${shares} shares`);
+
+        // Map side to YES/NO for the trade execution (lowercase for executeTradeInternal)
+        const tradeSide = side === 'UP' ? 'yes' : 'no';
+
+        // Disable button to prevent double-click
+        buttonElement.disabled = true;
+        buttonElement.textContent = 'Canceling...';
+
+        // Convert shares to e6 scale for the trade
+        const sharesE6 = Math.round(shares * 10_000_000);
+
+        // Get current quote to estimate proceeds (not exact, will be recalculated by contract)
+        const { yesQuote, noQuote } = getCurrentQuotes();
+        const estimatedPrice = tradeSide === 'yes' ? yesQuote : noQuote;
+        const estimatedCost = shares * estimatedPrice;
+
+        // Execute SELL trade for the full position
+        const tradeData = {
+            action: 'sell',
+            side: tradeSide,
+            numShares: shares,
+            pricePerShare: estimatedPrice,
+            totalCost: estimatedCost,
+            amount_e6: sharesE6
+        };
+
+        await executeTradeInternal(tradeData);
+
+        // Reload positions after a delay for blockchain finality
+        setTimeout(() => {
+            loadPositions();
+        }, 2000);
+
+    } catch (err) {
+        console.error('[CLOSE POSITION] Error:', err);
+        alert(`Failed to close position: ${err.message}`);
+        // Re-enable button
+        buttonElement.disabled = false;
+        buttonElement.textContent = 'Cancel';
     }
 }
 
