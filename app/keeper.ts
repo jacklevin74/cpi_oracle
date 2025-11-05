@@ -664,6 +664,7 @@ async function keeperLoop() {
           const { order, signature, order_id } = orderData;
 
           console.log(`\n🔍 Checking order ${order_id}:`);
+          console.log(`   User: ${order.user.slice(0, 5)}...`);
           console.log(`   ${order.action === 1 ? 'BUY' : 'SELL'} ${order.shares_e6 / 10_000_000} ${order.side === 1 ? 'YES' : 'NO'} @ limit $${(order.limit_price_e6 / 1e6).toFixed(6)}`);
 
           const executable = await checkIfExecutable(connection, amm, order);
