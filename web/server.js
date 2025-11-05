@@ -1360,6 +1360,29 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // API: Reset cost basis for new market cycle
+    if (req.url === '/api/cost-basis/reset' && req.method === 'POST') {
+        try {
+            const stmt = db.prepare('DELETE FROM position_cost_basis');
+            const result = stmt.run();
+            console.log(`💰 Cost basis reset - cleared ${result.changes} position records for new market cycle`);
+
+            res.writeHead(200, {
+                'Content-Type': 'application/json',
+                ...SECURITY_HEADERS
+            });
+            res.end(JSON.stringify({ success: true, cleared: result.changes }));
+        } catch (err) {
+            console.error('Failed to reset cost basis:', err.message);
+            res.writeHead(500, {
+                'Content-Type': 'application/json',
+                ...SECURITY_HEADERS
+            });
+            res.end(JSON.stringify({ error: err.message }));
+        }
+        return;
+    }
+
     // API: Get price history
     if (req.url.startsWith('/api/price-history') && req.method === 'GET') {
         logToBuffer(`${logPrefix} 📦 SERVICE: Original JavaScript (SQLite database query)`);

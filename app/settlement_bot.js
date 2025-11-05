@@ -214,6 +214,41 @@ async function resetVolume() {
   }
 }
 
+/* ---------------- Reset Cost Basis for New Market Cycle ---------------- */
+async function resetCostBasis() {
+  try {
+    const options = {
+      hostname: 'localhost',
+      port: 3434,
+      path: '/api/cost-basis/reset',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': '0'
+      }
+    };
+
+    return new Promise((resolve) => {
+      const req = http.request(options, (res) => {
+        if (res.statusCode === 200) {
+          logInfo('💰 Cost basis reset for new market cycle (SQLite cleared)');
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+
+      req.on('error', () => {
+        resolve(false); // Silently fail if web server is not running
+      });
+
+      req.end();
+    });
+  } catch (err) {
+    return false;
+  }
+}
+
 /* ---------------- Retry Helper for Blockhash Errors ---------------- */
 async function sendTransactionWithRetry(conn, tx, signers, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -785,8 +820,9 @@ async function runCycle(conn, kp, ammPda, vaultPda) {
     await initMarket(conn, kp, ammPda, vaultPda);
     await new Promise(r => setTimeout(r, 1500));
 
-    // Reset volume for new market cycle
+    // Reset volume and cost basis for new market cycle
     await resetVolume();
+    await resetCostBasis();
 
     logSuccess(C.bold("✓ PRE-MARKET BETTING NOW OPEN!"));
     logInfo(`Pre-market phase: ${formatCountdown(PREMARKET_DURATION_MS)} until snapshot`);
