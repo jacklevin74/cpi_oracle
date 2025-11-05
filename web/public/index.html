@@ -470,6 +470,33 @@
                         <button class="tab-btn" id="sellTab" onclick="switchTab('sell')">SELL</button>
                     </div>
 
+                    <!-- Order Type Switch (Market/Limit) -->
+                    <div class="order-type-switch" style="display: flex; gap: 4px; padding: 8px 12px; background: rgba(0,0,0,0.2); border-radius: 6px; margin: 12px 0;">
+                        <button class="order-type-btn active" id="marketOrderBtn" onclick="switchOrderType('market')"
+                                style="flex: 1; padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;">
+                            Market
+                        </button>
+                        <button class="order-type-btn" id="limitOrderBtn" onclick="switchOrderType('limit')"
+                                style="flex: 1; padding: 8px 16px; background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;">
+                            Limit
+                        </button>
+                    </div>
+
+                    <!-- Limit Price Input (hidden by default) -->
+                    <div class="input-section" id="limitPriceSection" style="display: none; margin-bottom: 12px;">
+                        <label class="input-label">LIMIT PRICE</label>
+                        <div style="position: relative;">
+                            <input type="number" id="limitPriceInput" class="trade-input" placeholder="0.50" step="0.0001" min="0.0001" max="0.9999" value="0.50" oninput="updateLimitPrice()" style="padding-right: 45px;">
+                            <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.4); font-size: 13px; pointer-events: none;">XNT</span>
+                        </div>
+                        <div class="quick-prices" style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+                            <button onclick="setLimitPrice(0.45)" style="flex: 1; min-width: 60px; padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 12px;">0.45</button>
+                            <button onclick="setLimitPrice(0.50)" style="flex: 1; min-width: 60px; padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 12px;">0.50</button>
+                            <button onclick="setLimitPrice(0.55)" style="flex: 1; min-width: 60px; padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 12px;">0.55</button>
+                            <button onclick="setMarketPrice()" style="flex: 1; min-width: 60px; padding: 6px 10px; background: rgba(91, 158, 255, 0.1); border: 1px solid rgba(91, 158, 255, 0.3); border-radius: 4px; color: #5b9eff; cursor: pointer; font-size: 12px;">Market</button>
+                        </div>
+                    </div>
+
                     <!-- Direction Toggle -->
                     <div class="direction-toggle">
                         <button class="dir-btn dir-yes active" id="yesBtn" onclick="selectOutcome('yes')">
@@ -710,6 +737,96 @@
 
             setShares(cappedShares);
             showToast(`Max shares set: ${cappedShares} (≈${(cappedShares * price).toFixed(2)} XNT)`, 'success');
+        }
+
+        // Order Type Management (Market/Limit)
+        let currentOrderType = 'market'; // 'market' or 'limit'
+        let limitPrice = 0.50;
+
+        function switchOrderType(type) {
+            currentOrderType = type;
+
+            // Update button styles
+            const marketBtn = document.getElementById('marketOrderBtn');
+            const limitBtn = document.getElementById('limitOrderBtn');
+            const limitSection = document.getElementById('limitPriceSection');
+
+            if (type === 'market') {
+                marketBtn.classList.add('active');
+                limitBtn.classList.remove('active');
+                marketBtn.style.background = 'rgba(255,255,255,0.1)';
+                marketBtn.style.color = '#fff';
+                limitBtn.style.background = 'transparent';
+                limitBtn.style.color = 'rgba(255,255,255,0.5)';
+                limitSection.style.display = 'none';
+            } else {
+                limitBtn.classList.add('active');
+                marketBtn.classList.remove('active');
+                limitBtn.style.background = 'rgba(255,255,255,0.1)';
+                limitBtn.style.color = '#fff';
+                marketBtn.style.background = 'transparent';
+                marketBtn.style.color = 'rgba(255,255,255,0.5)';
+                limitSection.style.display = 'block';
+
+                // Set initial limit price to current market price
+                const selectedSide = window.selectedSide || 'YES';
+                const priceEl = document.getElementById(selectedSide === 'YES' ? 'yesBtnPrice' : 'noBtnPrice');
+                if (priceEl) {
+                    const marketPrice = parseFloat(priceEl.textContent);
+                    if (!isNaN(marketPrice) && marketPrice > 0) {
+                        document.getElementById('limitPriceInput').value = marketPrice.toFixed(4);
+                        limitPrice = marketPrice;
+                    }
+                }
+            }
+
+            console.log(`Order type switched to: ${type}`);
+        }
+
+        function setLimitPrice(price) {
+            limitPrice = price;
+            document.getElementById('limitPriceInput').value = price.toFixed(4);
+            console.log(`Limit price set to: ${price}`);
+        }
+
+        function setMarketPrice() {
+            const selectedSide = window.selectedSide || 'YES';
+            const priceEl = document.getElementById(selectedSide === 'YES' ? 'yesBtnPrice' : 'noBtnPrice');
+            if (priceEl) {
+                const marketPrice = parseFloat(priceEl.textContent);
+                if (!isNaN(marketPrice) && marketPrice > 0) {
+                    setLimitPrice(marketPrice);
+                }
+            }
+        }
+
+        function updateLimitPrice() {
+            const input = document.getElementById('limitPriceInput');
+            const value = parseFloat(input.value);
+            if (!isNaN(value) && value > 0 && value < 1) {
+                limitPrice = value;
+            } else if (value >= 1) {
+                input.value = '0.9999';
+                limitPrice = 0.9999;
+            } else if (value <= 0) {
+                input.value = '0.0001';
+                limitPrice = 0.0001;
+            }
+        }
+
+        function addShares(amount) {
+            const input = document.getElementById('tradeAmountShares');
+            const current = parseInt(input.value) || 0;
+            const newValue = current + amount;
+            input.value = newValue;
+            document.getElementById('sharesSlider').value = Math.min(newValue, 500);
+            updateFromInput();
+        }
+
+        function resetShares() {
+            document.getElementById('tradeAmountShares').value = 0;
+            document.getElementById('sharesSlider').value = 0;
+            updateFromInput();
         }
 
         // Trade History Management
