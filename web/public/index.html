@@ -718,34 +718,8 @@
         const TRADE_HISTORY_KEY = 'x1_trade_history';
         let tradeHistory = [];
 
-        // Load trade history from localStorage
-        async function loadTradeHistory() {
-            try {
-                // Load from database API instead of localStorage
-                const response = await fetch('/api/recent-trades?limit=100');
-                if (response.ok) {
-                    const trades = await response.json();
-                    console.log(`💾 Loaded ${trades.length} trades from database`);
-
-                    // Add trades in reverse order (oldest first) so newest appear at top
-                    trades.reverse().forEach(trade => {
-                        addTradeToHistory({
-                            action: trade.action,
-                            side: trade.side,
-                            shares: trade.shares,
-                            avgPrice: trade.avgPrice,
-                            amount: trade.amount,
-                            user: trade.user || 'Unknown',
-                            timestamp: trade.timestamp
-                        }, false); // Don't save back to localStorage
-                    });
-                } else {
-                    console.warn('Failed to load trades from database:', response.status);
-                }
-            } catch (err) {
-                console.error('Failed to load trade history:', err);
-            }
-        }
+        // NOTE: Trade history is now loaded via SSE stream instead of fetch
+        // The connectTradeStream() function handles both initial history and live updates
 
         // Save trade history to localStorage
         function saveTradeHistory() {
@@ -1000,8 +974,8 @@
             // updateVolumeStats();
         }
 
-        // ============= WEBSOCKET TRADE MONITOR =============
-        let tradeSocket = null;
+        // ============= SSE TRADE STREAM =============
+        let tradeStream = null;
 
         function updateWsStatus(status) {
             const wsStatus = document.getElementById('wsStatus');
@@ -1010,36 +984,24 @@
             }
         }
 
-        function connectTradeMonitor() {
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            let wsUrl;
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                wsUrl = `${wsProtocol}//${window.location.hostname}:3435`;
-            } else {
-                wsUrl = `${wsProtocol}//${window.location.host}/ws`;
-            }
-
-            console.log('Connecting to trade monitor:', wsUrl);
+        function connectTradeStream() {
+            console.log('Connecting to trade stream via SSE');
             updateWsStatus('connecting');
 
-            tradeSocket = new WebSocket(wsUrl);
+            tradeStream = new EventSource('/api/trades-stream');
 
-            tradeSocket.onopen = () => {
-                console.log('✅ Connected to live trade feed');
+            tradeStream.addEventListener('open', () => {
+                console.log('✅ Connected to live trade feed (SSE)');
                 updateWsStatus('connected');
-            };
+            });
 
-            tradeSocket.onmessage = (event) => {
+            tradeStream.addEventListener('history', (event) => {
                 try {
-                    const data = JSON.parse(event.data);
+                    const trades = JSON.parse(event.data);
+                    console.log(`💾 Loaded ${trades.length} historical trades from SSE`);
 
-                    if (data.type === 'history') {
-                        // Skip - we load history directly from database API on page load
-                        console.log(`📜 Ignoring ${data.trades.length} historical trades from WebSocket (using database instead)`);
-                    } else if (data.type === 'trade') {
-                        const trade = data.trade;
-                        console.log(`📊 NEW TRADE: ${trade.action} ${trade.side} - ${trade.shares} shares @ ${trade.avgPrice}`);
-
+                    // Add trades in reverse order (oldest first) so newest appear at top
+                    trades.reverse().forEach(trade => {
                         addTradeToHistory({
                             action: trade.action,
                             side: trade.side,
@@ -1048,75 +1010,81 @@
                             amount: trade.amount,
                             user: trade.user || 'Unknown',
                             timestamp: trade.timestamp
-                        }, true);
+                        }, false); // Don't save to localStorage
+                    });
+                } catch (err) {
+                    console.error('Failed to parse trade history:', err);
+                }
+            });
 
-                        // Optimistic volume update (instant UI feedback!)
-                        updateVolumeOptimistic(trade);
+            tradeStream.addEventListener('trade', (event) => {
+                try {
+                    const trade = JSON.parse(event.data);
+                    console.log(`📊 NEW TRADE: ${trade.action} ${trade.side} - ${trade.shares} shares @ ${trade.avgPrice}`);
 
-                        // Auto-update trading history if this is the user's trade and trading tab is active
-                        if (wallet && wallet.publicKey && trade.user) {
-                            const userWallet = wallet.publicKey.toString();
-                            if (trade.user === userWallet && currentFeedTab === 'trading') {
-                                console.log('📈 User trade detected, fetching latest trade');
+                    addTradeToHistory({
+                        action: trade.action,
+                        side: trade.side,
+                        shares: trade.shares,
+                        avgPrice: trade.avgPrice,
+                        amount: trade.amount,
+                        user: trade.user || 'Unknown',
+                        timestamp: trade.timestamp
+                    }, true);
 
-                                // Wait a moment for the trade to be saved to DB, then fetch it
-                                setTimeout(async () => {
-                                    try {
-                                        const userPrefix = userWallet.slice(0, 6);
-                                        const response = await fetch(`/api/trading-history/${userPrefix}`);
-                                        if (response.ok) {
-                                            const data = await response.json();
-                                            if (data.history && data.history.length > 0) {
-                                                // Get the most recent trade (first item)
-                                                const latestTrade = data.history[0];
-                                                addSingleTradeToHistory({
-                                                    action: latestTrade.action,
-                                                    side: latestTrade.side,
-                                                    shares: latestTrade.shares,
-                                                    costUsd: latestTrade.cost_usd,
-                                                    avgPrice: latestTrade.avg_price,
-                                                    pnl: latestTrade.pnl,
-                                                    timestamp: latestTrade.timestamp
-                                                });
-                                            }
+                    // Optimistic volume update (instant UI feedback!)
+                    updateVolumeOptimistic(trade);
+
+                    // Auto-update trading history if this is the user's trade and trading tab is active
+                    if (wallet && wallet.publicKey && trade.user) {
+                        const userWallet = wallet.publicKey.toString();
+                        const userPrefix = userWallet.slice(0, 6);
+                        if (trade.user === userPrefix && currentFeedTab === 'trading') {
+                            console.log('📈 User trade detected, fetching latest trade');
+
+                            // Wait a moment for the trade to be saved to DB, then fetch it
+                            setTimeout(async () => {
+                                try {
+                                    const response = await fetch(`/api/trading-history/${userPrefix}`);
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        if (data.history && data.history.length > 0) {
+                                            // Get the most recent trade (first item)
+                                            const latestTrade = data.history[0];
+                                            addSingleTradeToHistory({
+                                                action: latestTrade.action,
+                                                side: latestTrade.side,
+                                                shares: latestTrade.shares,
+                                                costUsd: latestTrade.cost_usd,
+                                                avgPrice: latestTrade.avg_price,
+                                                pnl: latestTrade.pnl,
+                                                timestamp: latestTrade.timestamp
+                                            });
                                         }
-                                    } catch (err) {
-                                        console.error('Failed to fetch latest trade:', err);
                                     }
-                                }, 300); // 300ms delay to ensure DB write completes
-                            }
+                                } catch (err) {
+                                    console.error('Failed to fetch latest trade:', err);
+                                }
+                            }, 300); // 300ms delay to ensure DB write completes
                         }
-                    } else if (data.type === 'chat_history') {
-                        console.log(`💬 Loaded ${data.messages.length} chat messages`);
-                        loadChatHistory(data.messages);
-                    } else if (data.type === 'chat') {
-                        console.log(`💬 NEW CHAT: ${data.message.user}: ${data.message.text}`);
-                        displayChatMessage(data.message);
-                    } else if (data.type === 'error') {
-                        console.warn(`⚠️ Server error: ${data.message}`);
-                        displayChatError(data.message);
                     }
                 } catch (err) {
-                    console.error('Failed to parse trade message:', err);
+                    console.error('Failed to parse trade event:', err);
                 }
-            };
+            });
 
-            tradeSocket.onerror = (error) => {
+            tradeStream.addEventListener('error', (error) => {
                 console.error('❌ Trade feed error:', error);
                 updateWsStatus('disconnected');
-            };
-
-            tradeSocket.onclose = () => {
-                console.log('Trade feed disconnected. Reconnecting in 5s...');
-                updateWsStatus('disconnected');
-                setTimeout(connectTradeMonitor, 5000);
-            };
+                tradeStream.close();
+                // EventSource automatically reconnects, but we'll handle it manually with timeout
+                setTimeout(connectTradeStream, 5000);
+            });
         }
 
-        // Start trade monitor on page load
+        // Start trade stream on page load
         window.addEventListener('load', () => {
-            loadTradeHistory();
-            setTimeout(connectTradeMonitor, 2000);
+            connectTradeStream();
             setupTrollboxAutoScroll(); // Initialize trollbox auto-scroll
         });
 

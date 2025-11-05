@@ -54,6 +54,9 @@ const volumeStreamClients = new Set();
 // SSE clients for cycle status updates
 const cycleStreamClients = new Set();
 
+// SSE clients for live trades stream
+const tradesStreamClients = new Set();
+
 // AMM Configuration
 const PROGRAM_ID = 'EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF';
 const AMM_SEED = 'amm_btc_v6';
@@ -688,6 +691,61 @@ const server = http.createServer((req, res) => {
     // ============================================================================
     const timestamp = new Date().toISOString();
     const logPrefix = `[${timestamp}]`;
+
+    // SSE: Stream live trades
+    if (req.url === '/api/trades-stream' && req.method === 'GET') {
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*'
+        });
+
+        // Send initial batch of recent trades
+        try {
+            const stmt = db.prepare(`
+                SELECT
+                    user_prefix,
+                    action,
+                    side,
+                    shares,
+                    cost_usd,
+                    avg_price,
+                    timestamp
+                FROM trading_history
+                ORDER BY timestamp DESC
+                LIMIT 100
+            `);
+
+            const trades = stmt.all().map(row => ({
+                side: row.side === 'UP' ? 'YES' : 'NO',
+                action: row.action,
+                amount: row.cost_usd.toFixed(4),
+                shares: row.shares.toFixed(2),
+                avgPrice: row.avg_price ? row.avg_price.toFixed(4) : '0.0000',
+                timestamp: row.timestamp,
+                user: row.user_prefix
+            }));
+
+            // Send initial history as a batch
+            res.write(`event: history\n`);
+            res.write(`data: ${JSON.stringify(trades)}\n\n`);
+        } catch (err) {
+            console.error('Error sending initial trades:', err);
+        }
+
+        // Add client to set
+        tradesStreamClients.add(res);
+        console.log(`Trades SSE client connected (${tradesStreamClients.size} total)`);
+
+        // Remove client on disconnect
+        req.on('close', () => {
+            tradesStreamClients.delete(res);
+            console.log(`Trades SSE client disconnected (${tradesStreamClients.size} remaining)`);
+        });
+
+        return;
+    }
 
     // API: Get recent trades from database (replaces recent_trades.json)
     if (req.url.startsWith('/api/recent-trades') || req.url === '/recent_trades.json') {
@@ -1434,6 +1492,27 @@ const server = http.createServer((req, res) => {
                         data.pnl || null
                     );
                     if (success) {
+                        // Broadcast to SSE clients
+                        const trade = {
+                            side: data.side === 'UP' ? 'YES' : 'NO',
+                            action: data.action,
+                            amount: data.costUsd.toFixed(4),
+                            shares: data.shares.toFixed(2),
+                            avgPrice: data.avgPrice.toFixed(4),
+                            timestamp: Date.now(),
+                            user: data.userPrefix
+                        };
+
+                        tradesStreamClients.forEach(client => {
+                            try {
+                                client.write(`event: trade\n`);
+                                client.write(`data: ${JSON.stringify(trade)}\n\n`);
+                            } catch (err) {
+                                console.error('Error broadcasting trade to SSE client:', err);
+                                tradesStreamClients.delete(client);
+                            }
+                        });
+
                         res.writeHead(200, {
                             'Content-Type': 'application/json',
                             ...SECURITY_HEADERS
