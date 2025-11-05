@@ -466,19 +466,30 @@ function addSettlementHistory(userPrefix, result, amount, side, snapshotPrice = 
     try {
         const timestamp = Date.now();
 
-        // Get timestamp of last settlement for this user to determine cycle boundary
+        // Use the MARKET cycle start time from market_status.json, not the user's last settlement
+        // This ensures we only count trades from the CURRENT market cycle
         let cycleStartTime = 0;
-        const lastSettlementStmt = db.prepare('SELECT timestamp FROM settlement_history WHERE user_prefix = ? ORDER BY timestamp DESC LIMIT 1');
-        const lastSettlement = lastSettlementStmt.get(userPrefix);
-        if (lastSettlement) {
-            cycleStartTime = lastSettlement.timestamp;
+        try {
+            const marketStatus = JSON.parse(fs.readFileSync('./market_status.json', 'utf8'));
+            if (marketStatus && marketStatus.cycleStartTime) {
+                cycleStartTime = marketStatus.cycleStartTime;
+                console.log(`Using market cycle start time: ${cycleStartTime} (${new Date(cycleStartTime).toISOString()})`);
+            }
+        } catch (err) {
+            console.warn('Could not load market_status.json, using last settlement as fallback:', err.message);
+            // Fallback: use last settlement timestamp if market_status.json is unavailable
+            const lastSettlementStmt = db.prepare('SELECT timestamp FROM settlement_history WHERE user_prefix = ? ORDER BY timestamp DESC LIMIT 1');
+            const lastSettlement = lastSettlementStmt.get(userPrefix);
+            if (lastSettlement) {
+                cycleStartTime = lastSettlement.timestamp;
+            }
         }
 
-        // Calculate total buys, sells, and net spent from trading history SINCE LAST SETTLEMENT
+        // Calculate total buys, sells, and net spent from trading history WITHIN THIS CYCLE
         let totalBuys = 0;
         let totalSells = 0;
 
-        const tradingStmt = db.prepare('SELECT action, cost_usd FROM trading_history WHERE user_prefix = ? AND timestamp > ? AND timestamp <= ? ORDER BY timestamp ASC');
+        const tradingStmt = db.prepare('SELECT action, cost_usd FROM trading_history WHERE user_prefix = ? AND timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC');
         const trades = tradingStmt.all(userPrefix, cycleStartTime, timestamp);
 
         for (const trade of trades) {
