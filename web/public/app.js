@@ -7004,7 +7004,7 @@ async function loadPositions() {
             `;
         } else {
             let html = `
-                <div class="positions-header">
+                <div class="positions-header" style="display: flex; flex-wrap: nowrap; align-items: center;">
                     <div class="pos-side">SIDE</div>
                     <div class="pos-shares">SHARES</div>
                     <div class="pos-entry">ENTRY</div>
@@ -7022,7 +7022,7 @@ async function loadPositions() {
                 const pnlSign = pos.pnl >= 0 ? '+' : '';
 
                 html += `
-                    <div class="position-row">
+                    <div class="position-row" style="display: flex; flex-wrap: nowrap; align-items: center;">
                         <div class="pos-side ${sideClass}">${pos.side}</div>
                         <div class="pos-shares">${pos.shares.toFixed(2)}</div>
                         <div class="pos-entry">${pos.entryPrice.toFixed(4)}</div>
