@@ -488,8 +488,8 @@ function addSettlementHistory(userPrefix, result, amount, side, snapshotPrice = 
 
         const netSpent = totalBuys - totalSells;
 
-        const stmt = db.prepare('INSERT INTO settlement_history (user_prefix, result, amount, side, timestamp, snapshot_price, settle_price, total_buys, total_sells, net_spent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        stmt.run(userPrefix, result, amount, side, timestamp, snapshotPrice, settlePrice, totalBuys, totalSells, netSpent);
+        const stmt = db.prepare('INSERT INTO settlement_history (user_prefix, result, amount, side, timestamp, snapshot_price, settle_price, net_spent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        stmt.run(userPrefix, result, amount, side, timestamp, snapshotPrice, settlePrice, netSpent);
         return true;
     } catch (err) {
         console.error('Failed to add settlement:', err.message);
@@ -651,10 +651,86 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
     // ============================================================================
+    // ORDERBOOK API PROXY - Forward /orderbook-api/* to localhost:3436
+    // ============================================================================
+    if (req.url.startsWith('/orderbook-api/')) {
+        const targetPath = req.url.replace('/orderbook-api', '');
+        const options = {
+            hostname: 'localhost',
+            port: 3436,
+            path: targetPath,
+            method: req.method,
+            headers: req.headers
+        };
+
+        const proxy = http.request(options, (proxyRes) => {
+            res.writeHead(proxyRes.statusCode, {
+                ...proxyRes.headers,
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            });
+            proxyRes.pipe(res);
+        });
+
+        proxy.on('error', (err) => {
+            console.error('Orderbook API proxy error:', err);
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Orderbook API unavailable' }));
+        });
+
+        req.pipe(proxy);
+        return;
+    }
+
+    // ============================================================================
     // REQUEST LOGGING - Track which APIs are accessed and service type used
     // ============================================================================
     const timestamp = new Date().toISOString();
     const logPrefix = `[${timestamp}]`;
+
+    // API: Get recent trades from database (replaces recent_trades.json)
+    if (req.url.startsWith('/api/recent-trades') || req.url === '/recent_trades.json') {
+        try {
+            const url = new URL(req.url, `http://${req.headers.host}`);
+            const limit = parseInt(url.searchParams.get('limit')) || 100;
+
+            const stmt = db.prepare(`
+                SELECT
+                    user_prefix,
+                    action,
+                    side,
+                    shares,
+                    cost_usd,
+                    avg_price,
+                    timestamp
+                FROM trading_history
+                ORDER BY timestamp DESC
+                LIMIT ?
+            `);
+
+            const trades = stmt.all(limit).map(row => ({
+                side: row.side === 'UP' ? 'YES' : 'NO',
+                action: row.action,
+                amount: row.cost_usd.toFixed(4),
+                shares: row.shares.toFixed(2),
+                avgPrice: row.avg_price ? row.avg_price.toFixed(4) : '0.0000',
+                timestamp: row.timestamp,
+                user: row.user_prefix
+            }));
+
+            res.writeHead(200, {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            });
+            res.end(JSON.stringify(trades));
+        } catch (err) {
+            console.error('Error fetching recent trades:', err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to fetch trades' }));
+        }
+        return;
+    }
 
     // API: Get logs for real-time viewer
     if (req.url.startsWith('/api/logs')) {

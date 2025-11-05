@@ -719,15 +719,28 @@
         let tradeHistory = [];
 
         // Load trade history from localStorage
-        function loadTradeHistory() {
+        async function loadTradeHistory() {
             try {
-                const saved = localStorage.getItem(TRADE_HISTORY_KEY);
-                if (saved) {
-                    const loaded = JSON.parse(saved);
-                    console.log(`💾 Restored ${loaded.length} trades from localStorage`);
-                    loaded.reverse().forEach(trade => {
-                        addTradeToHistory(trade, false);
+                // Load from database API instead of localStorage
+                const response = await fetch('/api/recent-trades?limit=100');
+                if (response.ok) {
+                    const trades = await response.json();
+                    console.log(`💾 Loaded ${trades.length} trades from database`);
+
+                    // Add trades in reverse order (oldest first) so newest appear at top
+                    trades.reverse().forEach(trade => {
+                        addTradeToHistory({
+                            action: trade.action,
+                            side: trade.side,
+                            shares: trade.shares,
+                            avgPrice: trade.avgPrice,
+                            amount: trade.amount,
+                            user: trade.user || 'Unknown',
+                            timestamp: trade.timestamp
+                        }, false); // Don't save back to localStorage
                     });
+                } else {
+                    console.warn('Failed to load trades from database:', response.status);
                 }
             } catch (err) {
                 console.error('Failed to load trade history:', err);
@@ -1021,20 +1034,8 @@
                     const data = JSON.parse(event.data);
 
                     if (data.type === 'history') {
-                        if (tradeHistory.length === 0) {
-                            console.log(`📜 Loaded ${data.trades.length} historical trades from server`);
-                            data.trades.forEach(trade => {
-                                addTradeToHistory({
-                                    action: trade.action,
-                                    side: trade.side,
-                                    shares: trade.shares,
-                                    avgPrice: trade.avgPrice,
-                                    amount: trade.amount,
-                                    user: trade.user || 'Global',
-                                    timestamp: trade.timestamp
-                                }, false); // Don't save to localStorage - this IS the source
-                            });
-                        }
+                        // Skip - we load history directly from database API on page load
+                        console.log(`📜 Ignoring ${data.trades.length} historical trades from WebSocket (using database instead)`);
                     } else if (data.type === 'trade') {
                         const trade = data.trade;
                         console.log(`📊 NEW TRADE: ${trade.action} ${trade.side} - ${trade.shares} shares @ ${trade.avgPrice}`);

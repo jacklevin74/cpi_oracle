@@ -9,10 +9,9 @@ const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.x1.xyz';
 const PROGRAM_ID = new PublicKey('EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF');
 const WS_PORT = 3435;
 
-// Trade storage
+// Trade storage (in-memory only - database is source of truth)
 const MAX_TRADES = 100;
 const trades = [];
-const TRADES_FILE = './public/recent_trades.json';
 
 // Server URL for cumulative volume updates
 const SERVER_URL = 'http://localhost:3434';
@@ -154,13 +153,9 @@ function broadcastChatMessage(chatMsg) {
     });
 }
 
-function saveTrades() {
-    try {
-        fs.writeFileSync(TRADES_FILE, JSON.stringify(trades.slice(-MAX_TRADES), null, 2));
-    } catch (err) {
-        console.error('Failed to save trades:', err.message);
-    }
-}
+// NOTE: We no longer save trades to JSON file - database is the source of truth
+// All trades are saved to database via addToTradingHistory() API call
+// This in-memory cache is only for WebSocket broadcasting to connected clients
 
 // Update cumulative volume on server
 async function updateCumulativeVolume(side, amount, shares) {
@@ -305,15 +300,49 @@ function saveChatMessages() {
     }
 }
 
-// Load existing trades
-try {
-    if (fs.existsSync(TRADES_FILE)) {
-        const data = JSON.parse(fs.readFileSync(TRADES_FILE, 'utf8'));
-        trades.push(...data);
-        console.log(`Loaded ${trades.length} historical trades`);
+// Load existing trades from database API on startup
+async function loadRecentTradesFromDB() {
+    try {
+        const http = require('http');
+        const options = {
+            hostname: 'localhost',
+            port: 3434,
+            path: '/api/recent-trades?limit=100',
+            method: 'GET'
+        };
+
+        return new Promise((resolve, reject) => {
+            const req = http.request(options, (res) => {
+                let body = '';
+                res.on('data', (chunk) => body += chunk);
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            const dbTrades = JSON.parse(body);
+                            trades.push(...dbTrades.reverse()); // Reverse to get chronological order
+                            console.log(`Loaded ${trades.length} historical trades from database`);
+                            resolve();
+                        } catch (err) {
+                            console.error('Failed to parse trades from database:', err.message);
+                            reject(err);
+                        }
+                    } else {
+                        console.error('Failed to load trades from database, status:', res.statusCode);
+                        resolve(); // Continue anyway
+                    }
+                });
+            });
+
+            req.on('error', (err) => {
+                console.error('Error loading trades from database:', err.message);
+                resolve(); // Continue anyway
+            });
+
+            req.end();
+        });
+    } catch (err) {
+        console.error('Failed to load trades from database:', err.message);
     }
-} catch (err) {
-    console.error('Failed to load trades:', err.message);
 }
 
 // Load existing chat messages
@@ -370,6 +399,9 @@ async function startMonitoring() {
     console.log(`Monitoring trades on program: ${PROGRAM_ID.toString()}`);
     console.log(`WebSocket server running on port ${WS_PORT}`);
 
+    // Load recent trades from database on startup
+    await loadRecentTradesFromDB();
+
     // Subscribe to program logs
     const subscriptionId = connection.onLogs(
         PROGRAM_ID,
@@ -421,9 +453,6 @@ async function startMonitoring() {
 
                 // Broadcast to clients
                 broadcastTrade(trade);
-
-                // Save to disk
-                saveTrades();
             }
         },
         'confirmed'
@@ -436,7 +465,6 @@ async function startMonitoring() {
         console.log('\nShutting down...');
         await connection.removeOnLogsListener(subscriptionId);
         wss.close();
-        saveTrades();
         process.exit(0);
     });
 }
