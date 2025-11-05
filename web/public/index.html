@@ -519,12 +519,16 @@
                         <div style="margin-top: 12px;">
                             <label class="input-label" style="margin-bottom: 8px;">FILL STRATEGY</label>
                             <div style="display: flex; gap: 8px;">
-                                <button id="fillStrategyAON" onclick="setFillStrategy('all-or-none')"
-                                    style="flex: 1; padding: 8px 12px; background: rgba(91, 158, 255, 0.2); border: 1px solid rgba(91, 158, 255, 0.5); border-radius: 6px; color: #5b9eff; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s;">
+                                <button type="button" id="fillStrategyAON" onclick="setFillStrategy('all-or-none')"
+                                    onmouseover="if(window.fillStrategy !== 'all-or-none') this.style.background='rgba(91, 158, 255, 0.1)'"
+                                    onmouseout="if(window.fillStrategy !== 'all-or-none') this.style.background='rgba(255,255,255,0.05)'"
+                                    style="flex: 1; padding: 8px 12px; background: rgba(91, 158, 255, 0.2); border: 1px solid rgba(91, 158, 255, 0.5); border-radius: 6px; color: #5b9eff; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s; pointer-events: auto; user-select: none;">
                                     All or Nothing
                                 </button>
-                                <button id="fillStrategyPartial" onclick="setFillStrategy('partial')"
-                                    style="flex: 1; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s;">
+                                <button type="button" id="fillStrategyPartial" onclick="setFillStrategy('partial')"
+                                    onmouseover="if(window.fillStrategy !== 'partial') this.style.background='rgba(91, 158, 255, 0.1)'"
+                                    onmouseout="if(window.fillStrategy !== 'partial') this.style.background='rgba(255,255,255,0.05)'"
+                                    style="flex: 1; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s; pointer-events: auto; user-select: none;">
                                     Partial Fill
                                 </button>
                             </div>
