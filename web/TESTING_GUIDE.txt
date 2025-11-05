@@ -1,0 +1,222 @@
+================================================================================
+                        A/B TESTING GUIDE
+                    Original vs TypeScript Backend
+================================================================================
+
+✅ SETUP COMPLETE - Ready for Testing
+
+================================================================================
+                          URL COMPARISON
+================================================================================
+
+Original (Baseline):
+  URL:    http://localhost:3434/
+  Title:  "X1 Markets - Pro"
+  Badge:  None
+  Backend: JavaScript functions in server.js
+
+TypeScript (Test):
+  URL:    http://localhost:3434/proto2
+  Title:  "X1 Markets - Pro (TypeScript)"
+  Badge:  Blue "TypeScript" badge (top-left)
+  Backend: TypeScript services (compiled to dist/solana/)
+
+================================================================================
+                        VISUAL DIFFERENCES
+================================================================================
+
+The ONLY visible difference should be:
+
+  /          → "X1 Vero Prediction Markets"
+  /proto2    → "X1 Vero Prediction Markets [TypeScript]"
+                                            ^^^^^^^^^^^^
+                                            Blue badge
+
+Everything else should be IDENTICAL:
+  ✓ Same terminal-style UI
+  ✓ Same colors and fonts
+  ✓ Same layout and components
+  ✓ Same data values
+  ✓ Same refresh rates
+
+================================================================================
+                         TESTING PROCEDURE
+================================================================================
+
+Step 1: Open Both URLs Side-by-Side
+  - Left browser tab:  http://localhost:3434/
+  - Right browser tab: http://localhost:3434/proto2
+
+Step 2: Compare Data Values
+  Check these values match on both pages:
+    ☐ BTC Price (should be identical)
+    ☐ Market Status (Open/Stopped/Settled)
+    ☐ Vault Balance
+    ☐ Liquidity (b parameter)
+    ☐ YES/NO probabilities
+    ☐ Fee (bps)
+
+Step 3: Monitor for Differences
+  Expected:
+    ✓ Blue TypeScript badge on /proto2
+    ✓ Identical data on both pages
+
+  Unexpected (would indicate bug):
+    ✗ Different BTC prices
+    ✗ Different vault balances
+    ✗ Different probabilities
+    ✗ Any data mismatch
+
+Step 4: Test Functionality
+  Both pages should:
+    ✓ Auto-refresh data
+    ✓ Display charts correctly
+    ✓ Show trading interface
+    ✓ Update in real-time
+
+================================================================================
+                        BACKEND DIFFERENCES
+================================================================================
+
+Original (/)           TypeScript (/proto2)
+------------------     ---------------------
+Inline JS functions    Service classes
+No type checking       Strict type checks
+Manual validation      Compile-time safety
+No IDE support         Full autocomplete
+Hard to test           Easy unit tests
+
+Both serve the SAME data, just fetched differently under the hood.
+
+================================================================================
+                        QUICK TESTS
+================================================================================
+
+1. Check Pages Load:
+   $ curl -s http://localhost:3434/ | grep "<title>"
+   → Should show: <title>X1 Markets - Pro</title>
+
+   $ curl -s http://localhost:3434/proto2 | grep "<title>"
+   → Should show: <title>X1 Markets - Pro (TypeScript)</title>
+
+2. Check TypeScript Badge:
+   $ curl -s http://localhost:3434/proto2 | grep "TypeScript"
+   → Should show the blue badge HTML
+
+3. Verify Server Running:
+   $ ps aux | grep "node server.js" | grep -v grep
+   → Should show running process
+
+4. Check API Endpoints:
+   $ curl -s http://localhost:3434/api/typescript-demo
+   → Should return JSON with oracle + market + lmsr
+
+================================================================================
+                        EXPECTED BEHAVIOR
+================================================================================
+
+✅ Both pages display BTC price from X1 testnet
+✅ Both pages show market state (Open/Stopped/Settled)
+✅ Both pages calculate LMSR probabilities
+✅ Both pages auto-refresh data
+✅ Data values MATCH between pages
+✅ Only visual difference: TypeScript badge
+
+================================================================================
+                        FILES BREAKDOWN
+================================================================================
+
+Shared by Both:
+  - index.css         (styles)
+  - chart.min.js      (Chart.js library)
+  - server.js         (backend routes both URLs)
+
+Original (/) uses:
+  - index.html        (no TypeScript badge)
+
+TypeScript (/proto2) uses:
+  - proto2.html       (with TypeScript badge)
+  - dist/solana/oracle.service.js (compiled)
+  - dist/solana/market.service.js (compiled)
+
+Archived:
+  - proto2-gradient-backup.html (modern gradient UI)
+
+================================================================================
+                        SUCCESS CRITERIA
+================================================================================
+
+Test passes if:
+  ✅ Both pages load without errors
+  ✅ BTC price identical on both pages
+  ✅ Market data identical on both pages
+  ✅ TypeScript badge visible only on /proto2
+  ✅ No console errors on either page
+  ✅ Both pages refresh data correctly
+
+Test fails if:
+  ✗ Data mismatch between pages
+  ✗ TypeScript page shows errors
+  ✗ Pages show different BTC prices
+  ✗ One page fails to load
+
+================================================================================
+                        TROUBLESHOOTING
+================================================================================
+
+Problem: Proto2 looks identical to original
+  → This is EXPECTED! Only difference is the badge.
+  → Check top-left for blue "TypeScript" badge.
+
+Problem: Data doesn't match between pages
+  → Check server logs: tail -f /tmp/web_server.log
+  → Compare API responses directly
+  → May indicate bug in TypeScript services
+
+Problem: TypeScript badge not showing
+  → Hard refresh: Ctrl+Shift+R (Chrome) or Cmd+Shift+R (Mac)
+  → Clear browser cache
+  → Verify proto2.html has badge in source code
+
+Problem: Either page not loading
+  → Check server running: ps aux | grep server.js
+  → Check logs: tail /tmp/web_server.log
+  → Restart server if needed
+
+================================================================================
+                        NEXT STEPS
+================================================================================
+
+After testing and confirming both pages work identically:
+
+Option A: Keep both URLs for gradual migration
+  - Users can choose / (original) or /proto2 (TypeScript)
+  - Monitor for any issues with TypeScript version
+  - Eventually switch / to use TypeScript backend
+
+Option B: Switch / to TypeScript immediately
+  - If A/B testing shows no issues
+  - Update / to use TypeScript services
+  - Keep /proto2 as alias
+
+Option C: Continue Phase 4 migration
+  - Add more TypeScript services
+  - Migrate API layer to TypeScript
+  - Full end-to-end type safety
+
+================================================================================
+                        DOCUMENTATION
+================================================================================
+
+URL_COMPARISON.md     - Detailed comparison guide
+TESTING_GUIDE.txt     - This file (quick reference)
+PROTO2_ACCESS.md      - API endpoint documentation
+PROTO2_SUMMARY.txt    - Original proto2 gradient demo notes
+
+================================================================================
+
+Ready to test! Open both URLs and compare:
+  http://localhost:3434/       (Original)
+  http://localhost:3434/proto2 (TypeScript)
+
+================================================================================

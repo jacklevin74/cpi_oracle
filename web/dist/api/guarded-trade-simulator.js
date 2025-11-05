@@ -219,17 +219,7 @@ guards, amm) {
         }
     }
     // Validate guard configuration
-    if (guards.allowPartial && guards.minFillSharesE6 <= 0) {
-        return {
-            success: false,
-            sharesToExecute: 0,
-            executionPrice: 0,
-            totalCost: 0,
-            isPartialFill: false,
-            guardsStatus: {},
-            error: 'Invalid guard config: partial fills enabled but no minimum fill specified'
-        };
-    }
+    // (minFillSharesE6 = 0 is allowed, means no minimum enforced)
     // Try full execution first
     const fullResult = sharesPassGuards(amountE6, action, side, guards, amm);
     if (fullResult.passed) {
@@ -273,7 +263,20 @@ guards, amm) {
     }
     // Binary search for max executable shares
     const partialResult = findMaxExecutableShares(action, side, amountE6, guards, amm);
-    if (partialResult.shares < guards.minFillSharesE6) {
+    // Check if any shares can be executed
+    if (partialResult.shares === 0) {
+        return {
+            success: false,
+            sharesToExecute: 0,
+            executionPrice: 0,
+            totalCost: 0,
+            isPartialFill: false,
+            guardsStatus: partialResult.validation,
+            error: 'No shares can be executed within guard constraints'
+        };
+    }
+    // Check minimum fill requirement (only if minFillSharesE6 > 0)
+    if (guards.minFillSharesE6 > 0 && partialResult.shares < guards.minFillSharesE6) {
         return {
             success: false,
             sharesToExecute: partialResult.shares,

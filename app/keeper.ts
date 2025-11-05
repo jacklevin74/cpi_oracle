@@ -370,7 +370,7 @@ async function executeOrder(
   order: LimitOrder,
   signature: string,
   orderId: number
-): Promise<string | null> {
+): Promise<{ txSignature: string; filledShares: number; executionPrice: number } | null> {
   try {
     const ammPda = getAmmPda();
     const userPubkey = new PublicKey(order.user);
@@ -511,7 +511,45 @@ async function executeOrder(
     console.log(`✅ Transaction sent: ${tx}`);
     console.log(`   View: https://explorer.solana.com/tx/${tx}?cluster=custom`);
 
-    return tx;
+    // Wait for transaction confirmation and fetch logs to parse actual filled amount
+    await connection.confirmTransaction(tx, 'confirmed');
+
+    const txDetails = await connection.getTransaction(tx, {
+      commitment: 'confirmed',
+      maxSupportedTransactionVersion: 0
+    });
+
+    if (!txDetails || !txDetails.meta || !txDetails.meta.logMessages) {
+      console.error('❌ Could not fetch transaction details');
+      return null;
+    }
+
+    // Parse logs to extract actual filled shares from TradeSnapshot event
+    // Look for log line: "📊 Trade completed: net=X dq=Y avg_price=Z"
+    let filledShares = order.shares_e6; // Fallback to requested shares
+    let executionPrice = order.limit_price_e6; // Fallback to limit price
+
+    for (const log of txDetails.meta.logMessages) {
+      // Parse the dq (delta quantity = filled shares) from logs
+      const dqMatch = log.match(/dq=(\d+)/);
+      if (dqMatch) {
+        filledShares = parseInt(dqMatch[1]);
+        console.log(`📊 Parsed filled shares from logs: ${filledShares} (${filledShares / 10_000_000} shares)`);
+      }
+
+      // Parse execution price if available in logs
+      const priceMatch = log.match(/exec_price=(\d+)/);
+      if (priceMatch) {
+        executionPrice = parseInt(priceMatch[1]);
+        console.log(`💰 Parsed execution price from logs: ${executionPrice} ($${(executionPrice / 1e6).toFixed(6)})`);
+      }
+    }
+
+    return {
+      txSignature: tx,
+      filledShares,
+      executionPrice
+    };
 
   } catch (err: any) {
     console.error(`❌ Error executing order ${orderId}:`, err.message);
@@ -633,17 +671,19 @@ async function keeperLoop() {
           if (executable) {
             console.log(`✅ Order ${order_id} is executable!`);
 
-            const tx = await executeOrder(connection, keeper, order, signature, order_id);
+            const result = await executeOrder(connection, keeper, order, signature, order_id);
 
-            if (tx) {
-              console.log(`✅ Order ${order_id} executed: ${tx}`);
+            if (result) {
+              console.log(`✅ Order ${order_id} executed: ${result.txSignature}`);
+              console.log(`   Filled: ${result.filledShares / 10_000_000} shares (requested: ${order.shares_e6 / 10_000_000})`);
+              console.log(`   Execution Price: $${(result.executionPrice / 1e6).toFixed(6)}`);
 
-              // Mark as filled in database
+              // Mark as filled in database with ACTUAL filled shares
               await markOrderFilled(
                 order_id,
-                tx,
-                order.shares_e6,
-                order.limit_price_e6,
+                result.txSignature,
+                result.filledShares,  // Use actual filled shares from transaction logs
+                result.executionPrice,  // Use actual execution price from logs
                 keeper.publicKey.toString()
               );
             } else {

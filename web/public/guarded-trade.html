@@ -375,6 +375,268 @@
             margin-top: 16px;
         }
 
+        /* Transaction Results Panel */
+        .tx-results-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 20px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .tx-results-panel.success {
+            border-color: rgba(76, 175, 80, 0.3);
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, var(--bg-secondary) 100%);
+        }
+
+        .tx-results-panel.error {
+            border-color: rgba(244, 67, 54, 0.3);
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.05) 0%, var(--bg-secondary) 100%);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tx-results-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tx-results-title.success {
+            color: #4caf50;
+        }
+
+        .tx-results-title.error {
+            color: #f44336;
+        }
+
+        .tx-results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .tx-result-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .tx-result-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tx-result-value {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+        }
+
+        .tx-result-value.highlight {
+            font-weight: 600;
+            color: #4caf50;
+        }
+
+        .tx-result-value.error-highlight {
+            font-weight: 600;
+            color: #f44336;
+        }
+
+        .tx-explorer-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: rgba(var(--primary-rgb), 0.1);
+            border: 1px solid rgba(var(--primary-rgb), 0.2);
+            border-radius: 6px;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tx-explorer-link:hover {
+            background: rgba(var(--primary-rgb), 0.2);
+            border-color: rgba(var(--primary-rgb), 0.4);
+        }
+
+        /* Log Viewer */
+        .log-viewer {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            margin-top: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-viewer-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .log-line {
+            font-size: 12px;
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            padding: 4px 0;
+            border-left: 2px solid transparent;
+            padding-left: 12px;
+            margin-left: 4px;
+        }
+
+        .log-line.newton {
+            border-left-color: #2196f3;
+            color: #90caf9;
+        }
+
+        .log-line.guard {
+            border-left-color: #ff9800;
+            color: #ffb74d;
+        }
+
+        .log-line.success {
+            border-left-color: #4caf50;
+            color: #81c784;
+        }
+
+        .log-line.error {
+            border-left-color: #f44336;
+            color: #e57373;
+        }
+
+        .log-line.backoff {
+            border-left-color: #9c27b0;
+            color: #ba68c8;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            animation: slideInRight 0.3s ease-out;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        .toast.success {
+            border-color: rgba(76, 175, 80, 0.5);
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, var(--bg-secondary) 100%);
+        }
+
+        .toast.error {
+            border-color: rgba(244, 67, 54, 0.5);
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, var(--bg-secondary) 100%);
+        }
+
+        .toast.info {
+            border-color: rgba(33, 150, 243, 0.5);
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, var(--bg-secondary) 100%);
+        }
+
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .toast-message {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+            font-size: 18px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .toast-close:hover {
+            color: var(--text-primary);
+        }
+
         @media (max-width: 768px) {
             .form-row {
                 grid-template-columns: 1fr;
@@ -382,6 +644,16 @@
 
             .preset-buttons {
                 grid-template-columns: 1fr;
+            }
+
+            .tx-results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .toast-container {
+                left: 20px;
+                right: 20px;
+                max-width: none;
             }
         }
     </style>
@@ -475,6 +747,8 @@
                     <span class="info-card-icon">ℹ️</span>
                     For BUY: Trade rejected if execution price exceeds this limit.
                     For SELL: Trade rejected if execution price is below this limit.
+                    <br><br>
+                    <strong>Note:</strong> On-chain execution includes a 0.2% tolerance buffer to handle microsecond price movements while maintaining protection.
                 </div>
             </div>
 
@@ -590,16 +864,29 @@
                 </div>
 
                 <div class="form-group">
+                    <div class="toggle-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="enforceMinFill" onchange="toggleEnforceMinFill()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <label class="form-label" style="margin-bottom: 0;">
+                            Enforce Minimum Fill
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">
                         Minimum Fill <span class="form-label-info">(shares)</span>
                     </label>
-                    <input type="number" class="form-input" id="minFill" value="1" min="0.01" step="0.1" disabled>
+                    <input type="number" class="form-input" id="minFill" value="0.1" min="0.01" step="0.1" disabled>
                 </div>
 
                 <div class="info-card">
                     <span class="info-card-icon">ℹ️</span>
                     Uses binary search (max 16 iterations) to find the largest trade size that passes all guards.
-                    Minimum fill prevents dust trades.
+                    <strong>Enforce Minimum Fill:</strong> If checked, trade must meet the specified minimum or be rejected.
+                    If unchecked, accepts any partial fill (no minimum enforced).
                 </div>
             </div>
 
@@ -649,8 +936,59 @@
                 All guard validation happens on-chain in the Solana program. This ensures execution is protected
                 even if network conditions change between simulation and execution.
             </div>
+
+            <!-- Transaction Results -->
+            <div class="tx-results-panel" id="txResults" style="display: none;">
+                <div class="tx-results-title" id="txResultsTitle">
+                    <span id="txResultsIcon">✅</span>
+                    <span id="txResultsTitleText">Transaction Successful</span>
+                </div>
+
+                <div class="tx-results-grid">
+                    <div class="tx-result-item">
+                        <span class="tx-result-label">Transaction Signature</span>
+                        <span class="tx-result-value" id="txSignature" style="font-size: 11px; word-break: break-all;">-</span>
+                    </div>
+                    <div class="tx-result-item">
+                        <span class="tx-result-label">Compute Units</span>
+                        <span class="tx-result-value highlight" id="txComputeUnits">-</span>
+                    </div>
+                    <div class="tx-result-item">
+                        <span class="tx-result-label">Shares Executed</span>
+                        <span class="tx-result-value highlight" id="txSharesExecuted">-</span>
+                    </div>
+                    <div class="tx-result-item">
+                        <span class="tx-result-label">Transaction Fee</span>
+                        <span class="tx-result-value" id="txFee">-</span>
+                    </div>
+                    <div class="tx-result-item">
+                        <span class="tx-result-label">Execution Price</span>
+                        <span class="tx-result-value" id="txExecutionPrice">-</span>
+                    </div>
+                    <div class="tx-result-item">
+                        <span class="tx-result-label">Total Cost</span>
+                        <span class="tx-result-value highlight" id="txTotalCost">-</span>
+                    </div>
+                </div>
+
+                <a href="#" target="_blank" rel="noopener" class="tx-explorer-link" id="txExplorerLink">
+                    🔗 View on Explorer
+                </a>
+
+                <!-- On-Chain Logs Viewer -->
+                <div class="log-viewer" id="txLogViewer" style="display: none;">
+                    <div class="log-viewer-title">
+                        <span>📋</span>
+                        <span>On-Chain Execution Logs</span>
+                    </div>
+                    <div id="txLogsContent"></div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <script src="solana-web3.min.js"></script>
     <script>
@@ -709,6 +1047,182 @@
             }
         }
 
+        // ============================================================================
+        // Toast Notifications (replaces alert())
+        // ============================================================================
+
+        function showToast(title, message, type = 'info', duration = 5000) {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️',
+                warning: '⚠️'
+            };
+
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || icons.info}</span>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    ${message ? `<div class="toast-message">${message}</div>` : ''}
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    toast.style.animation = 'slideOutRight 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+        }
+
+        // ============================================================================
+        // Transaction Results Display
+        // ============================================================================
+
+        function displayTransactionResults(signature, txDetails, isSuccess = true, errorMsg = null) {
+            const txResults = document.getElementById('txResults');
+            const txResultsTitle = document.getElementById('txResultsTitle');
+            const txResultsTitleText = document.getElementById('txResultsTitleText');
+            const txResultsIcon = document.getElementById('txResultsIcon');
+
+            // Show/hide and set styling
+            txResults.style.display = 'block';
+            txResults.className = isSuccess ? 'tx-results-panel success' : 'tx-results-panel error';
+            txResultsTitle.className = isSuccess ? 'tx-results-title success' : 'tx-results-title error';
+            txResultsIcon.textContent = isSuccess ? '✅' : '❌';
+            txResultsTitleText.textContent = isSuccess ? 'Transaction Successful' : 'Transaction Failed';
+
+            if (isSuccess && txDetails) {
+                // Fill in transaction details
+                document.getElementById('txSignature').textContent = signature.slice(0, 32) + '...';
+                document.getElementById('txComputeUnits').textContent =
+                    (txDetails.meta?.computeUnitsConsumed || 0).toLocaleString();
+                document.getElementById('txFee').textContent =
+                    ((txDetails.meta?.fee || 0) / 1e9).toFixed(6) + ' XNT';
+
+                // Explorer link
+                const explorerUrl = `https://explorer.testnet.x1.xyz/tx/${signature}`;
+                document.getElementById('txExplorerLink').href = explorerUrl;
+
+                // Parse logs for execution details
+                const logs = txDetails.meta?.logMessages || [];
+                parseAndDisplayLogs(logs, signature);
+
+            } else if (!isSuccess) {
+                // Show error message
+                document.getElementById('txSignature').textContent = errorMsg || 'Transaction failed';
+                document.getElementById('txComputeUnits').textContent = '-';
+                document.getElementById('txFee').textContent = '-';
+                document.getElementById('txSharesExecuted').textContent = '-';
+                document.getElementById('txExecutionPrice').textContent = '-';
+                document.getElementById('txTotalCost').textContent = '-';
+            }
+
+            // Scroll to results
+            setTimeout(() => {
+                txResults.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+
+        function parseAndDisplayLogs(logs, signature) {
+            const logsContent = document.getElementById('txLogsContent');
+            const logViewer = document.getElementById('txLogViewer');
+
+            if (!logs || logs.length === 0) {
+                logViewer.style.display = 'none';
+                return;
+            }
+
+            logViewer.style.display = 'block';
+            logsContent.innerHTML = '';
+
+            let executed = null;
+            let requested = null;
+            let executionPrice = null;
+            let totalCost = null;
+
+            logs.forEach(log => {
+                // Skip non-program logs
+                if (!log.includes('Program log:') && !log.includes('✅') && !log.includes('❌') &&
+                    !log.includes('🔬') && !log.includes('🔽') && !log.includes('🔁')) {
+                    return;
+                }
+
+                const logLine = document.createElement('div');
+                logLine.className = 'log-line';
+
+                // Classify log type
+                if (log.includes('🔬') || log.includes('Newton')) {
+                    logLine.classList.add('newton');
+                } else if (log.includes('🔽') || log.includes('Backoff')) {
+                    logLine.classList.add('backoff');
+                } else if (log.includes('🔒') || log.includes('Price limit') || log.includes('Slippage')) {
+                    logLine.classList.add('guard');
+                } else if (log.includes('✅') || log.includes('PASSED') || log.includes('Converged')) {
+                    logLine.classList.add('success');
+                } else if (log.includes('❌') || log.includes('FAILED')) {
+                    logLine.classList.add('error');
+                }
+
+                // Clean up log text
+                let cleanLog = log.replace('Program log: ', '').trim();
+                logLine.textContent = cleanLog;
+                logsContent.appendChild(logLine);
+
+                // Extract execution details
+                if (log.includes('Partial execution allowed')) {
+                    const match = log.match(/Partial execution allowed: (\d+)\/(\d+) shares/);
+                    if (match) {
+                        executed = parseInt(match[1]);
+                        requested = parseInt(match[2]);
+                    }
+                } else if (log.includes('ADV BUY') || log.includes('ADV SELL')) {
+                    const execMatch = log.match(/executed=(\d+)/);
+                    const spendMatch = log.match(/spend=(\d+)/);
+                    if (execMatch) executed = parseInt(execMatch[1]);
+                    if (spendMatch) totalCost = parseInt(spendMatch[1]);
+                }
+            });
+
+            // Update execution details
+            if (executed && requested) {
+                const execShares = (executed / 1e7).toFixed(2);
+                const reqShares = (requested / 1e7).toFixed(2);
+                const fillPercent = ((executed / requested) * 100).toFixed(1);
+
+                document.getElementById('txSharesExecuted').textContent = `${execShares} / ${reqShares}`;
+
+                // Partial fill info removed per user request
+
+                if (totalCost) {
+                    executionPrice = (totalCost / executed);
+                    document.getElementById('txExecutionPrice').textContent =
+                        `$${executionPrice.toFixed(4)}/share`;
+                    document.getElementById('txTotalCost').textContent =
+                        `$${(totalCost / 1e6).toFixed(2)}`;
+                }
+            } else if (executed) {
+                const execShares = (executed / 1e7).toFixed(2);
+                document.getElementById('txSharesExecuted').textContent = execShares;
+
+                if (totalCost) {
+                    executionPrice = (totalCost / executed);
+                    document.getElementById('txExecutionPrice').textContent =
+                        `$${executionPrice.toFixed(4)}/share`;
+                    document.getElementById('txTotalCost').textContent =
+                        `$${(totalCost / 1e6).toFixed(2)}`;
+                }
+            }
+        }
+
+        // ============================================================================
         // Derive deterministic session wallet from Backpack signature
         async function deriveSessionWalletFromBackpack(backpackWallet) {
             // Check for cached session wallet first
@@ -822,6 +1336,11 @@
         async function updateWalletInfo() {
             if (!wallet?.publicKey) return;
 
+            // Ensure connection is initialized
+            if (!connection) {
+                connection = new solanaWeb3.Connection(CONFIG.RPC_URL, 'confirmed');
+            }
+
             try {
                 const balance = await connection.getBalance(wallet.publicKey);
                 const xnt = balance / 1e9;  // Convert lamports to XNT
@@ -854,8 +1373,15 @@
 
         function togglePartialFills() {
             const enabled = document.getElementById('allowPartial').checked;
+            document.getElementById('enforceMinFill').disabled = !enabled;
             document.getElementById('minFill').disabled = !enabled;
             updateGuardStatus('partialFillStatus', enabled);
+        }
+
+        function toggleEnforceMinFill() {
+            const partialEnabled = document.getElementById('allowPartial').checked;
+            const enforceEnabled = document.getElementById('enforceMinFill').checked;
+            document.getElementById('minFill').disabled = !partialEnabled || !enforceEnabled;
         }
 
         function updateGuardStatus(elementId, enabled) {
@@ -882,7 +1408,7 @@
                 // Fetch current market prices from the AMM
                 const response = await fetch('/api/ts/market-data');
                 if (!response.ok) {
-                    alert('Failed to fetch current price');
+                    showToast('Error', 'Failed to fetch current price', 'error');
                     return;
                 }
 
@@ -896,10 +1422,10 @@
                 document.getElementById('enableSlippage').checked = true;
                 toggleSlippage();
 
-                alert(`Quote fetched: $${quotePrice.toFixed(4)}`);
+                showToast('Quote Fetched', `Current price: $${quotePrice.toFixed(4)}`, 'success', 3000);
             } catch (err) {
                 console.error('Error fetching quote:', err);
-                alert('Failed to fetch quote: ' + err.message);
+                showToast('Error', 'Failed to fetch quote: ' + err.message, 'error');
             }
         }
 
@@ -922,8 +1448,8 @@
                 maxTotalCostE6: document.getElementById('enableCostLimit').checked ?
                     Math.floor(parseFloat(document.getElementById('maxCost').value) * 1e6) : 0,
                 allowPartial: document.getElementById('allowPartial').checked,
-                minFillSharesE6: document.getElementById('allowPartial').checked ?
-                    Math.floor(parseFloat(document.getElementById('minFill').value) * 10_000_000) : 0
+                minFillSharesE6: (document.getElementById('allowPartial').checked && document.getElementById('enforceMinFill').checked) ?
+                    Math.floor(parseFloat(document.getElementById('minFill').value) * 1_000_000) : 0
             };
 
             console.log('🔧 CONFIGURED GUARDS:');
@@ -943,7 +1469,11 @@
             }
             if (guards.allowPartial) {
                 console.log('  Partial Fills: ENABLED');
-                console.log('  Min Fill:', `${(guards.minFillSharesE6 / 1e7).toFixed(2)} shares`);
+                if (guards.minFillSharesE6 > 0) {
+                    console.log('  Min Fill (ENFORCED):', `${(guards.minFillSharesE6 / 1e6).toFixed(2)} shares`);
+                } else {
+                    console.log('  Min Fill: NOT ENFORCED (any partial fill allowed)');
+                }
             } else {
                 console.log('  Partial Fills: DISABLED');
             }
@@ -993,7 +1523,7 @@
                 console.error('Simulation error:', err);
                 document.getElementById('simStatus').textContent = 'FAILED';
                 document.getElementById('simStatus').className = 'simulation-value warning';
-                alert('Simulation failed: ' + err.message);
+                showToast('Simulation Failed', err.message, 'error', 8000);
             }
         }
 
@@ -1042,6 +1572,31 @@
             // Guard badges
             displayGuardBadges(guardsStatus);
 
+            // Check for tight price limit (within 0.5%)
+            if (success && document.getElementById('enablePriceLimit').checked) {
+                const priceLimitE6 = Math.floor(parseFloat(document.getElementById('priceLimit').value) * 1e6);
+                const action = parseInt(document.getElementById('action').value);
+                const buffer = Math.abs(executionPrice - priceLimitE6) / priceLimitE6;
+
+                if (buffer < 0.005) { // Less than 0.5% buffer
+                    const warningDiv = document.createElement('div');
+                    warningDiv.style.background = 'rgba(255, 193, 7, 0.1)';
+                    warningDiv.style.border = '1px solid #ffc107';
+                    warningDiv.style.borderRadius = '6px';
+                    warningDiv.style.padding = '12px';
+                    warningDiv.style.marginTop = '16px';
+                    warningDiv.style.fontSize = '12px';
+                    warningDiv.style.color = '#ffc107';
+                    warningDiv.style.fontFamily = "'SF Mono', Monaco, Consolas, monospace";
+                    warningDiv.innerHTML = `<strong>⚠️ Warning: Tight Price Limit</strong><br>` +
+                        `Execution price ($${(executionPrice/1e6).toFixed(4)}) is very close to your limit ($${(priceLimitE6/1e6).toFixed(4)}). ` +
+                        `Market movement may cause execution to fail. Consider ${action === 1 ? 'increasing' : 'decreasing'} your limit by at least 0.5% for buffer.`;
+
+                    const badgesContainer = document.getElementById('guardBadges');
+                    badgesContainer.appendChild(warningDiv);
+                }
+            }
+
             // Partial fill notice
             if (isPartialFill) {
                 const pctFilled = (sharesToExecute / (parseFloat(document.getElementById('amount').value) * 1e6)) * 100;
@@ -1088,28 +1643,109 @@
 
         async function executeTrade() {
             if (!simulationData || !simulationData.success) {
-                alert('Please run a successful simulation first');
+                showToast('Simulation Required', 'Please run a successful simulation first', 'warning');
                 return;
             }
 
             if (!wallet?.publicKey) {
-                alert('Please connect your wallet first');
+                showToast('Wallet Required', 'Please connect your wallet first', 'warning');
                 await connectWallet();
-                return;
-            }
-
-            const confirmMsg = `Execute guarded trade?\n\n` +
-                `Shares: ${(simulationData.sharesToExecute / 1e7).toFixed(2)}\n` +
-                `Price: $${(simulationData.executionPrice / 1e7).toFixed(4)}\n` +
-                `Total Cost: $${(simulationData.totalCost / 1e7).toFixed(2)}${simulationData.isPartialFill ? '\n\n⚠️ PARTIAL FILL' : ''}`;
-
-            if (!confirm(confirmMsg)) {
                 return;
             }
 
             const executeBtn = document.getElementById('executeBtn');
             const originalText = executeBtn.textContent;
             executeBtn.disabled = true;
+            executeBtn.textContent = '🔄 RE-SIMULATING WITH FRESH DATA...';
+
+            // Ensure connection is initialized
+            if (!connection) {
+                connection = new solanaWeb3.Connection(CONFIG.RPC_URL, 'confirmed');
+                console.log('Connection initialized for execution');
+            }
+
+            // Re-simulate with fresh market data to catch price movements
+            try {
+                const side = parseInt(document.getElementById('side').value);
+                const action = parseInt(document.getElementById('action').value);
+                const amount = parseFloat(document.getElementById('amount').value);
+
+                const guards = {
+                    priceLimitE6: document.getElementById('enablePriceLimit').checked ?
+                        Math.floor(parseFloat(document.getElementById('priceLimit').value) * 1e6) : 0,
+                    maxSlippageBps: document.getElementById('enableSlippage').checked ?
+                        parseInt(document.getElementById('maxSlippage').value) : 0,
+                    quotePriceE6: document.getElementById('enableSlippage').checked ?
+                        Math.floor(parseFloat(document.getElementById('quotePrice').value) * 1e6) : 0,
+                    quoteTimestamp: document.getElementById('enableSlippage').checked ?
+                        Math.floor(Date.now() / 1000) : 0,
+                    maxTotalCostE6: document.getElementById('enableCostLimit').checked ?
+                        Math.floor(parseFloat(document.getElementById('maxCost').value) * 1e6) : 0,
+                    allowPartial: document.getElementById('allowPartial').checked,
+                    minFillSharesE6: (document.getElementById('allowPartial').checked && document.getElementById('enforceMinFill').checked) ?
+                        Math.floor(parseFloat(document.getElementById('minFill').value) * 1_000_000) : 0
+                };
+
+                const response = await fetch('/api/simulate-guarded-trade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ side, action, amountE6: Math.floor(amount * 10_000_000), guards })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Re-simulation failed');
+                }
+
+                const freshSimulation = await response.json();
+
+                if (!freshSimulation.success) {
+                    executeBtn.textContent = originalText;
+                    executeBtn.disabled = false;
+                    showToast('Trade Invalid', `Market has moved since your last simulation. ${freshSimulation.error || 'Guards no longer pass.'} Please simulate again.`, 'error', 10000);
+                    return;
+                }
+
+                // Check if simulation changed significantly
+                const priceDiff = Math.abs(freshSimulation.executionPrice - simulationData.executionPrice);
+                const sharesDiff = Math.abs(freshSimulation.sharesToExecute - simulationData.sharesToExecute);
+
+                if (priceDiff > simulationData.executionPrice * 0.01 || sharesDiff > simulationData.sharesToExecute * 0.05) {
+                    // Significant change - show updated confirmation
+                    const confirmMsg = `⚠️ Market has moved! Updated execution:\n\n` +
+                        `Shares: ${(freshSimulation.sharesToExecute / 1e7).toFixed(2)} (was ${(simulationData.sharesToExecute / 1e7).toFixed(2)})\n` +
+                        `Price: $${(freshSimulation.executionPrice / 1e7).toFixed(4)} (was $${(simulationData.executionPrice / 1e7).toFixed(4)})\n` +
+                        `Total Cost: $${(freshSimulation.totalCost / 1e7).toFixed(2)} (was $${(simulationData.totalCost / 1e7).toFixed(2)})${freshSimulation.isPartialFill ? '\n\n⚠️ PARTIAL FILL' : ''}\n\nProceed with updated execution?`;
+
+                    if (!confirm(confirmMsg)) {
+                        executeBtn.textContent = originalText;
+                        executeBtn.disabled = false;
+                        return;
+                    }
+                } else {
+                    // Minimal change - standard confirmation
+                    const confirmMsg = `Execute guarded trade?\n\n` +
+                        `Shares: ${(freshSimulation.sharesToExecute / 1e7).toFixed(2)}\n` +
+                        `Price: $${(freshSimulation.executionPrice / 1e7).toFixed(4)}\n` +
+                        `Total Cost: $${(freshSimulation.totalCost / 1e7).toFixed(2)}${freshSimulation.isPartialFill ? '\n\n⚠️ PARTIAL FILL' : ''}`;
+
+                    if (!confirm(confirmMsg)) {
+                        executeBtn.textContent = originalText;
+                        executeBtn.disabled = false;
+                        return;
+                    }
+                }
+
+                // Update simulationData with fresh data
+                simulationData = freshSimulation;
+
+            } catch (err) {
+                console.error('Re-simulation error:', err);
+                executeBtn.textContent = originalText;
+                executeBtn.disabled = false;
+                showToast('Re-simulation Failed', 'Failed to re-simulate. Please try again.', 'error');
+                return;
+            }
+
             executeBtn.textContent = '⏳ BUILDING TRANSACTION...';
 
             try {
@@ -1161,8 +1797,8 @@
                     maxTotalCostE6: document.getElementById('enableCostLimit').checked ?
                         Math.floor(parseFloat(document.getElementById('maxCost').value) * 1e6) : 0,
                     allowPartial: document.getElementById('allowPartial').checked,
-                    minFillSharesE6: document.getElementById('allowPartial').checked ?
-                        Math.floor(parseFloat(document.getElementById('minFill').value) * 10_000_000) : 0
+                    minFillSharesE6: (document.getElementById('allowPartial').checked && document.getElementById('enforceMinFill').checked) ?
+                        Math.floor(parseFloat(document.getElementById('minFill').value) * 1_000_000) : 0
                 };
 
                 // Anchor discriminator for "trade_advanced" = sha256("global:trade_advanced").slice(0,8)
@@ -1214,12 +1850,20 @@
 
                 executeBtn.textContent = '⏳ SIGNING TRANSACTION...';
 
+                // Create compute budget instruction to increase CU limit for advanced trades
+                const computeBudgetIx = solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 800000
+                });
+
                 // Build and send transaction (session wallet signs directly, no approval needed!)
-                const transaction = new solanaWeb3.Transaction().add(instruction);
+                const transaction = new solanaWeb3.Transaction()
+                    .add(computeBudgetIx)  // Add compute budget first
+                    .add(instruction);      // Then the trade instruction
                 transaction.feePayer = wallet.publicKey;
                 transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
                 console.log('Signing with session wallet (no approval needed)...');
+                console.log('Compute units: 800,000 (for advanced guarded trade)');
                 transaction.sign(wallet);  // Session wallet is a Keypair, signs directly
 
                 executeBtn.textContent = '⏳ SENDING TRANSACTION...';
@@ -1239,15 +1883,65 @@
                     throw new Error('Transaction failed: ' + JSON.stringify(confirmation.value.err));
                 }
 
+                // Fetch transaction details for logging
+                let txDetails = null;
+                try {
+                    txDetails = await connection.getTransaction(signature, {
+                        commitment: 'confirmed',
+                        maxSupportedTransactionVersion: 0
+                    });
+
+                    if (txDetails && txDetails.meta) {
+                        console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        console.log('✅ TRANSACTION EXECUTED SUCCESSFULLY');
+                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+                        console.log(`📝 SIGNATURE: ${signature}`);
+                        console.log(`🔗 EXPLORER: https://explorer.testnet.x1.xyz/tx/${signature}`);
+                        console.log(`⛽ COMPUTE UNITS: ${txDetails.meta.computeUnitsConsumed?.toLocaleString() || 'N/A'}`);
+                        console.log(`💰 FEE: ${(txDetails.meta.fee / 1e9).toFixed(6)} XNT\n`);
+
+                        if (txDetails.meta.logMessages && txDetails.meta.logMessages.length > 0) {
+                            console.log('📋 PROGRAM LOGS:\n');
+                            txDetails.meta.logMessages.forEach((log, i) => {
+                                if (log.includes('Program log:') || log.includes('success') || log.includes('✅')) {
+                                    console.log(`  ${i + 1}. ${log}`);
+                                }
+                            });
+                            console.log('');
+
+                            // Extract execution details from logs
+                            const guardLog = txDetails.meta.logMessages.find(log =>
+                                log.includes('ADVANCED GUARDS') && log.includes('Partial execution allowed')
+                            );
+                            if (guardLog) {
+                                const match = guardLog.match(/Partial execution allowed: (\d+)\/(\d+) shares/);
+                                if (match) {
+                                    const executed = (parseInt(match[1]) / 1e7).toFixed(2);
+                                    const requested = (parseInt(match[2]) / 1e7).toFixed(2);
+                                    console.log(`📊 EXECUTION: ${executed} shares filled (${requested} requested)`);
+                                    if (executed !== requested) {
+                                        console.log(`⚠️  PARTIAL FILL: ${((parseFloat(executed) / parseFloat(requested)) * 100).toFixed(1)}%`);
+                                    }
+                                }
+                            }
+                        }
+
+                        console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+                    }
+                } catch (logErr) {
+                    console.warn('Could not fetch transaction details:', logErr);
+                }
+
                 // Success!
                 executeBtn.textContent = '✅ SUCCESS!';
                 executeBtn.style.background = 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)';
 
-                const explorerUrl = `https://explorer.testnet.x1.xyz/tx/${signature}`;
-                alert(`✅ Trade executed successfully!\n\nTx: ${signature}\n\nView on explorer: ${explorerUrl}`);
+                // Display transaction results on page
+                displayTransactionResults(signature, txDetails, true);
 
-                // Open explorer in new tab
-                window.open(explorerUrl, '_blank');
+                // Show success toast
+                const computeUnits = txDetails?.meta?.computeUnitsConsumed?.toLocaleString() || 'N/A';
+                showToast('Transaction Successful!', `Compute Units: ${computeUnits}`, 'success', 8000);
 
                 // Refresh wallet balance
                 await updateWalletInfo();
@@ -1267,20 +1961,99 @@
                 executeBtn.textContent = '❌ FAILED';
                 executeBtn.style.background = 'linear-gradient(135deg, #f44336 0%, #c62828 100%)';
 
+                // Extract and display detailed on-chain logs
                 let errorMsg = err.message || 'Unknown error';
+                let onChainLogs = [];
+                let errorCode = null;
+                let errorName = null;
 
-                // Parse common error messages
-                if (errorMsg.includes('User rejected')) {
-                    errorMsg = 'Transaction cancelled by user';
-                } else if (errorMsg.includes('insufficient')) {
-                    errorMsg = 'Insufficient balance';
-                } else if (errorMsg.includes('PriceLimitExceeded')) {
-                    errorMsg = 'Price limit exceeded (price moved since simulation)';
-                } else if (errorMsg.includes('SlippageExceeded')) {
-                    errorMsg = 'Slippage exceeded (price moved since simulation)';
+                // Try to extract logs from SendTransactionError
+                if (err.logs && Array.isArray(err.logs)) {
+                    onChainLogs = err.logs;
+                } else if (err.message && err.message.includes('Logs:')) {
+                    // Parse logs from error message
+                    const logsMatch = err.message.match(/Logs:\s*\[(.*?)\]/s);
+                    if (logsMatch) {
+                        try {
+                            onChainLogs = JSON.parse('[' + logsMatch[1] + ']');
+                        } catch (e) {
+                            console.warn('Failed to parse logs:', e);
+                        }
+                    }
                 }
 
-                alert(`❌ Transaction failed:\n\n${errorMsg}\n\nTry simulating again to get updated price.`);
+                // Parse program logs for detailed error info
+                console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('🔴 ON-CHAIN EXECUTION FAILED');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+                if (onChainLogs.length > 0) {
+                    console.log('📋 PROGRAM LOGS:\n');
+                    onChainLogs.forEach((log, i) => {
+                        console.log(`  ${i + 1}. ${log}`);
+
+                        // Extract error code and name from AnchorError
+                        if (log.includes('AnchorError') && log.includes('Error Code:')) {
+                            const codeMatch = log.match(/Error Code: (\w+)/);
+                            const numberMatch = log.match(/Error Number: (\d+)/);
+                            const msgMatch = log.match(/Error Message: (.+?)\.$/);
+                            if (codeMatch) errorName = codeMatch[1];
+                            if (numberMatch) errorCode = numberMatch[1];
+                            if (msgMatch) errorMsg = msgMatch[1];
+                        }
+
+                        // Extract guard failure details
+                        if (log.includes('ADVANCED GUARDS') && log.includes('❌')) {
+                            console.log(`  ⚠️  GUARD FAILURE DETECTED`);
+                        }
+                    });
+                    console.log('');
+                } else {
+                    console.log('⚠️  No on-chain logs available\n');
+                }
+
+                if (errorCode) {
+                    console.log(`❌ ERROR CODE: ${errorName} (${errorCode})`);
+                    console.log(`💬 ERROR MESSAGE: ${errorMsg}\n`);
+                }
+
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+                // Parse common error messages for user-friendly display
+                let userMsg = errorMsg;
+                if (errorMsg.includes('User rejected')) {
+                    userMsg = 'Transaction cancelled by user';
+                } else if (errorMsg.includes('insufficient')) {
+                    userMsg = 'Insufficient balance';
+                } else if (errorMsg.includes('price exceeds limit') || errorName === 'PriceLimitExceeded') {
+                    const action = parseInt(document.getElementById('action').value);
+                    const currentLimit = parseFloat(document.getElementById('priceLimit').value);
+                    const suggestedLimit = action === 1
+                        ? (currentLimit * 1.005).toFixed(4)  // Increase by 0.5% for BUY
+                        : (currentLimit * 0.995).toFixed(4); // Decrease by 0.5% for SELL
+                    userMsg = `Price limit exceeded!\n\nMarket moved between simulation and execution.\n\nTip: ${action === 1 ? 'Increase' : 'Decrease'} your price limit to $${suggestedLimit} (0.5% buffer) to account for market movement.`;
+                } else if (errorMsg.includes('slippage') || errorName === 'SlippageExceeded') {
+                    userMsg = 'Slippage exceeded (price moved since simulation)';
+                } else if (errorName === 'MinFillNotMet') {
+                    userMsg = 'Minimum fill requirement not met due to guard constraints';
+                } else if (errorMsg.includes('exceeded CUs meter')) {
+                    userMsg = 'Transaction exceeded compute units. This should not happen - please report this.';
+                }
+
+                // Display error on page
+                const errorTxDetails = {
+                    meta: {
+                        logMessages: onChainLogs
+                    }
+                };
+                displayTransactionResults(null, errorTxDetails, false, userMsg);
+
+                // Show error toast
+                if (errorName) {
+                    showToast(`${errorName}`, userMsg, 'error', 10000);
+                } else {
+                    showToast('Transaction Failed', userMsg, 'error', 10000);
+                }
 
                 setTimeout(() => {
                     executeBtn.textContent = originalText;

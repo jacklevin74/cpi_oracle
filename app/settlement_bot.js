@@ -438,11 +438,12 @@ async function findAllPositions(conn, ammPda) {
   const POS_SEED = Buffer.from("pos");
 
   // Get all program accounts for our program that match Position size
-  // NEW Position size: discriminator(8) + owner(32) + yes_shares(8) + no_shares(8) + master_wallet(32) + vault_balance_e6(8) + vault_bump(1) = 97 bytes
+  // Position size: discriminator(8) + owner(32) + yes_shares(8) + no_shares(8) + master_wallet(32) + vault_balance_e6(8) + vault_bump(1) + vec_len(4) + nonces(8*100) = 901 bytes
+  // Note: Vec<u64> makes this dynamic, but typically allocated for 100 nonces
   const accounts = await conn.getProgramAccounts(PID, {
     filters: [
       {
-        dataSize: 8 + 89, // 97 bytes total (8-byte discriminator + 89-byte Position struct)
+        dataSize: 8 + 893, // 901 bytes total (8-byte discriminator + 893-byte Position struct with Vec<u64> for 100 nonces)
       },
     ],
   });

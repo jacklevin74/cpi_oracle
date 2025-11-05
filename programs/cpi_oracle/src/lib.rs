@@ -147,7 +147,10 @@ impl AdvancedGuardConfig {
     }
 
     pub fn has_cost_limit(&self) -> bool {
-        self.max_total_cost_e6 > 0
+        // Only treat as active limit if it's a real constraint (not effectively unlimited)
+        // MAX_SAFE_INTEGER in JS is 9007199254740991, so use that as threshold
+        const EFFECTIVELY_UNLIMITED: i64 = 9_000_000_000_000_000; // 9 quadrillion (close to MAX_SAFE_INTEGER)
+        self.max_total_cost_e6 > 0 && self.max_total_cost_e6 < EFFECTIVELY_UNLIMITED
     }
 }
 
@@ -2049,6 +2052,9 @@ pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
         )?;
 
         msg!("📊 Executing {} of {} shares", executable_shares, order.shares_e6);
+
+        // Reject orders that would execute 0 shares
+        require!(executable_shares > 0, ReaderError::MinFillNotMet);
 
         // === TRADE EXECUTION PHASE ===
 

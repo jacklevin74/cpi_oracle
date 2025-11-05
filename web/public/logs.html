@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Request Monitor - Live Logs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #00ff00;
+            font-family: 'Courier New', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            overflow: hidden;
+        }
+
+        .terminal-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .terminal-header {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 5px 5px 0 0;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .terminal-title {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .terminal-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #2a2a2a;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px 15px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 11px;
+        }
+
+        .btn:hover {
+            background: #00ff00;
+            color: #0a0a0a;
+        }
+
+        .btn.active {
+            background: #00ff00;
+            color: #0a0a0a;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .terminal-body {
+            background: #000;
+            border: 1px solid #333;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            padding: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .log-entry.request {
+            color: #00aaff;
+        }
+
+        .log-entry.typescript {
+            color: #9370db;
+        }
+
+        .log-entry.javascript {
+            color: #ffa500;
+        }
+
+        .log-entry.success {
+            color: #00ff00;
+        }
+
+        .log-entry.error {
+            color: #ff4444;
+        }
+
+        .log-entry.hidden {
+            display: none;
+        }
+
+        .stats-bar {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-around;
+            flex-shrink: 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            color: #00ff00;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .timestamp {
+            color: #666;
+        }
+
+        .emoji {
+            filter: grayscale(0);
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .connection-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+
+        .connection-status.connected {
+            background: #00ff00;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
+        .connection-status.disconnected {
+            background: #ff4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-container">
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-label">Total Requests</div>
+                <div class="stat-value" id="totalRequests">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">TypeScript</div>
+                <div class="stat-value" id="tsCount" style="color: #9370db;">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">JavaScript</div>
+                <div class="stat-value" id="jsCount" style="color: #ffa500;">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Active Connections</div>
+                <div class="stat-value" id="activeConns">-</div>
+            </div>
+        </div>
+
+        <div class="terminal-header">
+            <div class="terminal-title">
+                API Request Monitor
+                <span class="connection-status" id="connStatus"></span>
+            </div>
+            <div class="terminal-controls">
+                <div class="filter-buttons">
+                    <button class="btn active" onclick="setFilter('all')" id="btnAll">All</button>
+                    <button class="btn" onclick="setFilter('typescript')" id="btnTS">TypeScript</button>
+                    <button class="btn" onclick="setFilter('javascript')" id="btnJS">JavaScript</button>
+                </div>
+                <button class="btn" onclick="clearLogs()">Clear</button>
+                <button class="btn" onclick="toggleAutoScroll()" id="btnScroll">Auto-scroll: ON</button>
+            </div>
+        </div>
+
+        <div class="terminal-body" id="logContainer">
+            <div class="log-entry">
+                <span class="timestamp">Initializing...</span>
+                <span style="color: #00aaff;">Connecting to log stream...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = 'all';
+        let autoScroll = true;
+        let logBuffer = [];
+        const MAX_LOGS = 500;
+
+        // Statistics
+        let stats = {
+            total: 0,
+            typescript: 0,
+            javascript: 0
+        };
+
+        // Connection status
+        let checkInterval;
+
+        function setFilter(filter) {
+            currentFilter = filter;
+
+            // Update button states
+            document.getElementById('btnAll').classList.toggle('active', filter === 'all');
+            document.getElementById('btnTS').classList.toggle('active', filter === 'typescript');
+            document.getElementById('btnJS').classList.toggle('active', filter === 'javascript');
+
+            // Apply filter to all logs
+            const logs = document.querySelectorAll('.log-entry');
+            logs.forEach(log => {
+                if (filter === 'all') {
+                    log.classList.remove('hidden');
+                } else {
+                    log.classList.toggle('hidden', !log.classList.contains(filter));
+                }
+            });
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            document.getElementById('btnScroll').textContent = `Auto-scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+            if (autoScroll) {
+                scrollToBottom();
+            }
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('logContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            logBuffer = [];
+            stats = { total: 0, typescript: 0, javascript: 0 };
+            updateStats();
+        }
+
+        function addLogEntry(text, type = '') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+
+            // Apply current filter
+            if (currentFilter !== 'all' && type !== currentFilter) {
+                entry.classList.add('hidden');
+            }
+
+            entry.textContent = text;
+            container.appendChild(entry);
+
+            logBuffer.push(entry);
+
+            // Limit buffer size
+            if (logBuffer.length > MAX_LOGS) {
+                const removed = logBuffer.shift();
+                if (removed && removed.parentNode) {
+                    removed.parentNode.removeChild(removed);
+                }
+            }
+
+            if (autoScroll) {
+                scrollToBottom();
+            }
+
+            // Update statistics
+            if (text.includes('REQUEST:')) {
+                stats.total++;
+            }
+            if (text.includes('🔷') || text.includes('TypeScript')) {
+                stats.typescript++;
+            }
+            if (text.includes('📦') || text.includes('Original JavaScript')) {
+                stats.javascript++;
+            }
+
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('totalRequests').textContent = stats.total;
+            document.getElementById('tsCount').textContent = stats.typescript;
+            document.getElementById('jsCount').textContent = stats.javascript;
+        }
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connStatus');
+            status.className = 'connection-status ' + (connected ? 'connected' : 'disconnected');
+        }
+
+        // Poll log file via API
+        let lastPosition = 0;
+        let isPolling = false;
+
+        async function pollLogs() {
+            if (isPolling) return;
+            isPolling = true;
+
+            try {
+                const response = await fetch(`/api/logs?from=${lastPosition}`);
+                if (!response.ok) throw new Error('Failed to fetch logs');
+
+                const data = await response.json();
+
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach(line => {
+                        let type = '';
+                        if (line.includes('📥 REQUEST:')) type = 'request';
+                        else if (line.includes('🔷') || line.includes('TypeScript')) type = 'typescript';
+                        else if (line.includes('📦') || line.includes('Original JavaScript')) type = 'javascript';
+                        else if (line.includes('✅')) type = 'success';
+                        else if (line.includes('❌')) type = 'error';
+
+                        addLogEntry(line, type);
+                    });
+
+                    lastPosition = data.position;
+                }
+
+                updateConnectionStatus(true);
+            } catch (err) {
+                console.error('Polling error:', err);
+                updateConnectionStatus(false);
+            } finally {
+                isPolling = false;
+            }
+        }
+
+        // Start polling
+        setInterval(pollLogs, 1000);
+        pollLogs();
+
+        // Check if server is responsive
+        checkInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/logs?from=0&limit=0');
+                document.getElementById('activeConns').textContent = response.ok ? '✓' : '✗';
+            } catch {
+                document.getElementById('activeConns').textContent = '✗';
+            }
+        }, 5000);
+
+        // Initial message
+        setTimeout(() => {
+            addLogEntry('Ready. Waiting for API requests...', 'success');
+        }, 500);
+    </script>
+</body>
+</html>

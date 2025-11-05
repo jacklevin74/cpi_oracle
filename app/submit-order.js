@@ -11,7 +11,7 @@ const nacl = require('tweetnacl');
 /* ---------------- CONFIG ---------------- */
 const RPC = process.env.ANCHOR_PROVIDER_URL || 'http://127.0.0.1:8899';
 const WALLET = process.env.ANCHOR_WALLET || `${process.env.HOME}/.config/solana/id.json`;
-const ORDER_BOOK_API = process.env.ORDER_BOOK_API || 'http://localhost:3000';
+const ORDER_BOOK_API = process.env.ORDER_BOOK_API || 'http://localhost:3436';
 
 // Program IDs
 const PID = new PublicKey('EeQNdiGDUVj4jzPMBkx59J45p1y93JpKByTWifWtuxjF');

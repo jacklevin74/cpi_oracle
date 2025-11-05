@@ -6396,14 +6396,14 @@ function displayFilledOrders(orders) {
     // Add header
     table.innerHTML = `
         <div class="trading-table-header">
-            <div class="col-id" style="width: 50px;">#</div>
-            <div class="col-type" style="width: 50px;">TYPE</div>
-            <div class="col-direction" style="width: 50px;">SIDE</div>
-            <div class="col-size" style="width: 60px;">SIZE</div>
-            <div class="col-price" style="width: 70px;">EXEC</div>
-            <div class="col-value" style="width: 80px;">COST</div>
-            <div class="col-time" style="width: 70px;">FILLED</div>
-            <div class="col-tx" style="flex: 1;">TX</div>
+            <div class="col-id" style="width: 50px; flex-shrink: 0;">#</div>
+            <div class="col-type" style="width: 50px; flex-shrink: 0;">TYPE</div>
+            <div class="col-direction" style="width: 50px; flex-shrink: 0;">SIDE</div>
+            <div class="col-size" style="width: 60px; flex-shrink: 0;">SIZE</div>
+            <div class="col-price" style="width: 70px; flex-shrink: 0;">EXEC</div>
+            <div class="col-value" style="width: 80px; flex-shrink: 0;">COST</div>
+            <div class="col-time" style="width: 70px; flex-shrink: 0;">FILLED</div>
+            <div class="col-tx" style="flex: 1; text-align: right; min-width: 0;">TX</div>
         </div>
     `;
 
@@ -6439,16 +6439,16 @@ function displayFilledOrders(orders) {
         row.style.color = isBuy ? '#10b981' : '#ef4444';
 
         row.innerHTML = `
-            <div class="col-id" style="width: 50px; font-weight: 600; font-size: 11px;">#${orderData.order_id}</div>
-            <div class="col-type" style="width: 50px; font-size: 11px;">${isBuy ? 'BUY' : 'SELL'}</div>
-            <div class="col-direction" style="width: 50px;">
+            <div class="col-id" style="width: 50px; flex-shrink: 0; font-weight: 600; font-size: 11px;">#${orderData.order_id}</div>
+            <div class="col-type" style="width: 50px; flex-shrink: 0; font-size: 11px;">${isBuy ? 'BUY' : 'SELL'}</div>
+            <div class="col-direction" style="width: 50px; flex-shrink: 0;">
                 <span class="badge ${order.side === 1 ? 'badge-yes' : 'badge-no'}" style="font-size: 10px; padding: 2px 6px;">${sideText}</span>
             </div>
-            <div class="col-size" style="width: 60px; color: #fff; font-size: 11px;">${shares}</div>
-            <div class="col-price" style="width: 70px; color: #10b981; font-size: 11px;">$${execPrice}</div>
-            <div class="col-value" style="width: 80px; color: #a855f7; font-weight: 600; font-size: 11px;">$${totalCost}</div>
-            <div class="col-time" style="width: 70px; color: #6b7280; font-size: 10px;">${timeStr}</div>
-            <div class="col-tx" style="flex: 1; font-size: 10px; text-align: right;">
+            <div class="col-size" style="width: 60px; flex-shrink: 0; color: #fff; font-size: 11px;">${shares}</div>
+            <div class="col-price" style="width: 70px; flex-shrink: 0; color: #10b981; font-size: 11px;">$${execPrice}</div>
+            <div class="col-value" style="width: 80px; flex-shrink: 0; color: #a855f7; font-weight: 600; font-size: 11px;">$${totalCost}</div>
+            <div class="col-time" style="width: 70px; flex-shrink: 0; color: #6b7280; font-size: 10px;">${timeStr}</div>
+            <div class="col-tx" style="flex: 1; min-width: 0; font-size: 10px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 ${orderData.filled_tx ? `<a href="${txLink}" target="_blank" style="color: #5b9eff; text-decoration: none; font-family: monospace;">${txShort}</a>` : '-'}
             </div>
         `;
