@@ -832,10 +832,9 @@ body:not(.debug-mode) .debug-slot-item {
 
 .quick-amounts {
     display: grid;
-    grid-template-columns: repeat(4, auto);
+    grid-template-columns: repeat(4, 1fr);
     gap: 6px;
     margin-top: 8px;
-    justify-content: start;
 }
 
 .quick-amounts button {
