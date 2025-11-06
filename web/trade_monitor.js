@@ -430,6 +430,13 @@ async function startMonitoring() {
                     trade.user = 'Unknown';
                 }
 
+                // Skip deployer/keeper wallet trades entirely (they execute on behalf of others)
+                const DEPLOYER_WALLET = 'AivknDqDUqnvyYVmDViiB2bEHKyUK5HcX91gWL2zgTZ4';
+                if (trade.user === DEPLOYER_WALLET) {
+                    console.log(`⚠️  Skipping keeper trade: ${trade.action} ${trade.side} ${trade.shares} shares @ ${trade.avgPrice} XNT`);
+                    return; // Don't process keeper trades at all
+                }
+
                 console.log(`${trade.user?.slice(0,5) || 'Unknown'} ${trade.action} ${trade.side}: ${trade.shares} shares @ ${trade.avgPrice} XNT`);
 
                 // Add to storage
@@ -448,12 +455,8 @@ async function startMonitoring() {
                 }
 
                 // Update user position and track P&L
-                // Skip recording for deployer/keeper wallet (they execute trades on behalf of others)
-                const DEPLOYER_WALLET = 'AivknDqDUqnvyYVmDViiB2bEHKyUK5HcX91gWL2zgTZ4';
-                if (trade.user && trade.user !== 'Unknown' && trade.user !== DEPLOYER_WALLET) {
+                if (trade.user && trade.user !== 'Unknown') {
                     updateUserPosition(trade);
-                } else if (trade.user === DEPLOYER_WALLET) {
-                    console.log(`⚠️  Skipping trade recording for deployer/keeper wallet`);
                 }
 
                 // Broadcast to clients
