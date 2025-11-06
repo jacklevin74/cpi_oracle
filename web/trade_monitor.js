@@ -358,8 +358,11 @@ try {
 }
 
 // Parse TradeSnapshot event from logs
-function parseTradeFromLogs(logs, signature) {
-    // Look for "Program data: " log which contains base64 encoded event
+function parseTradesFromLogs(logs, signature) {
+    // Look for ALL "Program data: " logs which contain base64 encoded events
+    // ClosePosition can emit multiple TradeSnapshot events (one for each side)
+    const trades = [];
+
     for (const log of logs) {
         if (log.startsWith('Program data: ')) {
             try {
@@ -377,7 +380,7 @@ function parseTradeFromLogs(logs, signature) {
                 const dq_e6 = Number(buffer.readBigInt64LE(offset)); offset += 8;
                 const avg_price_e6 = Number(buffer.readBigInt64LE(offset)); offset += 8;
 
-                return {
+                trades.push({
                     side: side === 1 ? 'YES' : 'NO',
                     action: action === 1 ? 'BUY' : 'SELL',
                     amount: (net_e6 / 10_000_000).toFixed(4),  // XNT scale: 10M per XNT, use 4 decimals
@@ -385,13 +388,13 @@ function parseTradeFromLogs(logs, signature) {
                     avgPrice: (avg_price_e6 / 1_000_000).toFixed(4),
                     signature,
                     timestamp: Date.now()
-                };
+                });
             } catch (err) {
                 console.error('Failed to parse trade data:', err.message);
             }
         }
     }
-    return null;
+    return trades.length > 0 ? trades : null;
 }
 
 // Listen for program logs
@@ -412,55 +415,65 @@ async function startMonitoring() {
                 return;
             }
 
-            // Parse trade from logs
-            const trade = parseTradeFromLogs(logs.logs, logs.signature);
-            if (trade) {
-                // Fetch transaction to get the user's public key (fee payer)
+            // Parse trades from logs (can be multiple for ClosePosition)
+            const parsedTrades = parseTradesFromLogs(logs.logs, logs.signature);
+            if (parsedTrades) {
+                // Fetch transaction once to get the user's public key (fee payer)
+                let userPubkey = 'Unknown';
                 try {
                     const tx = await connection.getTransaction(logs.signature, {
                         maxSupportedTransactionVersion: 0
                     });
                     if (tx && tx.transaction && tx.transaction.message) {
                         const accountKeys = tx.transaction.message.getAccountKeys();
-                        const feePayer = accountKeys.get(0); // First account is always the fee payer
-                        trade.user = feePayer ? feePayer.toString() : 'Unknown';
+                        const feePayer = accountKeys.get(0);
+                        userPubkey = feePayer ? feePayer.toString() : 'Unknown';
                     }
                 } catch (err) {
                     console.error('Failed to fetch transaction:', err.message);
-                    trade.user = 'Unknown';
                 }
 
-                // Skip deployer/keeper wallet trades entirely (they execute on behalf of others)
+                // Skip deployer/keeper wallet trades entirely
                 const DEPLOYER_WALLET = 'AivknDqDUqnvyYVmDViiB2bEHKyUK5HcX91gWL2zgTZ4';
-                if (trade.user === DEPLOYER_WALLET) {
-                    console.log(`⚠️  Skipping keeper trade: ${trade.action} ${trade.side} ${trade.shares} shares @ ${trade.avgPrice} XNT`);
-                    return; // Don't process keeper trades at all
+                if (userPubkey === DEPLOYER_WALLET) {
+                    console.log(`⚠️  Skipping keeper trade: ${parsedTrades.length} events from ${logs.signature.slice(0, 8)}...`);
+                    return;
                 }
 
-                console.log(`${trade.user?.slice(0,5) || 'Unknown'} ${trade.action} ${trade.side}: ${trade.shares} shares @ ${trade.avgPrice} XNT`);
+                // Process each trade event (ClosePosition can have multiple)
+                for (const trade of parsedTrades) {
+                    trade.user = userPubkey;
 
-                // Add to storage
-                trades.push(trade);
-                if (trades.length > MAX_TRADES) {
-                    trades.shift(); // Remove oldest
-                }
+                    console.log(`${trade.user?.slice(0,5) || 'Unknown'} ${trade.action} ${trade.side}: ${trade.shares} shares @ ${trade.avgPrice} XNT`);
 
-                // Update cumulative volume (only for BUY actions)
-                if (trade.action === 'BUY') {
-                    const amount = parseFloat(trade.amount);
-                    const shares = parseFloat(trade.shares);
-                    if (!isNaN(amount) && amount > 0 && !isNaN(shares) && shares > 0) {
-                        updateCumulativeVolume(trade.side, amount, shares);
+                    // Add to storage
+                    trades.push(trade);
+                    if (trades.length > MAX_TRADES) {
+                        trades.shift(); // Remove oldest
                     }
+
+                    // Update cumulative volume (only for BUY actions)
+                    if (trade.action === 'BUY') {
+                        const amount = parseFloat(trade.amount);
+                        const shares = parseFloat(trade.shares);
+                        if (!isNaN(amount) && amount > 0 && !isNaN(shares) && shares > 0) {
+                            updateCumulativeVolume(trade.side, amount, shares);
+                        }
+                    }
+
+                    // Update user position and track P&L
+                    if (trade.user && trade.user !== 'Unknown') {
+                        updateUserPosition(trade);
+                    }
+
+                    // Broadcast to clients
+                    broadcastTrade(trade);
                 }
 
-                // Update user position and track P&L
-                if (trade.user && trade.user !== 'Unknown') {
-                    updateUserPosition(trade);
+                // Log summary if multiple trades (ClosePosition)
+                if (parsedTrades.length > 1) {
+                    console.log(`📦 Processed ${parsedTrades.length} trade events from ClosePosition`);
                 }
-
-                // Broadcast to clients
-                broadcastTrade(trade);
             }
         },
         'confirmed'

@@ -5983,9 +5983,9 @@ function updateTradeButton() {
         console.log(`[UI Estimate SELL] ${shares} shares → ${cost.toFixed(4)} XNT proceeds`);
     }
 
-    const action = currentAction === 'buy' ? 'Buy' : 'Sell';
+    const action = currentAction === 'buy' ? 'BUY' : 'SELL';
     const sideDisplay = currentSide === 'yes' ? 'UP' : 'DOWN';
-    const text = `${action} ${shares} ${sideDisplay} shares (~${cost.toFixed(2)} XNT)`;
+    const text = `${action} ${shares} ${sideDisplay}`;
     document.getElementById('tradeBtnText').textContent = text;
 
     // Update cost display

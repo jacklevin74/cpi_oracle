@@ -907,20 +907,25 @@ body:not(.debug-mode) .debug-slot-item {
 /* Close Position Button */
 .btn-close-position {
     width: 100%;
-    background: var(--bg-secondary);
+    background: rgba(255, 149, 0, 0.08);
     color: #ff9500;
-    border: 1px solid #ff9500;
+    border: 1px solid rgba(255, 149, 0, 0.2);
     padding: 12px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
     cursor: pointer;
-    transition: all 0.15s;
-    letter-spacing: 0.3px;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
 }
 .btn-close-position:hover {
-    background: #ff9500;
-    color: #000;
+    background: rgba(255, 149, 0, 0.15);
+    border-color: rgba(255, 149, 0, 0.35);
+    transform: translateY(-1px);
+}
+.btn-close-position:active {
+    transform: translateY(0);
 }
 .btn-close-position:disabled {
     opacity: 0.4;
